@@ -1,106 +1,112 @@
-# Kanban Backend Rewrite
+# VibeTask Hub
 
-A clean rewrite of the Kanban backend using modern technologies:
-- **Better Auth** - Authentication with OAuth support
-- **Socket.IO** - Real-time WebSocket communication
-- **Prisma** - Database ORM
-- **Express** - HTTP server
+Express + Prisma backend with Better Auth, Socket.IO, and PostgreSQL full-text search. Part of the [VibeTask monorepo](../README.md).
+
+## Prerequisites
+
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| Node.js | 20+ | |
+| npm | 10+ | |
+| PostgreSQL | **11+** | Required for `websearch_to_tsquery` full-text search |
+| PostgreSQL extensions | `pg_trgm` | For trigram-based text matching on document titles |
+
+## Quick Start
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Configure environment
+cp .env.example .env
+# Edit .env — set DATABASE_URL, BETTER_AUTH_SECRET, and PLATFORM_SESSION_SECRET
+
+# 3. Set up the database
+createdb kanban                        # create the database
+npx prisma generate                    # generate Prisma client
+npx prisma migrate deploy              # apply all migrations
+# Migration 20260415200000 creates the tsvector searchVector column +
+# GIN index + pg_trgm extension automatically
+
+# 4. Start dev server
+npm run dev                            # :3000
+```
+
+On first startup the server automatically:
+- Creates WebSocket database triggers (`pg_notify` for real-time updates)
+- Verifies the `searchVector` generated column exists
+
+## Database Details
+
+### PostgreSQL Extensions
+
+The `ProjectDocument.searchVector` column uses `tsvector` for full-text search across document titles and content:
+
+```sql
+-- Created by migration 20260415200000:
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+ALTER TABLE "ProjectDocument" ADD COLUMN IF NOT EXISTS "searchVector" tsvector
+GENERATED ALWAYS AS (
+  setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
+  setweight(to_tsvector('english', coalesce(content, '')), 'B')
+) STORED;
+
+CREATE INDEX IF NOT EXISTS idx_doc_search ON "ProjectDocument" USING GIN ("searchVector");
+```
+
+This auto-indexes document content — no manual trigger maintenance needed.
+
+### WebSocket Triggers
+
+Real-time updates use PostgreSQL `LISTEN/NOTIFY` via the `pg-listen` npm package. The startup script (`ensureWebsocketTriggers`) creates `NOTIFY` triggers on `Task`, `ProjectColumn`, `ProjectUser`, and `Project` tables.
+
+### Environment Variables
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `PORT` | 3000 | | HTTP server port |
+| `WS_PORT` | 8080 | | WebSocket port |
+| `DATABASE_URL` | — | ✅ | PostgreSQL connection string |
+| `BETTER_AUTH_SECRET` | — | ✅ | Min 32 chars, run `openssl rand -hex 32` |
+| `BETTER_AUTH_URL` | `http://localhost:3000` | | Public-facing URL for OAuth callbacks |
+| `PLATFORM_SESSION_SECRET` | — | ✅ | HMAC secret for agent JWT, `openssl rand -hex 32` |
+| `DEVELOPMENT_FE_ORIGIN` | `http://localhost:5173` | | CORS origins, comma-separated |
+| `GOOGLE_CLIENT_ID` | — | | Google OAuth |
+| `GOOGLE_CLIENT_SECRET` | — | | Google OAuth |
+| `GITHUB_CLIENT_ID` | — | | GitHub OAuth |
+| `GITHUB_CLIENT_SECRET` | — | | GitHub OAuth |
+
+### Database Scripts
+
+See [DEVELOPER_HELPER_TOOLS.md](../frontend/docs/DEVELOPER_HELPER_TOOLS.md) for the full list of `npm run db:*` commands (seed, dump, reset, fix sequences, etc.).
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Runtime | Node.js + TypeScript |
+| HTTP | Express.js |
+| WebSocket | Socket.IO + `pg-listen` (pg NOTIFY/LISTEN) |
+| Auth | Better Auth (Argon2id, JWT sessions) |
+| DB | PostgreSQL via Prisma ORM |
+| Validation | Zod |
+| Real-time | PostgreSQL triggers → `pg_notify` → `pg-listen` → Socket.IO broadcast |
 
 ## Project Structure
 
 ```
 src/
-├── index.ts              # Entry point
-├── infrastructure/       # External services
-│   ├── http/            # Express server
-│   ├── websocket/       # Socket.IO server
-│   └── auth/           # Better Auth config
-├── domain/              # Business logic
-│   ├── entities/        # Data models
-│   ├── services/        # Business services
-│   └── repositories/    # Data access
-├── api/                 # Controllers
-│   └── controllers/     # Route handlers
-└── config/              # Configuration
+├── index.ts                     # Entry point — Express + Socket.IO + pg-listen
+├── api/routes/                  # Route handlers
+│   ├── agent/                   # Agent API (CLI/MCP endpoints)
+│   ├── auth.ts, projects.ts, tasks.ts, columns.ts, members.ts, users.ts
+├── infrastructure/
+│   ├── auth/                    # Better Auth + Prisma singleton + platform session
+│   ├── http/                    # Express middleware (error handler, validation, CORS)
+│   ├── websocket/               # Socket.IO server + broadcast logic
+│   └── database/                # pg-listen subscriber + trigger setup
+├── domain/                      # Business logic (rate-limit service, etc.)
+├── validation/schemas/          # Zod schemas
+└── shared/transformers/         # Response formatters
 ```
-
-## Quick Start
-
-```bash
-# Install dependencies
-npm install
-
-# Copy environment variables
-cp .env.example .env
-
-# Generate Prisma client
-npm run db:generate
-
-# Start development server
-npm run dev
-```
-
-## Frontend Compatibility
-
-This rewrite maintains full API compatibility with the existing frontend. See:
-- [`../Kanban-backend/REWRITEPLAN/API_CONTRACT.md`](../Kanban-backend/REWRITEPLAN/API_CONTRACT.md)
-- [`../Kanban-backend/REWRITEPLAN/WEBSOCKET_CONTRACT.md`](../Kanban-backend/REWRITEPLAN/WEBSOCKET_CONTRACT.md)
-
-## Technology Stack
-
-| Component | Technology |
-|-----------|------------|
-| Runtime | Node.js |
-| Language | TypeScript |
-| HTTP | Express.js |
-| WebSocket | Socket.IO |
-| Auth | Better Auth |
-| Database | PostgreSQL + Prisma |
-| Validation | Zod |
-
-## API Endpoints
-
-All endpoints maintain backward compatibility with the existing frontend:
-
-- `POST /api/login` - Authenticate
-- `GET /api/projects` - List projects
-- `POST /api/projects` - Create project
-- `GET /api/projects/:id` - Get project
-- `PATCH /api/projects/:id` - Update project
-- `GET /api/tasks` - List tasks
-- `POST /api/tasks` - Create task
-- `PATCH /api/tasks/:id` - Update task
-- `PATCH /api/tasks/comment/:id` - Add comment
-- ... see API_CONTRACT.md for full list
-
-## WebSocket Channels
-
-Real-time channels (matching frontend expectations):
-
-- `TasksIndexChannel` - Task list updates
-- `TaskIndexChannel` - Single task updates
-- `ColumnsIndexChannel` - Column updates
-- `MembersIndexChannel` - Member updates
-- `ProjectIndexChannel` - Project updates
-- `UserProjectsIndexChannel` - User's projects
-
-## Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| PORT | HTTP server port (default: 3000) |
-| WS_PORT | WebSocket port (default: 8080) |
-| DATABASE_URL | PostgreSQL connection string |
-| AUTH_SECRET | Better Auth secret key |
-| CORS_ORIGIN | Allowed CORS origins |
-
-## Next Steps
-
-1. [ ] Install dependencies (`npm install`)
-2. [ ] Set up PostgreSQL database
-3. [ ] Configure `.env` file
-4. [ ] Generate Prisma schema
-5. [ ] Implement authentication
-6. [ ] Implement API controllers
-7. [ ] Implement WebSocket channels
-8. [ ] Test against frontend
