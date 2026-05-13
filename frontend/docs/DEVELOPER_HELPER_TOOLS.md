@@ -34,12 +34,8 @@ npx prisma generate        # generate Prisma client from schema
 - `npm run db:seed` - seed/restore database from CSV dumps via `prisma/full-restore.sh`.
 - `npm run db:restore` - alias for `db:seed`.
 - `npm run db:reset-and-seed` - destructive reset + seed.
-- `npm run db:dump` - export current database state to CSV files in `prisma/DATADUMP/`.
-- `npm run db:fix-memberships` - detect and insert missing `ProjectUser` rows (owners without membership).
-- `npm run db:sync-sequences` - fix sequences after manual ID inserts.
 - `npm run db:reset-rate-limits` - reset `RateLimitConfig` rows to code defaults.
 - `npm run db:purge-agent-keys` - targeted helper for cleaning agent API keys for a user.
-- `npm run db:normalize-dump` - normalize CSV dumps (fix task relations, flatten multiline comments).
 
 ### OpenAPI
 - `npm run openapi:validate` - validate OpenAPI spec via Redocly.

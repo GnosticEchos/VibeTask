@@ -13,20 +13,10 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:normalize-dump": "node prisma/scripts/normalize-datadump-csv.mjs",
     "db:seed": "bash prisma/full-restore.sh",
     "db:restore": "bash prisma/full-restore.sh",
     "db:dump": "tsx prisma/dump-db.ts",
-    "db:fix-memberships": "tsx prisma/fix-project-memberships.ts",
-    "db:reset-and-seed": "prisma migrate reset --force && npm run db:seed",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui",
-    "test:integration": "vitest run --config vitest.integration.config.ts",
-    "test:integration:watch": "vitest --config vitest.integration.config.ts",
-    "test:all": "npm run test && npm run test:integration",
-    "db:purge-agent-keys": "tsx scripts/purge-agent-api-keys-for-user.ts",
+"db:purge-agent-keys": "tsx scripts/purge-agent-api-keys-for-user.ts",
     "db:reset-rate-limits": "tsx scripts/reset-rate-limit-config.ts",
     "openapi:sync-fe": "node scripts/sync-openapi-to-frontend.mjs",
     "openapi:validate": "redocly lint src/openapi.json",
@@ -34,7 +24,7 @@
     "openapi:bundle": "redocly bundle src/openapi.json --output dist/openapi.json"
   },
   "prisma": {
-    "seed": "tsx prisma/restore-from-dump.ts"
+    "seed": "bash prisma/full-restore.sh"
   },
   "dependencies": {
     "@better-auth/api-key": "^1.6.2",
