@@ -1,10 +1,10 @@
-# API Contract Review: Frontend vs Kanban-rewrite OpenAPI
+# API Contract Review: Frontend vs hub OpenAPI
 
-This document compares the **current frontend API usage** with the **Kanban-rewrite OpenAPI**. Focus: **removals or breaking changes** (updates/extensions are fine; removing or changing existing contract is not).
+This document compares the **current frontend API usage** with the **hub OpenAPI**. Focus: **removals or breaking changes** (updates/extensions are fine; removing or changing existing contract is not).
 
-**Spec source:** `openapi.json` in this repo (canonical copy from `Kanban-rewrite/src/openapi.json`). To refresh after backend spec edits: run **`npm run openapi:sync`** from this repo (sibling `Kanban-rewrite` required), or `npm run openapi:sync-fe` from `Kanban-rewrite`.
+**Spec source:** `openapi.json` in this repo (canonical copy from `hub/src/openapi.json`). To refresh after backend spec edits: run **`npm run openapi:sync`** from this repo (sibling `hub` required), or `npm run openapi:sync-fe` from `hub`.
 
-**Backend integration tests:** `Kanban-rewrite/tests/`. See **`docs/BACKEND_INTEGRATION_TESTS.md`** for a summary of the last run (7 files, 221 tests) and which APIs are covered. Raw run output: `Kanban-rewrite/IntegrationTesting.txt`.
+**Backend integration tests:** `hub/tests/`. See **`docs/BACKEND_INTEGRATION_TESTS.md`** for a summary of the last run (7 files, 221 tests) and which APIs are covered. Raw run output: `hub/IntegrationTesting.txt`.
 
 The spec includes:
 - **`/api/users/me`** (profile, password, preferences, sessions, **settings-layout** GET/PUT/DELETE) and **`/api/admin/*`** (rate limits, user roles)

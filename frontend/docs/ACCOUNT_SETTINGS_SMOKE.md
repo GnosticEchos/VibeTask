@@ -1,6 +1,6 @@
 # Account settings — manual smoke checklist
 
-Run against a dev backend (`Kanban-rewrite`) and SPA with a normal **USER** and an **ADMIN** account. Goal: confirm API + UI behavior matches [ACCOUNT_SETTINGS_API_V1.md](./ACCOUNT_SETTINGS_API_V1.md) and OpenAPI.
+Run against a dev backend (`hub`) and SPA with a normal **USER** and an **ADMIN** account. Goal: confirm API + UI behavior matches [ACCOUNT_SETTINGS_API_V1.md](./ACCOUNT_SETTINGS_API_V1.md) and OpenAPI.
 
 ## Profile (`GET/PATCH /api/users/me`)
 

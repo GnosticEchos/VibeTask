@@ -1,4 +1,4 @@
-# Account Settings API v1 (Frontend + Kanban-rewrite)
+# Account Settings API v1 (Frontend + hub)
 
 This document defines a minimal, implementation-ready API contract for Account Settings.
 
@@ -25,7 +25,7 @@ Frontend account page currently exposes:
 - active sessions list with revoke actions
 - preferences form (`locale`, `timezone`, email notification toggles)
 
-Wiring uses `src/api/v1/authApi.ts` against Kanban-rewrite routes under **`/api/users/me`** (see **`src/openapi.json`** in Kanban-rewrite for the live contract).
+Wiring uses `src/api/v1/authApi.ts` against hub routes under **`/api/users/me`** (see **`src/openapi.json`** in hub for the live contract).
 
 Backend currently guarantees:
 - `GET /api/session` with role + permissions hydration

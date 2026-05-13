@@ -1,6 +1,6 @@
 # WebSocket Contract Review
 
-Frontend now uses Socket.IO client to match `Kanban-rewrite` websocket server.
+Frontend now uses Socket.IO client to match `hub` websocket server.
 
 ## Transport and auth
 

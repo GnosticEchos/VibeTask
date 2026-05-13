@@ -4,7 +4,7 @@ The SPA persists settings hub layouts in **`localStorage`** and **syncs with the
 
 **Related:** Profile, password, sessions, and durable preferences are specified in [`ACCOUNT_SETTINGS_API_V1.md`](./ACCOUNT_SETTINGS_API_V1.md) (this doc covers **layout payload** sync only).
 
-### Implemented API (Kanban-rewrite)
+### Implemented API (hub)
 
 - **`GET /api/users/me/settings-layout`** → `{ layout: PersistedSettingsLayoutsV1 | null }`
 - **`PUT /api/users/me/settings-layout`** → body `{ layout }` (full replace; validated server-side)
@@ -14,7 +14,7 @@ Database: migration `prisma/migrations/20260327130000_add_user_settings_layout` 
 
 ## Current SPA implementation (mirror for backend)
 
-The frontend types and normalizer are the **canonical definition** of `PersistedSettingsLayoutsV1` and allowed card geometry; the API accepts the same shape (see OpenAPI in Kanban-rewrite).
+The frontend types and normalizer are the **canonical definition** of `PersistedSettingsLayoutsV1` and allowed card geometry; the API accepts the same shape (see OpenAPI in hub).
 
 | Item | Location |
 |------|-----------|
@@ -63,7 +63,7 @@ Each page:
 ## Notes
 
 - Frontend **clamps** `w`/`h` when editing; backend **rejects** out-of-range `w`/`h` on PUT (same bounds as `SETTINGS_CARD_CONSTRAINTS`).
-- **WebSocket:** After **`PUT`** or **`DELETE`** `/api/users/me/settings-layout`, Kanban-rewrite emits **`settings-layout:updated`** with `{ layout }` (`layout` is `null` after delete) to Socket.IO room `SettingsLayoutChannel` + `params: { userId }`. Only the matching session user may subscribe. SPA: `useWebsockets` joins on connect and updates the Pinia store via `applyRemoteWsLayoutPayload` (merge by `lastUpdatedAt`, same rule as pull).
+- **WebSocket:** After **`PUT`** or **`DELETE`** `/api/users/me/settings-layout`, hub emits **`settings-layout:updated`** with `{ layout }` (`layout` is `null` after delete) to Socket.IO room `SettingsLayoutChannel` + `params: { userId }`. Only the matching session user may subscribe. SPA: `useWebsockets` joins on connect and updates the Pinia store via `applyRemoteWsLayoutPayload` (merge by `lastUpdatedAt`, same rule as pull).
 
 ## Project workspace drawer notes
 

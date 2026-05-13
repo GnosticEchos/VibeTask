@@ -1,6 +1,6 @@
-# Backend integration tests (Kanban-rewrite)
+# Backend integration tests (hub)
 
-The backend’s integration test run is captured in `Kanban-rewrite/IntegrationTesting.txt`. This doc summarizes what is covered so the frontend can rely on those APIs.
+The backend’s integration test run is captured in `hub/IntegrationTesting.txt`. This doc summarizes what is covered so the frontend can rely on those APIs.
 
 **Last run (from IntegrationTesting.txt):** 7 test files, 221 tests passed — re-run `npm run test:integration` after adding `users-settings-layout.integration.test.ts` to refresh counts.
 
