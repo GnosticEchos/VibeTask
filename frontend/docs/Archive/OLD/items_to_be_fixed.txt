@@ -1,0 +1,41 @@
+1. src/App.vue 
+   - Toast import path typo: primevue/toast instead of primevue/toast.
+   - Review font-family spelling in CSS.
+2. src/components/base/BaseInput.vue
+   - Add error handling for the rules prop in the useField hook.
+   - Add validation for the input value using the v-model directive.
+3. src/components/dashboard/board/Board.vue
+   - Add error handling for the projectId prop in the v-if directive.
+   - Add validation for the draggedElementId ref.
+4. src/components_dashboard/project/ProjectBacklog.vue
+   - Add error handling for the projectId prop in the onBeforeMount hook.
+   - Add validation for the tasks prop in the v-for directive.
+5. src/components_dashboard/project/settings/ProjectSettings.vue
+   - Add error handling for the projectId prop in the onBeforeMount hook.
+   - Add validation for the projectData prop in the v-for directive.
+6. src_components_dashboard/project/settings/partials/ColumnsSectionPartial.vue
+   - Add error handling for the columns prop in the onBeforeMount hook.
+   - Add validation for the columns prop in the v-for directive.
+7. src_components_dashboard/project/settings/partials/DangerZone.vue
+   - Add error handling for the projectId prop in the onBeforeMount hook.
+   - Add validation for the projectId prop in the v-if directive.
+8. src_components_dashboard/project/settings/partials/ProjectDataSectionPartial.vue
+   - Add error handling for the projectData prop in the onBeforeMount hook.
+   - Add validation for the projectData prop in the v-for directive.
+9. src_components_dashboard/project/settings/partials/SettingsSectionTemplate.vue
+   - Add error handling for the loading prop in the template.
+   - Add validation for the loading prop in the v-if directive.
+10. src_components_base/BaseButton.vue
+   - Add validation rules for the props using Vue's built-in `validate` function.
+   - Add error handling for the `Button` component using a `try-catch` block.
+11. src_components_base/BaseButtonTabs.vue
+   - Add validation rules for the `tabs` and `activeTab` props using Vue's built-in `validate` function.
+   - Add error handling for the `tabs` and `activeTab` props using a `try-catch` block.
+12. src_components_base/BaseDialogTextarea.vue
+   - Add validation rules for the `modelValue` prop using Vue's built-in `validate` function.
+   - Add error handling for the `modelValue` prop using a `try-catch` block.
+13. src_components_base/BaseDoubleClickInput.vue
+   - Add validation rules for the `value` prop using Vue's built-in `validate` function.
+   - Add error handling for the `value` prop using a `try-catch` block.
+14. src_components_base/BaseDoubleClickSelect.vue
+   - Add validation rules for the

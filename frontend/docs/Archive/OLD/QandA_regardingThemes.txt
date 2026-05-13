@@ -1,0 +1,53 @@
+PrimeVue Scope:
+Should all possible UI elements (buttons, dialogs, forms, etc.) be migrated to PrimeVue 4.x components, or are there exceptions (e.g., custom widgets, legacy integrations) that should remain as-is?
+the Drag and Drop functionality should remain the Explorer page have had lots of recent work most concerning State management via Pinia and Vue Queue TanStack, so try and stay in complaince with their design patterns. you will notice a few PrimeVue 4x changes scattered that was because something was horribly broken and we decided to not just fix but make it better. In that regard I do want most if not all functionality to be standardized across the front end.
+
+Are there any PrimeVue components you specifically want to avoid or that have caused issues in the past?
+None that I'm aware of this was originally an abandoned github project that had a good enough skelton to just "fork" and update from vue 2 vite whatever and primevue 3.. but It has lots of cludgy hacks that need to be removed my bet is the original folk only used this as a prototype for an idea that wasn't accepted...
+
+Theme Switching & Color Picker:
+Should users be able to switch between all built-in PrimeVue themes (Aura, Material, Lara, Nora) at runtime, or only a subset?
+
+
+Copy the way the PrimeVue document page handles it -- a future release will offer more options for custom theming within the stylize context.
+
+For the color picker: Should it allow users to customize only the primary color, or also other palette elements (e.g., surface, accent, background)?
+copy the PrimeVue document pages - https://primevue.org/colorpicker/ in the top right they have a light / dark toggle and a primary, surface, theme selection box.. lets not expose ripple or RTL at for them at the moment
+
+Should theme and color preferences be persisted per user (e.g., in local storage, backend, or user profile)?
+what is the best practice -- would it be Pinia or TanStack during session? lets start local for the first iterations and progress unless you have a good reason for us to go ahead and backend / user profile.. Primary goal of this phase is the unify the cluster F and then add cool user specific features.
+
+
+Localization & Accessibility:
+Is the current localization system (likely Vue I18n) sufficient, or are there known gaps with PrimeVue integration?
+
+I was inherited and I think it is Vue I18n and I'm just trying to keep it going -- eventually we will create a settings page where users can extend the language offerings. there is a stub for user preferences that has a localization pull down. it mostly works
+
+Are there specific accessibility standards (e.g., WCAG 2.1 AA) you want to target, or should I follow PrimeVue’s defaults and best practices?
+
+PrimeVue's defaults and best practices
+
+UI Consistency:
+Are there any existing design tokens, branding guidelines, or color palettes that must be preserved or mapped into the new theming system?
+
+Not really there was a brief start of converting to PrimeVue 4x but we had to stop and fix bugs that were core to the system.
+
+Should we prioritize matching the look/feel of a particular PrimeVue theme, or is a custom preset the end goal?
+
+just the in built themes I just want a unified color pallette across the application and neither of us are UI specialist :) my favorite UI is the terminal or console :D
+
+Rollout & Refactoring:
+Is this a “big bang” migration, or should we plan for incremental rollout (e.g., one view/module at a time)?
+
+lets to a few pages and dialogs that relate to each other at a time
+
+Are there critical deadlines or milestones for this work?
+
+nope -- just me wishing it wasn't so cluttered
+
+References & Audit Docs:
+Should I treat the three referenced documents as authoritative, or are they more for background? (I will read them in research mode regardless.)
+
+Other Stakeholders:
+Not really but I want to get this UI stable and Consistent then release it as a fork on github.. After that we will take this project and integrate it into a Zauri shell that will be apart of a much larger application.
+

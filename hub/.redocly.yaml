@@ -1,0 +1,24 @@
+extends:
+  - recommended
+
+rules:
+  # OpenAPI 3.0 specification compliance
+  operation-operationId: error
+  operation-description: warn
+  operation-tags: error
+  
+  # Schema validation
+  schema: error
+  
+  # Security
+  operation-security-defined: error
+  
+  # Documentation quality
+  tag-description: warn
+  info-contact: off
+  info-license: off
+  
+  # Allow nullable fields (common in our API)
+  no-empty-enum: off
+  # Allow circular references (Prisma relations)
+  no-$ref-siblings: off

@@ -1,0 +1,44 @@
+node_modules/
+/dist/
+.env
+backend.log
+prisma/generated/
+.DS_Store
+*.log
+.gitnexus
+.claude/
+.kilo/
+CLAUDE.md
+
+# Build & output
+dist/
+tsconfig.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+Thumbs.db
+
+# Coverage
+coverage/
+backend.log
+
+# GitNexus
+.gitnexus
+/.kilo/
+/.claude/
+CLAUDE.md
+AGENTS.md
+node_modules/
+prisma/generated/
+.DS_Store
+*.log
+vibetask_logs/

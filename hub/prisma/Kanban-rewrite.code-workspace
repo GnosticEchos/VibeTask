@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../Kanban-backend"
+		},
+		{
+			"path": "../../Kanban-frontend"
+		}
+	],
+	"settings": {}
+}

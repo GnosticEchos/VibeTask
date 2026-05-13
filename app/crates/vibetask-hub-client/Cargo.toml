@@ -1,0 +1,20 @@
+[package]
+name = "vibetask-hub-client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = { workspace = true }
+reqwest = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+url = { workspace = true }
+vibetask-core = { path = "../vibetask-core" }
+
+[dev-dependencies]
+assert_matches = { workspace = true }
+wiremock = { workspace = true }

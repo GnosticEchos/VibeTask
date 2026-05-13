@@ -1,0 +1,17 @@
+// Global styles
+@use "./_variables" as v;
+@use "./functions/colors" as colors;
+@use "./functions/sizing" as sizing;
+@use "./functions/map-helpers" as map;
+@use "./mixins/scrollbar";
+@use "./mixins/user-select";
+@use "./mixins/flex";
+@use "./mixins/components";
+@use "./mixins/animations";
+
+// Global styles here
+:root {
+  // Your global styles
+}
+
+// Any additional global styles...

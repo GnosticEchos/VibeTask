@@ -1,0 +1,659 @@
+openapi: 3.0.0
+info:
+  title: Kanban API
+  version: 1.0.0
+servers:
+  - url: /api
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    LoginResponse:
+      type: object
+      properties:
+        token: { type: string }
+        user:
+          type: object
+          properties:
+            id: { type: integer }
+            email: { type: string }
+            name: { type: string }
+    Project:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string }
+        prefix: { type: string }
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/Column'
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/Member'
+    Column:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string }
+        order: { type: integer }
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+    Task:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string }
+        status: { type: string }
+        columnId: { type: integer }
+    Member:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        role: { type: string }
+
+paths:
+  /login:
+    post:
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                password: { type: string }
+            example:
+              email: user@example.com
+              password: password123
+      responses:
+        '200':
+          description: Auth response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              example:
+                token: jwt-token-string
+                user:
+                  id: 1
+                  email: user@example.com
+                  name: User Name
+        '401':
+          description: Invalid credentials
+        '400':
+          description: Missing fields
+      security: []
+
+  /projects:
+    get:
+      summary: List all projects
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+              example:
+                - id: 1
+                  name: Project 1
+                  description: Desc
+                  prefix: P1
+                - id: 2
+                  name: Project 2
+                  description: Desc
+                  prefix: P2
+        '401':
+          description: Not logged in
+    post:
+      summary: Create new project
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+            example:
+              name: New Project
+              description: Desc
+              prefix: NP
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                id: 3
+                name: New Project
+                description: Desc
+                prefix: NP
+        '400':
+          description: Missing/invalid fields
+        '401':
+          description: Not logged in
+
+  /projects/{id}:
+    get:
+      summary: Get full project details
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                id: 1
+                name: Project 1
+                description: Desc
+                prefix: P1
+                columns: []
+                tasks: []
+                members: []
+        '404':
+          description: Project does not exist
+        '401':
+          description: Not logged in
+    patch:
+      summary: Update project fields
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+            example:
+              name: Updated Name
+      responses:
+        '200':
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                id: 1
+                name: Updated Name
+                description: Desc
+                prefix: P1
+        '404':
+          description: Not found
+        '400':
+          description: Bad request
+        '401':
+          description: Not logged in
+
+  /projects/{id}/summary:
+    get:
+      summary: Get project summary (lightweight)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Project summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: integer }
+                  name: { type: string }
+                  prefix: { type: string }
+              example:
+                id: 1
+                name: Project 1
+                prefix: P1
+        '404':
+          description: Not found
+        '401':
+          description: Not logged in
+
+  /projects/{id}/board:
+    get:
+      summary: Get board structure (columns, tasks)
+      description: Used directly in Board.vue
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Board data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  columns:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Column'
+              example:
+                columns:
+                  - id: 1
+                    name: To Do
+                    order: 1
+                    tasks:
+                      - id: 1
+                        name: Task 1
+                        status: To Do
+                        columnId: 1
+                  - id: 2
+                    name: Done
+                    order: 2
+                    tasks:
+                      - id: 2
+                        name: Task 2
+                        status: Done
+                        columnId: 2
+        '404':
+          description: Not found
+        '401':
+          description: Not logged in
+
+  /columns:
+    get:
+      summary: List columns (by projectId)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: projectId
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: List of columns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Column'
+              example:
+                - id: 1
+                  name: To Do
+                  order: 1
+                - id: 2
+                  name: Done
+                  order: 2
+        '400':
+          description: Missing projectId
+        '401':
+          description: Not logged in
+    patch:
+      summary: Bulk update columns
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                columns:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Column'
+            example:
+              columns:
+                - id: 1
+                  name: To Do
+                  order: 1
+                - id: 2
+                  name: Done
+                  order: 2
+      responses:
+        '200':
+          description: Columns updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+              example:
+                success: true
+        '400':
+          description: Bad request
+        '401':
+          description: Not logged in
+
+  /columns/{id}:
+    patch:
+      summary: Update single column
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Column'
+            example:
+              name: In Progress
+      responses:
+        '200':
+          description: Column updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Column'
+              example:
+                id: 1
+                name: In Progress
+                order: 1
+        '404':
+          description: Not found
+        '400':
+          description: Bad request
+        '401':
+          description: Not logged in
+    delete:
+      summary: Delete column
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Column deleted
+        '404':
+          description: Not found
+        '401':
+          description: Not logged in
+
+  /tasks:
+    get:
+      summary: List tasks (by projectId, filters)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: projectId
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+              example:
+                - id: 1
+                  name: Task 1
+                  status: To Do
+                  columnId: 1
+                - id: 2
+                  name: Task 2
+                  status: Done
+                  columnId: 2
+        '400':
+          description: Missing projectId
+        '401':
+          description: Not logged in
+    patch:
+      summary: Bulk update tasks
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tasks:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Task'
+            example:
+              tasks:
+                - id: 1
+                  status: Done
+                - id: 2
+                  status: To Do
+      responses:
+        '200':
+          description: Tasks updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+              example:
+                success: true
+        '400':
+          description: Bad request
+        '401':
+          description: Not logged in
+
+  /tasks/{id}:
+    patch:
+      summary: Update single task
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Task'
+            example:
+              status: Done
+      responses:
+        '200':
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              example:
+                id: 1
+                name: Task 1
+                status: Done
+                columnId: 2
+        '404':
+          description: Not found
+        '400':
+          description: Bad request
+        '401':
+          description: Not logged in
+    delete:
+      summary: Delete task
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Task deleted
+        '404':
+          description: Not found
+        '401':
+          description: Not logged in
+
+  /members/check_email:
+    get:
+      summary: Validate member email
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: email
+          required: true
+          schema: { type: string }
+        - in: query
+          name: projectId
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Email validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid: { type: boolean }
+                  user:
+                    $ref: '#/components/schemas/Member'
+              example:
+                valid: true
+                user:
+                  id: 5
+                  email: invitee@example.com
+        '400':
+          description: Missing/invalid params
+        '401':
+          description: Not logged in
+
+  /members/invite:
+    post:
+      summary: Invite users to project
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                users:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: integer }
+                      role: { type: string }
+                projectId: { type: integer }
+            example:
+              users:
+                - id: 5
+                  role: Editor
+              projectId: 1
+      responses:
+        '200':
+          description: Members invited
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  invited:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Member'
+              example:
+                success: true
+                invited:
+                  - id: 5
+                    email: invitee@example.com
+        '400':
+          description: Bad request
+        '401':
+          description: Not logged in
+
+  /{endpoint}/{action}/{id}:
+    patch:
+      summary: Custom/bulk actions (e.g., reorder, archive)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: endpoint
+          required: true
+          schema: { type: string }
+        - in: path
+          name: action
+          required: true
+          schema: { type: string }
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Action performed
+        '400':
+          description: Bad request
+        '401':
+          description: Not logged in
+        '404':
+          description: Not found 

@@ -1,0 +1,20 @@
+[server]
+name = "VibeTask MCP Functional Test"
+version = "1.0.0"
+active_agent = "AgentSmith"
+hub_url = "http://localhost:3000"
+
+[[agents]]
+name = "AgentSmith"
+type = "ProjectDelegated"
+key_hash = "sha256:bb7df7b4b6f40b010f0137a82d03b289bfbb78ea7cb609445bd43bbdd1d2ee63"
+projects = [10]
+permissions = ["USER"]
+delegated_at = "2026-04-13T00:00:00.000Z"
+
+[[agents]]
+name = "McpTesting"
+type = "Platform"
+key_hash = "sha256:9c925176df08b606533a60b7a01c4e5bacd48cb0cc46de55a126dfef72a0d3e1"
+allowed_endpoints = ["/api/agent/projects", "/api/agent/projects/:projectId/docs", "/api/agent/projects/:projectId/tasks"]
+effective_endpoints = ["/api/agent/health", "/api/agent/me", "/api/agent/projects", "/api/agent/projects/:projectId/docs", "/api/agent/projects/:projectId/tasks"]

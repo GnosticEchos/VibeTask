@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/@openapitools/openapi-generator-cli/config.schema.json",
+  "spaces": 2,
+  "generator-cli": {
+    "version": "7.2.0",
+    "generators": {
+      "rust": {
+        "generatorName": "rust",
+        "output": "./vibetask-mcp/src/generated",
+        "glob": "KanbanAPI/openapi.json",
+        "additionalProperties": {
+          "packageName": "vibetask_api",
+          "packageVersion": "0.1.0",
+          "library": "reqwest",
+          "supportAsync": "true",
+          "useSingleRequestParameter": "true",
+          "enumNameSuffix": "",
+          "structPrefix": "",
+          "avoidBoxedModels": "false"
+        },
+        "globalProperties": {
+          "models": "",
+          "apis": "",
+          "supportingFiles": "configuration.rs,lib.rs"
+        },
+        "templateDir": "./openapi-templates/rust"
+      }
+    }
+  }
+}

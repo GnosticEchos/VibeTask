@@ -1,0 +1,47 @@
+@use 'sass:map';
+
+// The single source of truth for all colors.
+$color-palette: (
+  'primary': (
+    'lighten': #dfdcff,
+    'base': #6560ba,
+    'base-opacity': #6560ba5c,
+    'darken1': #5554a0,
+    'darken2': #474479
+  ),
+  'grayscale': (
+    'base': #e2e3e8,
+    'lighten1': #7e828e,
+    'darken1': #70727f,
+    'darken2': #3a3a46,
+    'darken3': #2c2c38,
+    'darken3-opacity': #2c2c3871,
+    'darken4': #21212d,
+    'darken5': #2f2f3b,
+    'darken6': #292938,
+    'darken7': #23232f
+  ),
+  'status': (
+    'success': #52ba28,
+    'warning': #ff7a00,
+    'error': #ed0000,
+    'error-darken': #6b1a2b
+  ),
+  'field': (
+    'hover-darken': #2424307c
+  )
+);
+
+// Function to safely access colors from the palette.
+
+@function get-color($group, $tone) {
+  @if not map.has-key($color-palette, $group) {
+    @error "Color group '#{$group}' not found in $color-palette.";
+  }
+
+  @if not map.has-key(map.get($color-palette, $group), $tone) {
+    @error "Tone '#{$tone}' not found in color group '#{$group}'.";
+  }
+
+  @return map.get(map.get($color-palette, $group), $tone);
+} 

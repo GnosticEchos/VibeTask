@@ -1,0 +1,27 @@
+// src/styles/mixins/_scrollbar.scss
+
+@use 'sass:map'; // Keep this for other uses
+
+@mixin scrollbar($width: 8px, $height: 8px) {
+  &::-webkit-scrollbar {
+    width: $width;
+    height: $height;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--primary-base);
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid var(--grayscale-darken5);
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+.styled-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+}

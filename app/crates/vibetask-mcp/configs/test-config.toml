@@ -1,0 +1,10 @@
+[server]
+name = "VibeTask MCP Test Server"
+version = "1.0.0"
+active_agent = "placeholder"
+
+# Agents will be added dynamically via register_agent tool
+[[agents]]
+name = "placeholder"
+type = "Platform"
+key_hash = "sha256:placeholder"

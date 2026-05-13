@@ -1,0 +1,21 @@
+// This file is likely empty now.
+
+@function safe-map-get($map, $key, $default: null) {
+  @if map.has-key($map, $key) {
+    @return map.get($map, $key);
+  }
+
+  @return $default;
+}
+
+@function deep-map-get($map, $keys...) {
+  @each $key in $keys {
+    @if not map.has-key($map, $key) {
+      @return null;
+    }
+
+    $map: map.get($map, $key);
+  }
+
+  @return $map;
+} 

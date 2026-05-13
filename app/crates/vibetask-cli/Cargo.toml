@@ -1,0 +1,15 @@
+[package]
+name = "vibetask-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+serde = { workspace = true }
+rust-mcp-sdk = { workspace = true }
+vibetask-app = { path = "../vibetask-app" }
+vibetask-tool-catalog = { path = "../vibetask-tool-catalog" }
+comfy-table = { workspace = true }
+termimad = { workspace = true }

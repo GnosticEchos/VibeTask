@@ -1,0 +1,62 @@
+{{>licenseInfo}}
+{{#models}}
+{{#model}}
+{{#description}}
+/// {{&description}}
+{{/description}}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+{{#vendorExtensions.x-serde-container-attributes}}
+{{#-first}}
+#[serde(
+{{/-first}}
+{{#-last}}
+    {{&.}}
+)]
+{{/-last}}
+{{^-last}}
+    {{&.}},
+{{/-last}}
+{{/vendorExtensions.x-serde-container-attributes}}
+{{^vendorExtensions.x-serde-container-attributes}}
+#[serde(rename_all = "camelCase")]
+{{/vendorExtensions.x-serde-container-attributes}}
+pub struct {{classname}} {
+{{#vars}}
+{{#description}}
+    /// {{&description}}
+{{/description}}
+{{#vendorExtensions.x-serde-field-attributes}}
+    #[serde({{&.}})]
+{{/vendorExtensions.x-serde-field-attributes}}
+{{^vendorExtensions.x-serde-field-attributes}}
+{{#isNullable}}
+    #[serde(skip_serializing_if = "Option::is_none")]
+{{/isNullable}}
+{{#hasMore}}
+    pub {{name}}: {{#isNullable}}Option<{{/isNullable}}{{dataType}}{{#isNullable}}>{{/isNullable}},
+{{/hasMore}}
+{{^hasMore}}
+    pub {{name}}: {{#isNullable}}Option<{{/isNullable}}{{dataType}}{{#isNullable}}>{{/isNullable}}
+{{/hasMore}}
+{{/vendorExtensions.x-serde-field-attributes}}
+{{/vars}}
+}
+
+impl {{classname}} {
+    /// Create a new {{classname}}
+    pub fn new({{#requiredVars}}{{name}}: {{dataType}}{{#hasMore}}, {{/hasMore}}{{/requiredVars}}) -> {{classname}} {
+        {{classname}} {
+{{#vars}}
+{{#required}}
+            {{name}},
+{{/required}}
+{{^required}}
+            {{name}}: None,
+{{/required}}
+{{/vars}}
+        }
+    }
+}
+
+{{/model}}
+{{/models}}

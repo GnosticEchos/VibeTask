@@ -1,0 +1,67 @@
+[package]
+name = "vibetask-mcp"
+version = "0.1.0"
+edition = "2021"
+description = "VibeTask Agent Orchestrator - Stateless Rust MCP sidecar for intelligent Kanban workflows"
+license = "MIT"
+repository = "https://github.com/vibetask/vibetask-mcp"
+keywords = ["mcp", "kanban", "agent", "orchestrator", "rust"]
+categories = ["development-tools", "api-bindings"]
+
+[[bin]]
+name = "vibetask-mcp"
+path = "src/main.rs"
+
+[dependencies]
+# Core MCP and async runtime
+rust-mcp-sdk = { workspace = true }
+rust-mcp-schema = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Token counting and AI integration
+tiktoken-rs = { workspace = true }
+
+# Security dependencies
+keyring = { workspace = true }
+tempfile = { workspace = true }
+sha2 = { workspace = true }
+nanoid = { workspace = true }
+
+# Business logic crates
+chrono = { workspace = true }
+regex = { workspace = true }
+similar = { workspace = true }
+toml = { workspace = true }
+
+# Development and testing
+async-trait = { workspace = true }
+schemars = { workspace = true }
+
+# Generated API client dependencies
+url = { workspace = true }
+uuid = { workspace = true }
+
+# OpenAPI code generation (alternative to openapi-generator)
+progenitor = { workspace = true }
+vibetask-app = { path = "../vibetask-app" }
+vibetask-core = { path = "../vibetask-core" }
+vibetask-hub-client = { path = "../vibetask-hub-client" }
+vibetask-tool-catalog = { path = "../vibetask-tool-catalog" }
+
+[dev-dependencies]
+mockall = { workspace = true }
+wiremock = { workspace = true }
+assert_matches = { workspace = true }
+tokio-test = "0.4"
+
+[features]
+default = ["server"]
+server = ["rust-mcp-sdk/server"]
+stdio = ["rust-mcp-sdk/stdio"]
+hyper = ["rust-mcp-sdk/hyper"]

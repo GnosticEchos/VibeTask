@@ -1,0 +1,1241 @@
+id,projectId,title,content,docType,version,createdById,createdAt,updatedAt
+1,10,Agent Skill Lifecycle Brainstorm,"# Brainstorm: Blended Agent Skill Lifecycle
+**Project:** Spec Task Board (ID: 10)
+**Status:** Refined / Swarm Architecture
+**Date:** 2026-04-08
+
+## 1. Project Types & Architectural Flexibility
+*   **Structured Epics:** Full workflows (Discovery -> Finalized).
+*   **Freeform:** Simple Todo -> Done.
+*   **Hybrid:** Structured parent Epics spawning sandboxed sub-boards.
+
+## 2. Distributed Agent Swarm (Specialized Local Agents)
+We leverage the WebSocket feed and OpenFang/OpenClaw to resource a swarm of small, local agents.
+
+*   **Research Agent:** Triggered by `Plan`. Uses `code_index` to pre-fetch context. Logs `📁 [FILES TO REVIEW]`.
+*   **Critic Agent:** Triggered by `Verify`. Compares code diffs against `SPECIFICATION.md`.
+*   **Memory Agent:** Inspired by `OpenMemory`. Distills long comment threads into lean `BRAINSTORM` artifacts.
+
+## 3. The Execution Protocol (Mermaid Flow)
+
+```mermaid
+sequenceDiagram
+    participant Hub as Kanban Hub (Agent API)
+    participant Fang as OpenFang (WebSocket Listener)
+    participant Local as Local Critic Agent
+    participant Cloud as Cloud Orchestrator
+
+    Hub->>Fang: [WS Event] Task 51 -> Verify
+    Fang->>Hub: GET /tasks/51?inline=true
+    Fang->>Local: ""Verify these changes against Spec""
+    Local-->>Hub: POST /comments ""Review Results""
+    Note over Hub: If failure, Hub patches Task back to Execute
+```
+
+## 4. Refined Agent API Call Stack
+*   `GET /api/agent/projects/:id/tasks/:id?inline=true&compact=true` (Context Acquisition)
+*   `POST /api/agent/projects/:id/docs` (Knowledge Commitment)
+*   `POST /api/agent/projects/:id/tasks/:id/comments` (Work Logging)
+*   `POST /api/agent/projects/:id/tasks/:id/doc-links` (Context Binding)",BRAINSTORM,3,1,2026-04-08T11:31:28.089Z,2026-04-08T13:41:19.582Z
+2,10,Project Constitution,"# SpecTask Constitution
+
+## 1. Quality Standards
+- **Safety First:** No agent shall modify `.env` or system credentials.
+- **Atomic Changes:** Implementation should be surgical (1 file at a time).
+- **Validation Required:** No task moves to ""Finalized"" without a verified `TEST_REPORT.md`.
+- **Rust Standards:** All Rust code MUST pass `cargo fmt`, `cargo clippy` (with zero warnings), and `cargo test` before submission.
+
+## 2. Git Governance
+- **Pre-commit Hooks:** All Rust-based repositories must use the project-standard `.git/hooks/pre-commit` script to enforce quality gates locally.
+- **Branching:** Work should occur in task-specific branches (e.g., `feat/SPEC-1-scaffold`).
+
+## 3. Communication Rules
+- Agents must use the `internal_monologue` for technical reasoning.
+- Public `comments` are reserved for human-facing summaries.
+- All ""Epics"" must have a linked `SPECIFICATION.md` before work begins.
+
+## 4. Tech Stack Mandates
+- **Backend:** Node.js / Prisma / Express.
+- **Frontend:** Vue 3 / Tailwind 4 / DaisyUI 5.
+- **Agent Skill:** Rust Binary (Compiled) using `rust-mcp-sdk` (pmcp).",CONSTITUTION,3,1,2026-04-08T11:36:56.995Z,2026-04-09T05:34:00.660Z
+3,10,Rust MCP Orchestrator Spec,"# Technical Spec: Rust MCP
+
+- Binary: `mcp-vibe-bridge`
+- Protocol: MCP 1.0
+- Auth: Delegate Key Only",SPECIFICATION,1,1,2026-04-08T13:03:27.006Z,2026-04-08T13:03:27.006Z
+4,10,Product Platform Roadmap,"# Roadmap: The Vibe Tasks Product Platform
+**Status:** Architecture Finalized / Universal Binary Ready
+**Version:** 1.3.0 (Universal Swarm Edition)
+**Date:** 2026-04-10
+
+## 1. The ""Logic Hub"" Architecture
+To support both high-end IDE agents and local shell scripts, the VibeTask Orchestrator is organized as a Rust Workspace:
+*   **`vibe-core`**: Shared library containing the Hub API client and battle-hardened algorithms (Shrimp/SpecKit).
+*   **`vibe-mcp`**: High-autonomy sidecar for Cursor/Claude.
+*   **`vibe-cli`**: Lower-autonomy tool for terminal users, OpenFang laborers, and cron jobs.
+
+## 2. Event-Driven Swarm Protocol
+The platform acts as a shared nervous system for specialized agents.
+1.  **Lobby (IRC):** For human-observable reasoning and bot-to-bot consensus.
+2.  **Backbone (NATS.io):** For high-speed task claiming and machine data.
+3.  **Runtime (OpenFang):** For resource management and secure execution of the labor swarm.
+
+## 3. The ""Cron-to-Lattice"" Pattern
+Sustainable automation is achieved by leveraging standard system utilities:
+*   **Injection:** Linux `cron` uses `vibe-cli` to inject recurring tasks into the Hub.
+*   **Observation:** The swarm listens to the Hub feed and autonomous laborers pick up the work.
+*   **Verification:** The binary's scoring algorithm ensures automated jobs meet quality standards.
+
+## 4. Implementation Roadmap
+
+### Phase 1: Platform Foundation (Current)
+- [x] Standardize Agent API prefix and `/me` tiering.
+- [x] Implement `?inline=true` JIT context packet.
+- [x] Ratify Master Manifest and Internal Logic Blueprint.
+
+### Phase 2: Technical Scaffolding (Next)
+- [ ] Initialize Rust Workspace (`vibe-core`, `vibe-mcp`, `vibe-cli`).
+- [ ] Implement `vibe-cli task create/move/context` commands.
+- [ ] Implement TOML-based Identity Registry.
+
+### Phase 3: Swarm Integration (Advanced)
+- [ ] Implement Vibe-Relay (Socket.IO to NATS/IRC).
+- [ ] Bolt VibeMCP into OpenFang as a Tool Provider.
+- [ ] Add ""Mission Support"" (YAML-driven state machines).
+",BRAINSTORM,2,1,2026-04-08T15:55:11.933Z,2026-04-10T19:19:17.816Z
+5,10,Project Type & Formality Profiles,"# Project Type & Formality Profiles
+
+Vibe Tasks supports varying levels of ""Lattice Rigidity"" to accommodate different workflows.
+
+## 1. Type: Product Design (High Formality)
+**Target:** New feature development, complex systems.
+**Rigidity:** Level 5 (Strict State Machine).
+**Rules:**
+- All tasks must move through all 6 Lifecycle columns.
+- Mandatory `SPECIFICATION.md` before Planning.
+- Human `accept-plan` required to spawn sub-boards.
+- Verification requires independent `Critic Agent` sign-off.
+
+## 2. Type: Sys-Admin / Ops (Low Formality)
+**Target:** Helpdesk, server maintenance, one-off tickets.
+**Rigidity:** Level 1 (Freeform).
+**Rules:**
+- Minimal columns: `Todo`, `Doing`, `Done`.
+- No required artifacts.
+- Tasks are usually ""Leaf Nodes"" (no recursion).
+- Agents act as automated assistants (e.g., ""Renew SSL cert"") rather than architects.
+
+## 3. Type: Hybrid (Dynamic Formality)
+**Target:** Ongoing project with both maintenance and feature work.
+**Rigidity:** Context-Dependent.
+**Rules:**
+- Main board is Freeform.
+- Epic cards (Containers) trigger a ""Formality Escalation"" once drilled into.
+- The sub-board enforces the Product Design workflow for that specific feature.
+
+## 4. Implementation Idea: Formality Templates
+Project settings should allow the owner to select a ""Formality Profile"" which automatically:
+1. Initializes the correct columns.
+2. Sets the `Agent Prompts` for those columns.
+3. Configures the `POST /move` validation logic.",SPECIFICATION,1,1,2026-04-08T15:56:01.699Z,2026-04-08T15:56:01.699Z
+6,10,Case Study: Recurring Automation,"# Case Study: Recurring Automation & Job Queues
+
+## Overview
+This profile transforms the Vibe Tasks board into a high-throughput **Automation Hub**. It leverages specialized local agents (resourced via OpenFang/OpenClaw) to claim, research, and execute recurring system tasks.
+
+## 1. The Automation Lifecycle (Columns)
+
+| Column | Goal | Agent Action |
+| :--- | :--- | :--- |
+| **1. Job Queue** | Bounty | Listen for WebSocket event. Claim task by assigning `delegateId`. |
+| **2. Research** | Validation | Agent analyzes the specific request. Logs `📁 [FILES TO REVIEW]`. |
+| **3. WIP** | Execution | Surgical implementation or system action. Logs `📁 [FILES TOUCHED]`. |
+| **4. Audit** | Review | Human or Critic Agent verifies the automated result. |
+| **5. Archive** | Archive | Task persists for historical visibility. Spawns next recurrence. |
+
+## 2. The Recurrence Engine
+To support sustainable automation, the platform implements a cloning mechanism:
+*   **Trigger:** Task with `isRecurring: true` moves to the `Archive` column.
+*   **Action:** The backend creates a shallow clone of the task.
+*   **Result:** A fresh, unassigned version of the task is placed back in the **Job Queue**.
+
+## 3. Distributed ""Claim"" Logic
+To prevent agent collisions in a multi-threaded swarm:
+1.  The Hub broadcasts a `TASK_CREATED` event.
+2.  All listening agents (OpenFang instances) receive the notification.
+3.  The first agent to successfully `PATCH` the `assigneeId` wins the task.
+4.  Subsequent PATCH attempts from other agents are rejected with `409 Conflict`.
+
+## 4. Integration with Local Tooling
+*   **OpenFang:** Listens to the WS feed and maps Kanban state changes to local model invocations.
+*   **Code Index:** Used during the **Research** phase to gather the necessary file context without human intervention.
+",SPECIFICATION,1,1,2026-04-08T16:18:53.720Z,2026-04-08T16:18:53.720Z
+7,10,SPEC-1 Implementation Plan,"## Core Rust Crate Setup
+## Implement Vibe Client
+## Implement Lattice Logic
+## Implement MCP Server Transport",IMPLEMENTATION_PLAN,1,1,2026-04-08T16:37:20.367Z,2026-04-08T16:37:20.367Z
+8,10,Agent API Ownership Policy,"# Policy: Agent API Ownership & Sovereignty
+**Status:** Approved Specification
+**Version:** 1.0.0
+**Date:** 2026-04-08
+
+## 1. The Sovereignty Matrix
+To prevent alignment drift and recursive loops, we distinguish between **Governance** (Human) and **Execution** (Agent) capabilities.
+
+| API Category | Action | Owner | Rationale |
+| :--- | :--- | :--- | :--- |
+| **Governance** | Create/Delete Project | Human | Prevents unauthorized resource creation. |
+| **Governance** | Set Constitution | Human | The agent must be subject to the rules, not author. |
+| **Governance** | Accept Plan | Human | Critical gate for spawning labor/sub-tasks. |
+| **Execution** | Draft Spec/Plan | Agent | Primary artifact generation. |
+| **Execution** | Move Task | Agent | Functional gate progression. |
+| **Execution** | Log Work (Comments) | Agent | Transparency and work-tree synchronization. |
+| **Intelligence** | Link Task to Doc | Agent | Maintaining recursive context. |
+
+## 2. Behavioral Guardrails (The ""Push-back"" Protocol)
+The Agent MCP Binary must enforce context sanity through the following behaviors:
+
+### A. Context Ambiguity (Multiple Projects)
+*   **The Problem:** User asks ""What is the status?"" while the agent has access to multiple delegated projects.
+*   **The Rule:** The agent **must** list the accessible project names and ask for a specific ""Lens"" focus before performing analysis.
+*   **Response Pattern:** *""I see access to 'SpecTask' and 'SysAdmin'. Which project should I analyze?""*
+
+### B. Mandatory Redirection
+*   **The Problem:** User asks the agent to perform a Governance action (e.g., ""Delete this project"").
+*   **The Rule:** The agent **must** decline and provide direct navigation instructions to the Human UI.
+*   **Response Pattern:** *""I do not have the authority to delete projects. Please navigate to **Project Settings > Danger Zone** to perform this action manually.""*
+
+## 3. Optimized Agent Endpoints (The ""Aggregator"" Stack)
+To support the Push-back protocol without token bloat, the following endpoints are required in the `/api/agent` prefix:
+
+### `GET /api/agent/projects/summary`
+*   **Returns:** Lean array of `{ id, name, formalityLevel, totalTasks, activeSprints }`.
+*   **Usage:** Used for the ""Push-back"" list and global status dashboards.
+
+### `GET /api/agent/projects/:id/tasks?compact=true`
+*   **Behavior:** Returns only `id`, `name`, and `statusId` for all tasks in a project.
+*   **Usage:** Allows the agent to calculate ""Stats"" (e.g., ""3 in TODO, 1 in Execute"") using minimal tokens.
+
+## 4. Formality Steering (Lattice Metadata)
+Projects carry a `formalityLevel` (1-5) in their metadata. The agent must check this before each turn:
+*   **Level 5 (Product Design):** Enforce SpecKit/Shrimp state machine (Spec -> Plan -> Execute).
+*   **Level 1 (Job Queue):** Skip Design phases; move directly to Execution.
+
+---
+*Ratified for delivery to the Backend and Agent Development teams.*
+",CONSTITUTION,1,1,2026-04-08T18:08:31.527Z,2026-04-08T18:08:31.527Z
+9,10,Agent API Requirements (Technical) - v2,"# Requirements: Agent API Implementation
+**Status:** Final Technical Specification
+**Version:** 1.3.0
+**Date:** 2026-04-10
+
+## 1. Platform Agent Tier (Admin-Managed)
+Platform agents are system-wide identities restricted to controlled read-only access.
+
+### Default Scope (Immutable):
+- `GET /api/agent/health`
+- `GET /api/agent/me`
+
+### Configurable Read Scope:
+- `GET /api/agent/projects`
+- `GET /api/agent/projects/:projectId/tasks`
+- `GET /api/agent/projects/:projectId/tasks/:taskId`
+
+### Management (Admin Only):
+- CRUD operations via `/api/admin/platform-agents/*` endpoints.
+- Support for key rotation and `metadata` customization.
+
+## 2. Project Agent Tier (Delegate-Managed)
+Standard agents delegated by users to specific projects with full labor permissions.
+
+### Primary Endpoints:
+- `GET .../tasks/:id?inline=true`: Single-call JIT context assembly.
+- `POST .../tasks/:id/accept`: Direct task ownership claim.
+- `POST .../docs`: Sovereign write access to the Knowledge Hub.
+- `POST .../doc-links`: Binding artifacts to the task lattice.
+
+## 3. Schema Requirements (The Lattice)
+Ensure the `Task` and `Agent` models support:
+- `isPlatformAgent`: Boolean flag.
+- `apiAllowance`: JSON structure containing `effectiveReadEndpoints`.
+- `parentId`: Recursive hierarchy support.
+- `isContainer`: Epic/Sprint indicator.
+",SPECIFICATION,2,1,2026-04-08T18:19:48.014Z,2026-04-10T15:53:33.041Z
+10,10,Rust MCP Binary Scaffolding,"# Technical Scaffolding: vibe-mcp-binary
+
+## 1. Project Dependencies
+- `mcp-protocol-sdk`: Standard RPC layer.
+- `reqwest`: For Agent API calls.
+- `tokio`: Async runtime.
+- `serde_json`: Context packet parsing.
+
+## 2. Module Tree
+- `main.rs`: Entry point & tool registration.
+- `client.rs`: The `/api/agent` wrapper.
+- `protocol.rs`: The Lattice state machine logic.
+- `context.rs`: JIT prompt assembly (`?inline=true` handler).",BRAINSTORM,1,1,2026-04-08T18:57:59.910Z,2026-04-08T18:57:59.910Z
+11,10,Master Manifest: Vibe Product Platform,"# Manifest: The Vibe Product Platform
+**Version:** 1.5.0 (Simple & Sovereign)
+**Status:** Architecture Ratified
+**Date:** 2026-04-09
+
+## 1. Core Vision: The Lattice
+Vibe Tasks is a **Lifecycle-Driven Product Platform**. It provides a structured state machine (The Lattice) where Humans and Agents collaborate via a shared ""Working Memory.""
+
+### Architectural Philosophy (Finalized)
+*   **Simple is Beautiful:** One Delegate Key per MCP integration. No complex ""Wallet"" logic required in the binary.
+*   **Persona Sovereignty:** Agent identity is stateless and driven purely by the **Column Description** of the current task.
+*   **Protocol-First:** The Rust binary is a sidecar that enforces the Lattice Protocol via the verified `/api/agent` prefix.
+
+## 2. The Agent Protocol
+
+| Endpoint | Feature | Agent Benefit |
+| :--- | :--- | :--- |
+| `GET .../me` | **Identity** | Binary confirms its assigned name and role metadata. |
+| `GET .../tasks/:id?inline=true` | **Context Packet** | Single-call JIT context (Metadata + Column Persona + Linked Docs). |
+| `POST .../tasks/:id/accept` | **Claim Logic** | Agent signals it has taken ownership of a ticket. |
+
+## 3. The ""Intelligent Sidecar"" (Rust MCP)
+The Rust binary acts as the **Context Assembler** and **Security Enforcer**.
+
+### Key Responsibilities:
+1.  **Token Budgeting:** Strictly enforces 4k-5k token limits per task turn.
+2.  **Persona Injection:** Transforms Column Descriptions into high-fidelity System Prompts.
+3.  **Governance Gate:** Blocks destructive actions or Constitution modifications.
+
+---
+*Ratified for final implementation.*
+",CONSTITUTION,2,1,2026-04-09T12:05:42.433Z,2026-04-09T17:22:33.740Z
+12,10,Feature Request: Agent /me API,"# Feature Request: Agent Identity API (`/api/agent/me`)
+
+**Target Prefix:** `/api/agent` (Agent-Sovereign)  
+**Status:** Pending Implementation  
+**Priority:** High (Prerequisite for the Rust MCP Binary)
+
+## 1. Objective
+Enable an agent using a Delegate API Key to retrieve its own identity, permissions, and metadata in a stateless manner. Currently, agents can list projects but cannot verify their own ""Name"" or ""Assigned Role"" as defined in the Hub.
+
+## 2. Requirement
+The `unifiedAuthMiddleware` already attaches the agent delegation data to the request. This endpoint should simply expose that existing information.
+
+### Endpoint: `GET /api/agent/me`
+**Authentication:** `x-agent-api-key` header required.
+
+### Proposed Response Schema:
+```json
+{
+  ""agent"": {
+    ""id"": ""cuid_xyz123"",
+    ""name"": ""Agent Smith"",
+    ""ownerId"": 1,
+    ""createdAt"": ""2026-04-08T12:00:00Z"",
+    ""expiresAt"": ""2027-04-08T12:00:00Z""
+  },
+  ""delegations"": [
+    {
+      ""projectId"": 10,
+      ""projectName"": ""Spec Task Board"",
+      ""permissionLevel"": ""USER"",
+      ""metadata"": {
+        ""role"": ""ARCHITECT"",
+        ""worktree"": ""/path/to/repo""
+      }
+    }
+  ]
+}
+```
+
+## 3. Architectural Rationale
+*   **Persona Synthesis:** The Rust MCP binary needs to know its assigned name (e.g., ""Agent Smith"") to respond correctly to human summons in chat.
+*   **Bootstrapping:** At startup, the binary must verify the key is valid and retrieve the `worktree` location from the delegation metadata to initialize its local environment.
+*   **Sovereignty Compliance:** This endpoint resides strictly within the `/api/agent` prefix, respecting the constraint that agents never use human-scoped `/api/agents` (plural) endpoints.
+
+## 4. Acceptance Criteria
+1.  The endpoint returns 401 if the `x-agent-api-key` is missing or invalid.
+2.  The endpoint returns the full `metadata` JSON object stored in the `apikey` table.
+3.  The response includes the human-readable project names for each delegation.
+",SPECIFICATION,1,1,2026-04-09T13:11:27.692Z,2026-04-09T13:11:27.692Z
+13,10,VibeMCP: Technical Requirements,"# Requirements Document: VibeTask Agent Orchestrator
+
+## Introduction
+
+The VibeTask Agent Orchestrator is a stateless Rust MCP sidecar that transforms Kanban boards into intelligent ""Lattice"" state machines. Agents adopt personas based on column position and collaborate through structured workflows with governance controls.
+
+## Requirements
+
+### Requirement 1 - Platform Agent Identity System
+
+**User Story:** As a system administrator, I want to create Platform Agents with configurable read-only permissions, so that MCP servers can have their own identity for system integration without project-specific access.
+
+#### Acceptance Criteria
+
+1. WHEN an administrator creates a Platform Agent THEN the system SHALL set `isPlatformAgent: true` and `readOnly: true` in the agent metadata
+2. WHEN a Platform Agent is created THEN it SHALL have default access to `alwaysAllowedReadEndpoints: [""/api/agent/health"", ""/api/agent/me""]`
+3. WHEN configuring a Platform Agent THEN administrators SHALL be able to add `configuredReadEndpoints` from approved list: `[""/api/agent/projects"", ""/api/agent/projects/:projectId/tasks"", ""/api/agent/projects/:projectId/tasks/:taskId"", ""/api/agent/projects/:projectId/docs""]`
+4. WHEN a Platform Agent makes API calls THEN the system SHALL enforce `effectiveReadEndpoints` (combination of always allowed + configured)
+5. WHEN the MCP server starts THEN it SHALL authenticate using its Platform Agent key and validate `isPlatformAgent: true` in the response
+
+### Requirement 2 - Agent Key Management and Secure Storage
+
+**User Story:** As an MCP server, I want to securely store and manage multiple agent keys with TOML configuration and dynamic registration, so that I can handle both Platform Agent identity and delegated project agents with proper verification.
+
+#### Acceptance Criteria
+
+1. WHEN starting the MCP server THEN it SHALL support `--config vibe-mcp.toml` flag for configuration file location with default fallback to `./vibe-mcp.toml`
+2. WHEN storing agent keys THEN the system SHALL use SHA-256 hashing with secure storage in TOML format: `key_hash = ""sha256:...""`
+3. WHEN managing multiple agents THEN the TOML SHALL support `[[agents]]` array with `name`, `type`, `key_hash`, and detected permissions/projects
+4. WHEN an `active_agent` is specified THEN the system SHALL use that agent's credentials for API calls and tool registration
+5. WHEN providing `register_agent` tool THEN it SHALL verify new keys via `GET /api/agent/me`, extract permissions, hash the key, and update TOML config
+
+**TOML Structure:**
+```toml
+[server]
+name = ""Vibe Orchestrator""
+active_agent = ""AgentSmith""
+
+[[agents]]
+name = ""AgentSmith""
+type = ""ProjectDelegated""
+key_hash = ""sha256:...""
+projects = [10]
+permissions = [""USER""]
+
+[[agents]]
+name = ""MCPTesting""
+type = ""Platform""
+key_hash = ""sha256:...""
+allowed_endpoints = [""/api/agent/projects"", ""/api/agent/projects/:projectId/docs""]
+```
+
+### Requirement 3 - User Agent Delegation with Project Context
+
+**User Story:** As a user, I want to prompt ""Use AgentSmith to provide status of X project"", so that I can get project information through specific project-assigned agents with full permissions.
+
+#### Acceptance Criteria
+
+1. WHEN a user requests agent delegation THEN the system SHALL parse agent name, lookup project agent key, and validate `delegations` array contains target project
+2. WHEN using delegated agent identity THEN the system SHALL switch from Platform Agent key to project agent key for API calls
+3. WHEN delegated agent has `permissionLevel: ""USER""` THEN it SHALL have full read/write access to assigned projects
+4. WHEN delegation target lacks project access THEN the system SHALL return error with available projects from `delegations` array
+5. WHEN delegation is successful THEN responses SHALL include agent provenance: `""Using {agent.name} (delegated to {project.projectName})""`
+
+### Requirement 4 - Platform Agent Status and Health Tools
+
+**User Story:** As a Platform Agent, I want read-only tools that respect my configured endpoint permissions, so that I can provide system status without exceeding my access scope.
+
+#### Acceptance Criteria
+
+1. WHEN Platform Agent queries health THEN it SHALL use `GET /api/agent/health` (always allowed) and return system connectivity status
+2. WHEN checking agent identity THEN it SHALL use `GET /api/agent/me` and validate `isPlatformAgent: true` and `effectiveReadEndpoints` list
+3. WHEN querying projects THEN it SHALL only succeed if `/api/agent/projects` is in `configuredReadEndpoints`, otherwise return ""Platform Agent - Insufficient Permissions""
+4. WHEN accessing project details THEN it SHALL respect endpoint permissions and return available data based on `effectiveReadEndpoints`
+5. WHEN providing status reports THEN it SHALL format responses showing which endpoints are accessible and which require delegation
+
+### Requirement 5 - Dynamic Agent Registration Tool
+
+**User Story:** As a user, I want to register new agent keys through chat by providing the raw key, so that the MCP server can verify identity and securely store the credentials without manual TOML editing.
+
+#### Acceptance Criteria
+
+1. WHEN user provides `register_agent` tool with raw `x-agent-api-key` THEN the system SHALL immediately call `GET /api/agent/me` to verify identity
+2. WHEN identity verification succeeds THEN the system SHALL extract agent metadata: `name`, `isPlatformAgent`, `delegations`, and `apiAllowance`
+3. WHEN agent is verified THEN the system SHALL hash the key with SHA-256, update TOML config, and respond with: ""Identity Verified: Registered '{name}' with {type} permissions""
+4. WHEN identity verification fails THEN the system SHALL return ""Invalid key. Identity verification failed."" without storing anything
+5. WHEN updating TOML config THEN the system SHALL preserve existing agents and add new entry with detected permissions and project access
+
+**Tool Response Format:**
+```
+✅ Identity Verified: Registered 'AgentSmith' 
+Type: ProjectDelegated
+Projects: Spec Task Board (ID: 10) - USER permission
+Delegations: 1 project accessible
+
+Key securely stored in vibe-mcp.toml
+```
+
+### Requirement 6: Lattice State-Driven Persona System
+
+**User Story:** As a project manager, I want agents to automatically adopt appropriate personas based on their task location, so that they can provide contextually relevant assistance throughout the development lifecycle.
+
+#### Acceptance Criteria
+
+1. WHEN an agent focuses on a task THEN the system SHALL fetch column description via `GET /api/agent/projects/:id/tasks/:id`
+2. WHEN a column description is retrieved THEN the system SHALL inject it as the primary system prompt
+3. WHEN an agent is in the ""Specify"" column THEN the system SHALL configure the agent as an Architect persona
+4. WHEN an agent is in the ""Execute"" column THEN the system SHALL configure the agent as a Coder persona  
+5. WHEN an agent is in the ""Verify"" column THEN the system SHALL configure the agent as a Critic persona
+
+**Error Handling:**
+- IF Hub returns 5xx THEN persona defaults to ""General Assistant"" with warning
+- IF column has no description THEN use column name as persona
+
+### Requirement 7: Named Resource Orchestration
+
+**User Story:** As a team lead, I want to assign specific agents to specific tasks by name, so that I can leverage different agent capabilities and maintain accountability.
+
+#### Acceptance Criteria
+
+1. WHEN multiple delegate keys are registered THEN the system SHALL support multiple agents per project via `x-agent-api-key` header
+2. WHEN a user assigns an agent to a task THEN the system SHALL treat that agent as a first-class assignee with ""Agent {Name}"" format
+3. WHEN agent assignment occurs THEN the system SHALL support assignment via both Vibe UI and `summon_agent` tool
+4. WHEN accessing agent resources THEN the system SHALL enforce permissions (VIEWER/USER) at the API level per delegate key
+5. WHEN an agent is summoned THEN the system SHALL maintain agent identity and assignment state via Hub storage
+
+### Requirement 8: JIT Context Injection System
+
+**User Story:** As a developer, I want agents to receive complete context in a single API call, so that they can work efficiently without multiple round trips.
+
+#### Acceptance Criteria
+
+1. WHEN an agent requests task context THEN the system SHALL provide it via `GET /api/agent/projects/:id/tasks/:id?inline=true&compact=true` endpoint
+2. WHEN context is assembled THEN the system SHALL include task metadata, persona, and full linked docs in a single response
+3. WHEN context is provided THEN the system SHALL maintain **HARD LIMIT** of ≤5500 tokens total context
+4. WHEN Constitution is included THEN the system SHALL always include full-text (never summarized)
+
+**Token Budget:**
+| Component | Budget | Behavior on Overflow |
+|-----------|--------|---------------------|
+| Metadata | 500 | Truncate fields |
+| Persona | 1000 | Truncate description |
+| Constitution | 1500 | Error if exceeds |
+| Specification | 2000 | Summarize to fit |
+| **Buffer** | **500** | Reserved for response |
+| **Total** | **5500** | Hard limit |
+
+### Requirement 9: Product Design Phase (Specify Column)
+
+**User Story:** As a product owner, I want agents to generate and refine specifications before moving to planning, so that implementation is based on clear requirements.
+
+#### Acceptance Criteria
+
+1. WHEN in the design phase THEN the system SHALL provide a `commit_artifact` tool available only in Specify column
+2. WHEN `commit_artifact` is used THEN the system SHALL create/update SPECIFICATION.md in Hub
+3. WHEN a task attempts to transition to ""Plan"" THEN the system SHALL verify specification contains `[RATIFIED]` in title
+4. IF no ratified specification exists THEN the system SHALL prevent transition to planning phase
+
+### Requirement 10: Sprint Planning Phase (Plan Column)
+
+**User Story:** As a scrum master, I want agents to automatically break down implementation plans into atomic tasks, so that complex features can be managed as structured sub-boards.
+
+#### Acceptance Criteria
+
+1. WHEN in the planning phase THEN the system SHALL provide a `spawn_sub_board` tool available only in Plan column
+2. WHEN `spawn_sub_board` is triggered THEN the system SHALL parse the `IMPLEMENTATION_PLAN.md` content
+3. WHEN implementation plan is parsed THEN the system SHALL bulk-create atomic sub-tasks via Hub API
+4. WHEN sub-board is created THEN the system SHALL maintain parent-child relationships in Hub database
+
+### Requirement 11: Execution and Audit Phase (Verify Column)
+
+**User Story:** As a quality assurance lead, I want agents to perform mandatory integrity checks and maintain work logs, so that all development work is traceable and auditable.
+
+#### Acceptance Criteria
+
+1. WHEN work is completed THEN the system SHALL provide a `reflect_on_work` tool available only in Verify column
+2. WHEN `reflect_on_work` is used THEN the system SHALL perform a mandatory 6-step integrity check (all must be true)
+3. WHEN integrity check is complete THEN the system SHALL create Work Log document + TLDR comment with `📁 [FILES TOUCHED]`
+4. WHEN tasks are modified THEN the system SHALL maintain chronological history in TaskLog table
+5. WHEN checks fail THEN the system SHALL use `reject_to_execute` to return to Execute column
+
+### Requirement 12: Platform Integration
+
+**User Story:** As a system administrator, I want the orchestrator to integrate seamlessly with VibeTask Hub, so that agents can operate within the existing platform architecture.
+
+#### Acceptance Criteria
+
+1. WHEN agent identity is needed THEN the system SHALL use `GET /api/agent/me` to find assigned name and role
+2. WHEN task context is needed THEN the system SHALL use `GET /api/agent/projects/:id/tasks/:id?inline=true&compact=true`
+3. WHEN knowledge management is required THEN the system SHALL use `POST /api/agent/projects/:id/docs`
+4. WHEN document binding is needed THEN the system SHALL use `POST /api/agent/projects/:id/doc-links`
+5. WHEN API calls are made THEN the system SHALL maintain stateless operation (zero local storage between requests)
+
+**Retry Policy:**
+- 3 retries with exponential backoff (1s, 2s, 4s)
+- Circuit breaker after 5 consecutive Hub failures (60s cooldown)
+
+### Requirement 13: Collaborative Memory System
+
+**User Story:** As a development team member, I want agents to share technical knowledge across the swarm, so that insights and solutions can be reused across similar tasks.
+
+#### Acceptance Criteria
+
+1. WHEN technical insights are generated THEN the system SHALL use Document Annotations for knowledge sharing
+2. WHEN annotations are created THEN the system SHALL make them accessible to other agents in the swarm
+3. WHEN agents access shared knowledge THEN the system SHALL provide contextual retrieval based on task similarity
+4. WHEN collaborative memory is used THEN the system SHALL maintain knowledge consistency across agent interactions
+
+### Requirement 14: Code Quality and Pre-commit Validation
+
+**User Story:** As a developer, I want automated code quality checks to run before commits and task completion, so that code standards are consistently maintained throughout the project.
+
+#### Acceptance Criteria
+
+1. WHEN the project is initialized THEN the system SHALL install pre-commit hooks: `cargo fmt`, `clippy -D warnings`, `cargo test`
+2. WHEN a commit is attempted THEN the pre-commit hooks SHALL block commit on any failure
+3. WHEN pre-commit formatting fails THEN the system SHALL display message ""cargo fmt check failed. Please run 'cargo fmt --all' to format your code.""
+4. WHEN pre-commit clippy fails THEN the system SHALL display message ""clippy check failed. Please fix the warnings/errors.""
+5. WHEN pre-commit tests fail THEN the system SHALL display message ""Tests failed. Please fix failing tests.""
+
+### Requirement 15: Governance and Safety Controls
+
+**User Story:** As a compliance officer, I want to ensure that governance artifacts remain protected from unauthorized modifications, so that project integrity is maintained.
+
+#### Acceptance Criteria
+
+1. WHEN governance artifacts (Constitution) are accessed THEN the system SHALL enforce read-only permissions by default
+2. WHEN unauthorized modification attempts occur THEN the system SHALL prevent changes and log the attempt
+3. WHEN safety controls are triggered THEN the system SHALL maintain audit trail of all Constitution access
+4. WHEN governance documents are referenced THEN the system SHALL ensure version consistency across agent interactions
+
+**NEW: Constitution Amendment Flow**
+5. WHEN Constitution changes are needed THEN the system SHALL provide `propose_constitution_amendment` tool that generates diff and confirmation code
+6. WHEN confirmation code is generated THEN the system SHALL expire it after 5 minutes
+7. WHEN confirming amendments THEN the system SHALL require `confirm_constitution_amendment` with matching code
+8. WHEN confirmations fail or expire THEN the system SHALL require re-proposal
+
+### Requirement 16: Fault Isolation
+
+**User Story:** As a system operator, I want the MCP server to handle all errors gracefully without crashing, so that agents can continue working even when the Hub is temporarily unavailable.
+
+#### Acceptance Criteria
+
+1. WHEN any error occurs THEN the system SHALL never use `unwrap()` or `panic!()` in production code
+2. WHEN errors are encountered THEN the system SHALL return valid MCP error responses
+3. WHEN Hub is down THEN the system SHALL return ""Hub Offline"" status, not crash
+4. WHEN Hub becomes available THEN agents SHALL be able to wait and retry without restart
+",SPECIFICATION,3,1,2026-04-09T14:42:29.748Z,2026-04-10T16:08:49.805Z
+14,10,VibeMCP: Architectural Design,"# Manifest: The Vibe Product Platform
+**Version:** 1.5.0 (Simple & Sovereign)
+**Status:** Architecture Ratified
+**Date:** 2026-04-09
+
+## 1. Core Vision: The Lattice
+Vibe Tasks is a **Lifecycle-Driven Product Platform**. It provides a structured state machine (The Lattice) where Humans and Agents collaborate via a shared ""Working Memory.""
+
+### Architectural Philosophy (Finalized)
+*   **Simple is Beautiful:** One Delegate Key per MCP integration. No complex ""Wallet"" logic required in the binary.
+*   **Persona Sovereignty:** Agent identity is stateless and driven purely by the **Column Description** of the current task.
+*   **Protocol-First:** The Rust binary is a sidecar that enforces the Lattice Protocol via the verified `/api/agent` prefix.
+
+## 2. The Agent Protocol
+
+| Endpoint | Feature | Agent Benefit |
+| :--- | :--- | :--- |
+| `GET .../me` | **Identity** | Binary confirms its assigned name and role metadata. |
+| `GET .../tasks/:id?inline=true` | **Context Packet** | Single-call JIT context (Metadata + Column Persona + Linked Docs). |
+| `POST .../tasks/:id/accept` | **Claim Logic** | Agent signals it has taken ownership of a ticket. |
+
+## 3. The ""Intelligent Sidecar"" (Rust MCP)
+The Rust binary acts as the **Context Assembler** and **Security Enforcer**.
+
+### Key Responsibilities:
+1.  **Token Budgeting:** Strictly enforces 4k-5k token limits per task turn.
+2.  **Persona Injection:** Transforms Column Descriptions into high-fidelity System Prompts.
+3.  **Governance Gate:** Blocks destructive actions or Constitution modifications.
+
+---
+*Ratified for final implementation.*
+",SPECIFICATION,3,1,2026-04-09T14:42:29.808Z,2026-04-10T16:06:23.788Z
+15,10,VibeMCP: Implementation Tasks,"# Implementation Plan: VibeTask MCP Orchestrator with Dual-Agent Architecture
+
+## Phase 1: Foundation & Dual-Agent Infrastructure (Week 1-2)
+
+- [ ] 1. Project scaffolding with rust-mcp-sdk and dual-agent foundation
+  - [ ] 1.1 Initialize Cargo workspace with rust-mcp-sdk 0.9.0 and security dependencies
+    - Add core dependencies: tokio, serde, reqwest, thiserror, tracing, tiktoken-rs
+    - Add security dependencies: keyring, tempfile, sha2, nanoid
+    - Add business logic crates: chrono, regex, similar, toml
+    - Configure features: `[""server"", ""stdio"", ""hyper""]` from rust-mcp-sdk
+    - _Requirements: 1.1, 1.2, 2.1, 2.2, 13.1, 13.2, 13.3_
+  - [ ] 1.2 TOML configuration system with atomic writes
+    - Create AgentConfig struct with server and agents array
+    - Implement AtomicConfigWriter with tempfile + rename pattern
+    - Add SHA-256 key hashing and secure storage integration
+    - Create configuration validation and backup system
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+  - [ ] 1.3 Configure pre-commit hooks and CI
+    - Install pre-commit hooks: cargo fmt, clippy -D warnings, test
+    - Set up GitHub Actions for test + clippy + fmt
+    - Add security linting and dependency audit checks
+    - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5_
+
+- [ ] 2. Agent Type Detection and Secure Key Management
+  - [ ] 2.1 Agent type detection from Hub API
+    - Create AgentTypeDetector with `/api/agent/me` parsing
+    - Implement AgentType enum (Platform vs ProjectDelegated)
+    - Add PermissionLevel enum (VIEWER, USER) with type safety
+    - Create agent metadata parsing and validation
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+  - [ ] 2.2 Secure key storage with keyring integration
+    - Implement keyring-based storage for production
+    - Add .env file support for development (never logged)
+    - Create key rotation and validation mechanisms
+    - Add key expiration detection and notification
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+  - [ ] 2.3 Dynamic agent registration tool
+    - Create register_agent MCP tool with identity verification
+    - Implement Hub API verification before key storage
+    - Add automatic TOML config updates with atomic writes
+    - Create agent switching and management capabilities
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
+
+- [ ] 3. Core domain models with business logic
+  - [ ] 3.1 Document lifecycle models with Knowledge Hub integration
+    - Create DocumentState enum (Draft, Review, Ratified, Superseded)
+    - Implement Specification struct with ratification validation
+    - Add ImplementationPlan with task parsing and atomicity validation
+    - Create WorkLog with integrity check and TLDR generation
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 9.1, 9.2, 9.3, 9.4_
+  - [ ] 3.2 Task atomicity validation system
+    - Create TaskAtomicityValidator with complexity limits
+    - Implement duplicate name detection and reserved name checking
+    - Add ""Max 3 Modified Files"" complexity validation
+    - Create dependency graph validation with cycle detection
+    - _Requirements: 9.1, 9.2, 9.3, 9.4, 10.1, 10.2_
+  - [ ] 3.3 Error handling with MCP compatibility
+    - Create OrchestratorError enum with proper MCP error code mapping
+    - Implement From traits for CallToolError conversion
+    - Add business logic specific errors with detailed messages
+    - Write comprehensive unit tests for error scenarios
+    - _Requirements: 16.1, 16.2, 16.3, 16.4_
+
+- [ ] 4. VibeTask API Client with OpenAPI type generation
+  - [ ] 4.1 OpenAPI-to-Rust type generation pipeline
+    - Set up `openapitools.json` configuration for rust generation
+    - Create post-generation refinement script for MCP compatibility
+    - Add JsonSchema derives and validation attributes
+    - Generate request/response types for all agent endpoints
+    - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
+  - [ ] 4.2 HTTP client with fault isolation and agent type awareness
+    - Create VibeTaskClient with agent type detection and endpoint validation
+    - Implement retry logic (3 attempts, exponential backoff) and circuit breaker
+    - Add Platform Agent endpoint restriction enforcement
+    - Write integration tests with `wiremock` for both agent types
+    - **Checkpoint**: Client can authenticate both Platform and Project agents
+    - _Requirements: 1.1, 1.2, 1.3, 4.1, 4.2, 4.3, 4.4, 4.5_
+
+## Phase 2: Context Assembly & Token Management with Constitution Fidelity (Week 3)
+
+- [ ] 5. Advanced Context Assembly with Recursive Summarization
+  - [ ] 5.1 Token budget enforcement with Constitution immutability
+    - Create TokenBudget struct with explicit allocations (500/1000/1500/2000/500 tokens)
+    - Implement tiktoken-rs integration for accurate token counting
+    - Add Constitution fidelity lock (never truncated, error if exceeds budget)
+    - Create emergency modes with graceful degradation
+    - _Requirements: 8.1, 8.2, 8.3, 8.4_
+  - [ ] 5.2 Recursive summarization algorithm
+    - Implement RecursiveSummarizer with LLM integration for large specifications
+    - Add key section preservation (API signatures, headers, requirements)
+    - Create iterative summarization with max iteration limits
+    - Add fallback truncation with meaningful suffixes
+    - _Requirements: 8.1, 8.2, 8.3, 8.4_
+  - [ ] 5.3 Hierarchical context assembly with Knowledge Hub integration
+    - Implement context assembly with fixed priority: Metadata > Persona > Constitution > Spec
+    - Add Knowledge Hub document role-based context loading
+    - Create version pinning for consistency during agent work
+    - Add context validation ensuring Constitution is always full text
+    - **Checkpoint**: Can assemble context for any task, respects budget, Constitution never truncated
+    - _Requirements: 8.1, 8.2, 8.3, 8.4_
+
+- [ ] 6. Tool Registry with Agent Type Filtering
+  - [ ] 6.1 Tool Registry with compile-time safety
+    - Create ToolRegistry with explicit tool-column mapping (no flat lists)
+    - Implement agent type detection and tool filtering
+    - Add re-evaluation after agent type or context changes
+    - Create tool validation with detailed error messages
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
+  - [ ] 6.2 Platform Agent tool restrictions
+    - Implement Platform Agent read-only tool filtering
+    - Add endpoint-based tool availability (based on effectiveReadEndpoints)
+    - Create write operation blocking at MCP protocol layer
+    - Add clear error messages for restricted operations
+    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
+
+## Phase 3: MCP Server with Dual-Agent Architecture (Week 4)
+
+- [ ] 7. MCP Server with Agent Type Detection and Dynamic Tool Registration
+  - [ ] 7.1 VibeTaskHandler with agent type awareness
+    - Implement agent type detection on startup via `/api/agent/me`
+    - Create dynamic tool registration based on agent type and column
+    - Add Platform Agent capability restrictions (no resources/prompts)
+    - Implement Project Agent full capability support
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+  - [ ] 7.2 MCP protocol handlers with dual-agent support
+    - Create handle_initialize_request with agent-specific capabilities
+    - Implement handle_list_tools_request with dynamic tool filtering
+    - Add handle_call_tool_request with pre-flight permission checks
+    - Create agent-specific instruction generation
+    - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
+  - [ ] 7.3 Server initialization with error recovery
+    - Create server using `server_runtime::create_server` with StdioTransport
+    - Add comprehensive error handling that never crashes the binary
+    - Implement graceful shutdown and agent type validation
+    - Create health check and connectivity validation
+    - _Requirements: 16.1, 16.2, 16.3, 16.4_
+
+- [ ] 8. Integration testing with dual-agent scenarios
+  - [ ] 8.1 Mock Hub scenarios for both agent types
+    - Create test scenarios: Platform Agent (read-only), Project Agent (full access)
+    - Test tool filtering enforcement and permission validation
+    - Test agent type detection and configuration loading
+    - Add fault isolation scenarios (Hub down, invalid responses)
+    - _Requirements: All requirements validation_
+  - [ ] 8.2 End-to-end MCP protocol testing
+    - Test server boots with both agent types and connects to mock Hub
+    - Test dynamic tool listing based on agent type and column
+    - Test write operation blocking for Platform Agents
+    - **Checkpoint**: Server supports both agent types with proper tool filtering
+    - _Requirements: 1.1, 1.2, 1.3, 4.1, 4.2, 4.3, 4.4, 4.5_
+
+## Phase 4: Platform Agent Tools - Read-Only Operations (Week 5)
+
+- [ ] 9. Platform Agent health and status tools
+  - [ ] 9.1 Health check and connectivity tools
+    - Create query_health tool for Hub connectivity validation
+    - Implement system status reporting with endpoint accessibility
+    - Add agent identity validation and expiration checking
+    - Create diagnostic information formatting
+    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
+  - [ ] 9.2 Project and task query tools (endpoint-restricted)
+    - Create query_projects tool (requires /api/agent/projects endpoint)
+    - Implement query_tasks tool (requires /api/agent/projects/:projectId/tasks)
+    - Add read_documents tool (requires /api/agent/projects/:projectId/docs)
+    - Create get_context tool for task context retrieval
+    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
+
+- [ ] 10. Agent delegation and switching tools
+  - [ ] 10.1 Agent delegation with project context
+    - Implement agent delegation parsing (""Use AgentSmith to get status of X project"")
+    - Add project agent key lookup and validation
+    - Create delegation permission checking and error handling
+    - Add agent provenance tracking in responses
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+  - [ ] 10.2 Agent management tools
+    - Create switch_agent tool for changing active agent
+    - Implement list_agents tool for available agent display
+    - Add agent status and expiration monitoring
+    - **Checkpoint**: Platform Agents can query system status and delegate to project agents
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+
+## Phase 5: Project Agent Tools - Specify Column (Week 6)
+
+- [ ] 11. Specification creation and ratification tools
+  - [ ] 11.1 commit_artifact tool with ratification support
+    - Create CommitArtifactTool with column verification (Specify only)
+    - Implement SPECIFICATION.md creation/update with Hub API integration
+    - Add [RATIFIED] marker validation for exit gate compliance
+    - Create specification quality checks and validation
+    - _Requirements: 8.1, 8.2, 8.3, 8.4_
+  - [ ] 11.2 Architecture review and governance tools
+    - Create request_architecture_review tool for technical review documents
+    - Implement propose_constitution_amendment with diff generation
+    - Add confirm_constitution_amendment with TTL validation
+    - Create governance audit trail and safety controls
+    - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 14.7, 14.8_
+
+## Phase 6: Project Agent Tools - Plan Column (Week 7)
+
+- [ ] 12. Implementation planning and sub-board creation
+  - [ ] 12.1 spawn_sub_board tool with task atomicity validation
+    - Create SpawnSubBoardTool with column verification (Plan only)
+    - Implement IMPLEMENTATION_PLAN.md parsing with TaskAtomicityValidator
+    - Add bulk task creation with parent-child relationships
+    - Create dependency graph validation and cycle detection
+    - _Requirements: 9.1, 9.2, 9.3, 9.4_
+  - [ ] 12.2 Planning validation and complexity estimation
+    - Add task complexity estimation based on file modification counts
+    - Implement duplicate name detection and reserved name checking
+    - Create atomic scope validation (single responsibility principle)
+    - **Checkpoint**: Can create sub-boards with validated atomic tasks
+    - _Requirements: 10.1, 10.2, 10.3, 10.4_
+
+## Phase 7: Project Agent Tools - Execute & Verify Columns (Week 8)
+
+- [ ] 13. Execution support tools
+  - [ ] 13.1 Task progress and document management
+    - Create update_task_progress tool for status tracking
+    - Implement link_document tool with Knowledge Hub integration
+    - Add request_help tool for escalation and collaboration
+    - Create work logging and progress tracking
+    - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
+
+- [ ] 14. Verification and integrity tools
+  - [ ] 14.1 reflect_on_work tool with strict integrity validation
+    - Create ReflectOnWorkTool with mandatory 6-step integrity check
+    - Implement IntegrityCheck struct with strict boolean validation (all must pass)
+    - Add TLDR generation with FILES TOUCHED header formatting
+    - Create work log document creation and task linking
+    - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
+  - [ ] 14.2 Task completion and rejection tools
+    - Create approve_completion tool for final verification gate
+    - Implement reject_to_execute tool for returning tasks to Execute column
+    - Add completion audit trail and provenance tracking
+    - **Checkpoint**: Full workflow: Specify → Plan → Execute → Verify with integrity validation
+    - _Requirements: 10.5, 11.1, 11.2, 11.3, 11.4, 11.5_
+
+## Phase 8: Knowledge Hub Integration & Collaborative Memory (Week 9)
+
+- [ ] 15. Knowledge Hub document management
+  - [ ] 15.1 Document lifecycle and version management
+    - Implement document creation with role-based linking (SPEC, PLAN, WORK_LOG, etc.)
+    - Add version pinning for consistency during agent work
+    - Create document annotation system for collaborative memory
+    - Add cross-agent knowledge sharing capabilities
+    - _Requirements: 12.1, 12.2, 12.3, 12.4_
+  - [ ] 15.2 Context Hub integration with annotations
+    - Parse YAML frontmatter for status warnings (DRAFT, etc.)
+    - Implement #annotate tag parsing for collaborative insights
+    - Create RECENT LEARNINGS block generation
+    - Add semantic document retrieval based on task similarity
+    - _Requirements: 13.1, 13.2, 13.3, 13.4_
+
+## Phase 9: Performance Optimization & Hardening (Week 10)
+
+- [ ] 16. Performance optimization and monitoring
+  - [ ] 16.1 Context assembly optimization
+    - Target <200ms context assembly time with caching
+    - Implement connection pooling for Hub API using reqwest Client reuse
+    - Add memory usage monitoring with <50MB target
+    - Create performance benchmarks for token budget compliance
+    - _Requirements: 8.3, 8.4_
+  - [ ] 16.2 Observability and monitoring
+    - Add structured logging using tracing crate with agent type context
+    - Implement metrics: tool usage, latency, errors, agent type distribution
+    - Create health check endpoint for container orchestration
+    - Add agent key expiration monitoring and alerts
+    - _Requirements: 16.1, 16.2, 16.3, 16.4_
+
+- [ ] 17. Comprehensive testing and validation
+  - [ ] 17.1 Unit tests for all business logic components
+    - Write tests for agent type detection, tool filtering, and integrity validation
+    - Add error handling and edge case coverage using assert_matches! macro
+    - Create mock implementations using mockall crate for external dependencies
+    - Test atomic configuration writes and key management security
+    - _Requirements: All requirements validation_
+  - [ ] 17.2 Integration and performance tests
+    - Implement end-to-end workflow testing for both agent types
+    - Add multi-agent coordination test scenarios with delegation
+    - Create performance benchmarks for context assembly and tool execution
+    - Test fault isolation and graceful degradation scenarios
+    - _Requirements: All requirements final validation_
+
+## Phase 10: Documentation & Production Readiness (Week 11)
+
+- [ ] 18. Documentation and deployment preparation
+  - [ ] 18.1 Documentation creation
+    - Create comprehensive README with dual-agent setup instructions
+    - Write CLAUDE.md template for both Platform and Project agents
+    - Document architecture decision records (ADRs) for dual-agent design
+    - Create troubleshooting guide for common agent configuration issues
+    - _Requirements: All requirements documentation_
+  - [ ] 18.2 Production deployment validation
+    - Create Docker configuration with secure key management
+    - Add Kubernetes manifests with proper RBAC and secrets
+    - Test production deployment with real Hub (staging environment)
+    - Validate security: key storage, agent isolation, audit trails
+    - _Requirements: All requirements final validation_
+
+- [ ] 19. Final integration and validation
+  - [ ] 19.1 Complete system integration with dual-agent support
+    - Wire together all modules using dependency injection with Arc<T>
+    - Add configuration management using config crate and environment variables
+    - Create main.rs with --config flag support and agent type detection
+    - Implement graceful shutdown with proper cleanup for both agent types
+    - _Requirements: All requirements integration_
+  - [ ] 19.2 Production validation and acceptance testing
+    - Run complete test suite and verify all acceptance criteria
+    - Test dual-agent scenarios: Platform Agent monitoring + Project Agent workflow
+    - Validate governance controls and security boundaries
+    - Create CLI documentation and usage examples for both agent types
+    - **Final Checkpoint**: Production ready dual-agent MCP orchestrator
+    - _Requirements: All requirements final validation_
+",SPECIFICATION,3,1,2026-04-09T14:42:29.847Z,2026-04-10T17:06:36.989Z
+16,10,Manifest: Rust MCP Tool Pattern,"# Manifest: Rust MCP Tool Pattern (Macro-First)
+**Status:** Approved Coding Standard
+**Version:** 1.0.0
+**Date:** 2026-04-08
+
+## 1. The #[mcp_tool] Mandate
+To ensure architectural consistency and prevent schema-sync bugs, all VibeMCP tools must use the `rust-mcp-sdk` procedural macro.
+
+### The Transformation Loop:
+1.  **Input:** Doc comments + Struct fields.
+2.  **Output:** Automatic JSON Schema generation (via `schemars`).
+3.  **Result:** The LLM always sees the exact parameters the code expects.
+
+## 2. Standard Implementation Pattern
+Every tool must follow the **Context-Injected Implementation** pattern to ensure testability and fault isolation.
+
+```rust
+// 1. Tool Definition (Macro handles protocol glue)
+#[macros::mcp_tool(
+    name = ""commit_artifact"",
+    description = ""Saves specification/plan to the Knowledge Hub""
+)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct CommitArtifact {
+    pub task_id: String,
+    pub content: String,
+}
+
+// 2. Business Logic (Pure and Testable)
+impl CommitArtifact {
+    pub async fn execute_with_context(
+        &self,
+        ctx: &ToolContext,
+    ) -> Result<CallToolResult, CallToolError> {
+        // MANDATE: Always check Column Gating first
+        let task = ctx.api.get_task(&self.task_id).await?;
+        if task.column.name != ""Specify"" {
+             return Err(CallToolError::invalid_params(""Not in Specify column""));
+        }
+
+        // Logic here...
+        Ok(CallToolResult::success(""Artifact saved""))
+    }
+}
+```
+
+## 3. The ""Two-Step"" Governance Pattern
+For actions that modify project rules (e.g., Constitution), the **Propose -> Confirm** pattern must be used.
+
+*   **Step 1:** `propose_X` returns a diff and a transient 16-char confirmation code.
+*   **Step 2:** `confirm_X` requires the code to be echoed back by the human.
+*   **State:** Codes are stored in an in-memory `Mutex<HashMap>` with a strict 5-minute TTL.
+
+## 4. Fault Isolation & Logging
+*   **No unwrap():** Use `?` or `ok_or_else()` to convert errors into `OrchestratorError`.
+*   **Standardized Headers:** Every tool that modifies code must trigger a comment starting with `📁 [FILES TOUCHED]`.
+*   **Internal Monologue:** Use the `internal_monologue` field for verbose Shrimp-style audits; keep comments concise.
+
+## 5. Defense-in-Depth Checklist
+Before a tool implementation is considered ""Ratified,"" it must pass:
+- [ ] **Column Affinity:** Does it verify the task column?
+- [ ] **Token Awareness:** Does it use the `ContextAssembler` budget?
+- [ ] **Error Mapping:** Does it map to `RpcError` without panicking?
+- [ ] **Statelessness:** Does it rely ONLY on the Hub API for data?
+",CONSTITUTION,1,1,2026-04-09T15:29:59.586Z,2026-04-09T15:29:59.586Z
+17,10,Implementation: ContextAssembler Token Budgeting,"## Core Token Budgeting Strategy
+
+### Budget Allocation
+- Metadata: 500 tokens
+- Persona (Column): 1000 tokens
+- Constitution: 1500 tokens (STRICT: Never summarized)
+- Specification: 2000 tokens (Adaptive: Summarized if needed)
+- Hard Limit: 5500 tokens (Effective context window)
+
+### Implementation Patterns
+- **Strict Mode:** Fail if budget exceeded.
+- **Adaptive Mode:** Use LLM to summarize SPECIFICATION while preserving MUST/SHALL requirements.
+- **Emergency Mode:** Aggressive truncation with visual warnings.
+
+### Logic Flow
+1. Fetch Task + Columns + Docs via `?inline=true`.
+2. Count tokens using `tiktoken-rs`.
+3. Verify Constitution fidelity.
+4. Apply summarization/truncation to Spec and Metadata.
+5. Assemble final prompt string.",SPECIFICATION,1,1,2026-04-09T15:42:02.319Z,2026-04-09T15:42:02.319Z
+18,10,Implementation: API Type Generation Pipeline,"## Goal: Zero-Drift Type Safety
+
+### 1. The Pipeline
+- **Input:** `openapi.json` from VibeTask Hub.
+- **Generator:** `openapi-generator-cli` (Rust target).
+- **Refinement:** Custom script to inject `JsonSchema` and `mcp_tool` derives.
+
+### 2. Key Transformations
+- **ID Fix:** Convert `Option<i32>` to `i32` for response-only models.
+- **Schema Mapping:** Map `date-time` to `chrono::DateTime<chrono::Utc>`.
+- **Validation:** Inject `#[schemars(regex = ...)]` for project identifiers (e.g., API-1).
+
+### 3. Benefits
+- No manual struct maintenance.
+- Compiles-time verification of Hub API integration.
+- Automatic MCP Tool schema generation from Hub models.",SPECIFICATION,1,1,2026-04-09T15:42:02.341Z,2026-04-09T15:42:02.341Z
+19,10,Feature Request: Admin Platform-Agent Bento Card,"# Feature Request: Platform Agent Registry (Admin Hub)
+
+**Target UI:** `/dashboard/settings/admin` (Administration Bento Grid)  
+**Status:** Design Finalized  
+**Priority:** High
+
+## 1. Objective
+Add a new administrative card to the Settings Hub specifically for managing **Platform-Level Agents**. Unlike project-specific agents, Platform Agents are intended for ""Orchestrator"" tools that handle system-wide health and project discovery.
+
+## 2. Requirement
+The card should mirror the functionality of the **Agent Registry** found in Project Settings but target the system-wide scope.
+
+### UI Components:
+*   **Card Title:** ""Platform Agent Registry""
+*   **Actions:**
+    *   `Rename`, `Enable/Disable`.
+    *   `Regenerate Key` (Rotates the system-wide key).
+    *   `Delete`.
+*   **Status Badges:** `Active`, `Expires`.
+
+## 3. Integration Path
+*   Use the existing **Create Agent** flow but route the request to a new admin-only endpoint: `POST /api/admin/platform-agents`.
+*   The resulting key should be tagged in `metadata` as `isPlatformAgent: true`.
+
+## 4. Permissions
+*   By default, Platform Agent keys should have **Zero project access**. 
+*   They are restricted to non-destructive system calls: `GET /health`, `GET /api/agent/me`, and `GET /api/agent/projects/summary`.
+",SPECIFICATION,1,1,2026-04-09T17:22:33.718Z,2026-04-09T17:22:33.718Z
+20,10,VibeMCP: Internal Business Logic Manual,"# Specification: Business Logic Blueprint (Internal Algorithms)
+**Status:** Approved / Tier-Aware Logic
+**Version:** 1.3.0
+**Date:** 2026-04-10
+
+## 1. The Startup Identity Handshake
+The binary MUST NOT assume its capabilities. It must perform a **Pre-flight Identity Check**.
+
+### Logic:
+1.  **Load Key:** Fetch active key from `--config vibe-mcp.toml`.
+2.  **Call /me:** Execute `GET /api/agent/me`.
+3.  **Tier Detection:**
+    *   IF `agent.metadata.isPlatformAgent == true`:
+        *   Set state to `PLATFORM_MODE`.
+        *   Filter available tools to: `query_projects`, `get_lattice_context`, `read_docs`.
+        *   Block all mutation tools at the protocol level.
+    *   IF `agent.metadata.isPlatformAgent == false`:
+        *   Set state to `PROJECT_MODE`.
+        *   Register full SpecKit/Shrimp toolset.
+        *   Cache `delegations` array for project-scoped permission checks.
+
+## 2. Dynamic Registry Management (The add_agent Tool)
+To allow users to add identities via chat without manually editing TOML files.
+
+### The Registration Algorithm:
+1.  **Tool Invoke:** `register_agent(key: String)`.
+2.  **Verify:** Call `/api/agent/me` using the *provided* key.
+3.  **Inspect:** Parse the response for agent name and tier.
+4.  **Persist:** Append the validated identity to `agents` array in `vibe-mcp.toml`.
+5.  **Hash Policy:** Keys MUST NOT be stored in plain text if the environment is shared. Use OS-level secret storage or SHA-256 masking for logs.
+
+## 3. Pre-flight Access Gating (Client-Side)
+The `VibeTaskClient` MUST implement a `check_access(method, path)` method.
+
+*   **Platform Guard:** IF `state == PLATFORM_MODE` and `method != GET`, return `ApiError::Forbidden`.
+*   **Whitelist Guard:** IF `state == PLATFORM_MODE`, verify `path` matches regex patterns in `configuredReadEndpoints`.
+*   **Project Guard:** IF `state == PROJECT_MODE`, verify `projectId` in path exists in the agent's `delegations` array.
+
+## 4. Context Synthesis (One-Call Packet)
+The logic for `get_task_context` remains the ""Zero Token"" source of truth:
+1.  **Instruction Chaining:** Identity Header + Worktree Instruction + Constitution.
+2.  **Annotation Injection:** Harvest `#note` comments from history.
+3.  **Token Budgeting:** Strictly enforce 4000-token limit using adaptive summarization.
+",SPECIFICATION,3,1,2026-04-10T15:38:52.609Z,2026-04-10T16:06:23.804Z
+21,10,Vision: Mission-Driven Lattice,"# Vision: Mission-Driven Lattice (Modular Workflows)
+**Status:** Research Prototype / Post-MVP Vision
+**Date:** 2026-04-10
+**Inspiration:** Spec Kitty ""Doctrine"" System
+
+## 1. Objective
+To transition Vibe Tasks from a ""Software Development Kanban"" into a **Universal Knowledge Work Engine**. By decoupling the state machine from the code and moving it into a ""Mission YAML,"" the platform can support any structured workflow without backend changes.
+
+## 2. The Mission YAML Schema
+Every project will link to a `mission.yaml` (stored in the Hub) that defines the project's ""DNA.""
+
+### Key Sections:
+*   **`states`**: Defines the column names and display order (e.g., `Scoping -> Gathering -> Synthesis`).
+*   **`guards`**: Algorithmic rules for moving between columns (e.g., `check: 'artifact_exists(""SPECIFICATION.md"")'`).
+*   **`artifacts`**: Required vs. Optional documents the agent must produce for each phase.
+*   **`mcp_tools`**: Whitelist of recommended tools for the domain (e.g., `arxiv-search` for Research, `seo-audit` for Marketing).
+*   **`agent_context`**: The ""Base Persona"" instructions injected as the top-level system prompt for the entire project.
+
+## 3. Dynamic Lattice Scaffolding
+When a new project is initialized via `/vibe.init --mission [type]`, the Rust binary will:
+1.  **Parse** the mission YAML.
+2.  **Bulk-create** the columns exactly as defined in the `states` array.
+3.  **Inject** the state-specific persona prompts into each `Column.description`.
+
+## 4. Mission-Aware Tool Filtering
+The Rust MCP server will dynamically register tools based on the mission's `mcp_tools` section.
+*   **Goal:** Protect the LLM from ""Tool Overload."" 
+*   **Result:** A Research Agent only sees tools for reading PDFs and searching citations, while a Software Agent sees tools for tests and code indexing.
+
+## 5. Implementation Roadmap (Phase 4)
+*   [ ] Create `vibe-missions` Hub repository.
+*   [ ] Implement YAML expression evaluator in the Rust binary (`guards` engine).
+*   [ ] Add ""Mission Selector"" to the Vibe UI Project Creation flow.
+",BRAINSTORM,1,1,2026-04-10T16:41:12.169Z,2026-04-10T16:41:12.169Z
+22,10,Vision: OpenFang Swarm Integration,"# Vision: OpenFang Swarm Integration
+**Status:** Architecture Finalized / Ready for Plugin Implementation
+**Version:** 1.0.0
+**Date:** 2026-04-10
+
+## 1. Objective
+To leverage **OpenFang** as the primary runtime environment (The Laborer Swarm) for Vibe Tasks. OpenFang provides the process management, security sandboxing, and channel adapters (IRC/Discord) needed to transform VibeMCP tools into autonomous behaviors.
+
+## 2. Integration Architecture (The ""Bolt-On"" Model)
+
+### A. VibeMCP as a Provider
+The `vibe-mcp-binary` is registered as an external server in `openfang.toml`. 
+*   OpenFang agents gain namespaced tools: `mcp_vibe_get_task_context`, `mcp_vibe_commit_spec`, etc.
+*   This allows any OpenFang agent (regardless of its internal model) to interact with the Kanban Lattice.
+
+### B. Event-Driven Invocation (The Bridge)
+A small background process (Vibe-Relay) monitors the VibeTask WebSocket feed.
+1.  **Event:** Task #58 moved to `Verify`.
+2.  **Relay:** Vibe-Relay emits a `SystemEvent` to the OpenFang Kernel.
+3.  **Trigger:** OpenFang's `TriggerEngine` identifies a match for the ""Critic"" persona.
+4.  **Wake-up:** The `CriticBot` is spawned/activated with the task context as its initial prompt.
+
+### C. The IRC War Room (Observability)
+OpenFang’s IRC channel adapter is used to provide a human-readable ""Lobby"" for the swarm.
+*   **Machine Traffic:** High-speed data (NATS) remains internal to OpenFang.
+*   **Reasoning Traffic:** Bots discuss architectural decisions in the `#vibe-swarm` IRC channel.
+*   **Human Oversight:** The user can monitor the discussion via an IRC-compatible TUI (Vibe-Overwatch).
+
+## 3. Decision Compaction (Zero-Token Efficiency)
+*   Agents use IRC for ""Chatter"" and ""Argumentation.""
+*   Once a consensus is reached, the lead agent uses the `mcp_vibe_commit_artifact` tool to save the **Final Technical Decision** to the VibeTask Knowledge Hub.
+*   This ensures the Cloud Bot (Cursor/Claude) only sees the high-fidelity results, not the messy discussion.
+
+## 4. Resource Allocation
+We use OpenFang's **`openfang-runtime`** to manage local resources:
+*   **ResearchBot:** Assigned high CPU/Memory for code indexing.
+*   **CriticBot:** Assigned low resources for lightweight verification.
+*   **WorkerBot:** Isolated in a `subprocess_sandbox` for safe code execution.
+",BRAINSTORM,1,1,2026-04-10T18:44:54.994Z,2026-04-10T18:44:54.994Z
+23,10,Bug Report: Missing Agent API Endpoints,"# Bug Report: Missing Agent-Scoped API Endpoints (404 Not Found)
+
+**Severity:** High (Blocks Agent Workflow)
+**Component:** Backend (`src/api/routes/agent/*`)
+**Date:** 2026-04-10
+
+## 1. Summary
+During stress testing of the ""Agent-Lean"" protocol on Project 10, several critical endpoints returned `404 Not Found`. While the `unifiedAuthMiddleware` is functioning correctly, the corresponding sub-routers for Documents and Doc-Links have not been registered within the `agentRouter`, and the Project Summary aggregator is missing from the projects sub-router.
+
+## 2. Evidence of Gaps
+
+### A. Missing Project Summary Aggregator
+*   **Endpoint:** `GET /api/agent/projects/summary`
+*   **Behavior:** Returns 404.
+*   **Implementation Note:** This endpoint is required for the ""Push-back"" protocol to allow agents to list project formality levels and metadata without fetching full task lists.
+
+### B. Missing Knowledge Hub (Documents)
+*   **Endpoint:** `GET /api/agent/projects/:projectId/docs`
+*   **Endpoint:** `POST /api/agent/projects/:projectId/docs`
+*   **Behavior:** Returns 404.
+*   **Observation:** The standard `documentsRoutes` are mounted at the root level using `requireAuth`. They need to be exposed under the `/api/agent` prefix using `unifiedAuthMiddleware` and `requireAgentProjectAccess`.
+
+### C. Missing Context Binding (Doc-Links)
+*   **Endpoint:** `POST /api/agent/projects/:projectId/tasks/:taskId/doc-links`
+*   **Behavior:** Returns 404.
+*   **Observation:** Like the documents routes, these are currently restricted to human-only authentication.
+
+## 3. Implementation Checklist for Dev Team
+
+### Permissions Layer (`src/infrastructure/auth/agent-permissions.ts`)
+*   [ ] Add `VIEW_DOCS = 'docs:view'` to `ProjectAction`.
+*   [ ] Add `CREATE_DOC = 'docs:create'` to `ProjectAction`.
+*   [ ] Map both actions in `ACTION_PERMISSIONS` (VIEW_DOCS -> VIEWER, CREATE_DOC -> USER).
+
+### Project Router (`src/api/routes/agent/projects.ts`)
+*   [ ] Implement `GET /summary` to return an array of `{ id, name, formalityLevel, totalTasks, activeSprints }`.
+
+### Agent Router Index (`src/api/routes/agent/index.ts`)
+*   [ ] Register the new `documentsRouter` at `/projects/:projectId/docs`.
+*   [ ] Register the new `docLinksRouter` at `/projects/:projectId/tasks/:taskId/doc-links`.
+
+## 4. Note on Database State
+A desync was discovered where **Project 10** had 0 members, causing `403 Forbidden` for all entities. This was manually patched via `psql` (User 1 restored as Owner), but the backend team should verify why project creation/member-creation transactions might be failing during recent refactors.
+",SPECIFICATION,1,1,2026-04-11T10:52:12.987Z,2026-04-11T10:52:12.987Z

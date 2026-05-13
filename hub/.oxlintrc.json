@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": ["dist/**", "coverage/**", "node_modules/**"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error"
+  },
+  "rules": {
+    "no-async-endpoint-handlers": "off",
+    "unicorn/no-array-sort": "off",
+    "unicorn/no-useless-fallback-in-spread": "off",
+    "typescript/no-extraneous-class": "off",
+    "@typescript-eslint/no-extraneous-class": "off"
+  }
+}

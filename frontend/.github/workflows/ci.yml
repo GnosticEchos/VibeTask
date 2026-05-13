@@ -1,0 +1,35 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: OpenAPI matches Kanban-rewrite (sibling checkout)
+        run: |
+          if [ -f ../Kanban-rewrite/src/openapi.json ]; then npm run openapi:check-sync; else echo 'Skip openapi:check-sync — ../Kanban-rewrite not present'; fi
+
+      - name: Run style lint
+        run: npm run lint:style
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Build
+        env:
+          VITE_API_BASE_URL: http://localhost:3000
+        run: npm run build

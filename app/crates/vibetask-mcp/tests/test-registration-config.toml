@@ -1,0 +1,9 @@
+[server]
+name = "Test Registration Server"
+version = "1.0.0"
+active_agent = "placeholder"
+
+[[agents]]
+name = "placeholder"
+type = "Platform"
+key_hash = "sha256:placeholder"

@@ -1,0 +1,40 @@
+repos:
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: env -u ARGV0 cargo fmt --all --check
+        language: system
+        files: \.rs$
+        pass_filenames: false
+        
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: env -u ARGV0 cargo clippy --all-targets --all-features -- -D warnings
+        language: system
+        files: \.rs$
+        pass_filenames: false
+        
+      - id: cargo-test
+        name: cargo test
+        entry: env -u ARGV0 cargo test --all-features
+        language: system
+        files: \.rs$
+        pass_filenames: false
+        
+      - id: cargo-audit
+        name: cargo audit
+        entry: env -u ARGV0 cargo audit
+        language: system
+        files: Cargo\.(toml|lock)$
+        pass_filenames: false
+        
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files

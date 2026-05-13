@@ -1,0 +1,54 @@
+[workspace]
+members = [
+    "crates/vibetask-core",
+    "crates/vibetask-app",
+    "crates/vibetask-hub-client",
+    "crates/vibetask-tool-catalog",
+    "crates/vibetask-mcp",
+    "crates/vibetask-cli",
+]
+resolver = "2"
+
+[workspace.dependencies]
+# Core MCP and async runtime
+rust-mcp-sdk = { version = "0.9.0", features = ["server", "stdio", "hyper"] }
+rust-mcp-schema = "0.10.0"
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Token counting and AI integration
+tiktoken-rs = "0.5"
+
+# Security dependencies
+keyring = "3.0"  # Updated to latest version
+tempfile = "3.8"
+sha2 = "0.10"
+nanoid = "0.4"
+
+# Business logic crates
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1.10"
+similar = "2.4"
+toml = "0.8"
+
+# Development and testing
+async-trait = "0.1"
+mockall = "0.12"
+wiremock = "0.6"
+assert_matches = "1.5"
+schemars = { version = "0.8", features = ["chrono"] }
+
+# Generated API client dependencies
+url = "2.4"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# OpenAPI code generation (alternative to openapi-generator)
+progenitor = "0.8"
+clap = { version = "4.5", features = ["derive"] }
+comfy-table = "7.1"
+termimad = "0.31"

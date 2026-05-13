@@ -1,0 +1,10 @@
+id,name,description,prefix,ownerId,createdAt,updatedAt
+1,Pierwszy projekt,Opis pierwszego projektu,PIE,1,2025-06-18T13:07:12.940Z,2025-06-18T13:07:12.940Z
+2,Drugi projekt,Opis drugiego projektu,DRU,1,2025-06-18T13:07:12.941Z,2025-06-18T13:07:12.941Z
+4,Changed Board Name,just testing a new board,NEW,1,2025-06-18T13:16:01.400Z,2025-06-21T16:14:54.548Z
+5,New Project Name,Just testing,PRO,1,2025-06-18T13:20:45.982Z,2025-06-21T08:40:06.417Z
+6,James Project 1,This is a project description,JAM,5,2025-06-21T08:03:54.406Z,2025-06-21T08:03:54.406Z
+7,this is a new projec,I will invite members,THI,5,2025-06-21T14:12:51.900Z,2025-06-21T14:12:51.900Z
+8,14234,234423,142,1,2025-06-21T21:00:16.105Z,2025-06-21T21:00:16.105Z
+9,NewBoard,New Board 6,NEW,1,2025-06-22T06:42:01.012Z,2025-06-22T06:42:01.012Z
+10,Spec Task Board,"[PROJECT]: SpecTask | [GOAL]: Validate blended agent methodologies (SpecKit+Shrimp+Kanban) | [STACK]: Rust MCP, TS Backend, Vue FE | [CONSTRAINTS]: No enterprise bloat, API-only integration.",SPEC,1,2026-04-08T10:54:16.236Z,2026-04-08T11:29:31.459Z

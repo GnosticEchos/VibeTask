@@ -1,0 +1,6 @@
+/* Tailwind v4 + DaisyUI: keep in plain CSS so Dart Sass does not process @import "tailwindcss" (deprecated in .scss). */
+@import "tailwindcss";
+
+@plugin "daisyui" {
+  themes: all;
+}

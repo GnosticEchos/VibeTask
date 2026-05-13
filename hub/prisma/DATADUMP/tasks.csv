@@ -1,0 +1,56 @@
+id,name,description,projectId,projectColumnId,assigneeId,createdById,order,identifier,relationMode,relationId,parentId,isContainer,planAccepted,subBoardOutlineColor,createdAt,updatedAt
+1,Pierwszy task R2 test,Opis pierwszego taska2,1,5,1,1,3,PIE-1,,,,false,false,,2025-06-18T13:07:13.189Z,2025-07-12T11:31:28.892Z
+2,Drugi task R1,Opis drugiego taska,1,5,2,1,1,PIE-2,related-to,1,,false,false,,2025-06-18T13:07:13.189Z,2025-07-12T11:31:20.168Z
+3,Rename a task,Opis trzeciego taska,1,3,2,1,1,PIE-3,,,,false,false,,2025-06-18T13:07:13.189Z,2026-04-11T16:55:30.648Z
+4,Czwarty task,Opis backlog taska,1,5,2,1,3,PIE-4,,,,false,false,,2025-06-18T13:07:13.189Z,2025-07-12T11:31:20.221Z
+5,a Piąty task Tweak,Opis piatego taska tweaks,1,2,1,1,5,PIE-5,,,,false,false,,2025-06-18T13:07:13.189Z,2025-07-12T11:31:20.100Z
+6,Szósty task,Opis szóstego taska,1,,1,1,6,PIE-6,,,,false,false,,2025-06-18T13:07:13.190Z,2025-06-18T13:07:13.190Z
+7,Siódmy task,Opis siódmego taska,1,,1,2,7,PIE-7,,,,false,false,,2025-06-18T13:07:13.190Z,2025-06-18T13:07:13.190Z
+8,Ósmy task,Opis ósmego taska,1,,3,3,8,PIE-8,,,,false,false,,2025-06-18T13:07:13.190Z,2025-06-18T13:07:13.190Z
+9,Dziewiąty task,Opis dziewiątego taska,1,,2,3,9,PIE-9,,,,false,false,,2025-06-18T13:07:13.190Z,2025-06-18T13:07:13.190Z
+10,Dziesiąty task 2,Opis dziesiątego taska,1,5,2,1,2,PIE-10,,,,false,false,,2025-06-18T13:07:13.190Z,2025-07-12T12:12:36.830Z
+11,Jedenasty task -altered,Opis jedenastego taska,1,3,1,1,2,PIE-11,,,,false,false,,2025-06-18T13:07:13.190Z,2026-04-11T16:55:30.654Z
+12,Dwunasty task tweaks,Opis dwunastego taska,1,1,1,1,12,PIE-12,,,,false,false,,2025-06-18T13:07:13.190Z,2025-07-12T11:31:19.990Z
+13,Trzynasty task,Opis trzynastego taska Adding a little more to the description,1,2,2,3,1,PIE-13,,,,false,false,,2025-06-18T13:07:13.191Z,2025-07-12T11:31:20.103Z
+14,Czternasty task 1,Opis czternastego taska,1,2,2,3,14,PIE-14,,,,false,false,,2025-06-18T13:07:13.191Z,2025-07-12T11:31:20.102Z
+15,Piętnasty task,Opis piętnastego taska,1,3,2,1,3,PIE-15,,,,false,false,,2025-06-18T13:07:13.191Z,2026-04-11T16:55:30.654Z
+16,Szesnansty task,Opis szesnanstego taska,1,4,1,2,16,PIE-16,,,,false,false,,2025-06-18T13:07:13.191Z,2025-07-12T11:31:20.168Z
+17,Siedemnast task,Opis siedemnastego taska,1,1,3,3,3,PIE-17,,,,false,false,,2025-06-18T13:07:13.191Z,2025-07-12T11:31:19.993Z
+18,Osiemnasty task,Opis dziewietnastego taska,1,3,2,3,0,PIE-18,,,,false,false,,2025-06-18T13:07:13.191Z,2026-04-11T16:55:30.653Z
+19,Dziewietnasty task,Opis dwudziestego taska,1,,2,1,19,PIE-19,,,,false,false,,2025-06-18T13:07:13.191Z,2025-06-18T13:07:13.191Z
+20,Dwudziesty task,Opis dwudziestego pierwszego taska,1,2,1,1,1,PIE-21,,,,false,false,,2025-06-18T13:07:13.191Z,2025-07-12T11:31:19.997Z
+21,Dwudziesty pierwszy task,Opis dwudziestego drugiegi taska,1,1,1,1,22,PIE-22,,,,false,false,,2025-06-18T13:07:13.191Z,2025-07-12T11:31:19.996Z
+22,Dwudziesty drugi task,Opis dwudziestego trzeciego taska,1,,2,3,23,PIE-23,,,,false,false,,2025-06-18T13:07:13.191Z,2025-06-18T13:07:13.191Z
+23,Dwudziesty trzeci task,Opis dwudziestego czwartego taska,1,,2,3,24,PIE-24,,,,false,false,,2025-06-18T13:07:13.192Z,2025-07-10T14:09:12.624Z
+24,Test 1,<p>test <strong>Bold</strong> UnderLine&nbsp;<em>iTAL</em> </p>,2,9,5,1,1,DRU-1,,,,false,false,,2025-06-20T18:35:14.315Z,2025-06-21T18:25:39.614Z
+25,Renaming this task,<p>Description&nbsp;input&nbsp;field&nbsp;default&nbsp;text&nbsp;should&nbsp;be&nbsp;a&nbsp;much&nbsp;lighter&nbsp;color</p>,1,2,2,1,21,PIE-25,related-to,3,,false,false,,2025-06-21T05:31:43.005Z,2025-07-12T11:31:20.101Z
+26,A better Name,<p>3333333333333</p>,1,4,1,1,2,PIE-26,,,,false,false,,2025-06-21T07:28:33.476Z,2025-07-12T11:31:20.165Z
+28,asdf asdf,<p>asdfasdf&nbsp;asdfasdf&nbsp;</p>,2,8,5,1,1,DRU-2,,,,false,false,,2025-06-21T08:40:45.050Z,2025-06-21T18:25:37.875Z
+30,a new task,<p>a&nbsp;new&nbsp;task&nbsp;</p>,6,,,5,22,JAM-1,,,,false,false,,2025-06-21T13:49:38.267Z,2025-06-21T13:49:38.267Z
+31,a name must be 5 letters,<p>a&nbsp;name&nbsp;must&nbsp;be&nbsp;5&nbsp;letters</p>,6,,,5,23,JAM-2,,,,false,false,,2025-06-21T13:53:11.691Z,2025-06-21T13:53:11.691Z
+32,why must a name be 5 letters?,<p>why&nbsp;must&nbsp;a&nbsp;name&nbsp;be&nbsp;5&nbsp;letters?</p>,6,,,5,24,JAM-3,,,,false,false,,2025-06-21T13:53:35.338Z,2025-06-21T13:53:35.338Z
+33,adding a new task,<p>adding&nbsp;a&nbsp;new&nbsp;task</p>,6,22,,5,1,JAM-4,,,,false,false,,2025-06-21T13:56:46.580Z,2025-06-21T14:04:24.770Z
+35,add a task,<p>add&nbsp;a&nbsp;task</p>,4,11,,1,2,NEW-1,,,,false,false,,2025-06-21T16:15:16.555Z,2025-07-13T12:10:59.906Z
+36,add a task 3,<p>add&nbsp;a&nbsp;task&nbsp;44</p>,4,10,,1,1,NEW-2,,,,false,false,,2025-06-21T16:15:30.789Z,2025-07-13T12:10:59.901Z
+37,Nane Original Task,<p><strong><em><u>NewDescriptins</u></em></strong></p>,1,,,1,12,PIE-27,,,,false,false,,2025-06-24T19:27:35.313Z,2025-06-24T19:27:35.313Z
+38,When a new taks,<p><strong>Testing&nbsp;Bold&nbsp;<em>and&nbsp;Italics&nbsp;<u>with&nbsp;underlines&nbsp;with&nbsp;the&nbsp;appropriate&nbsp;keyboard&nbsp;SHORTCUTS&nbsp;:-)</u></em></strong></p>,1,,,1,13,PIE-28,,,,false,false,,2025-06-25T16:43:18.226Z,2025-06-25T16:43:18.226Z
+39,Testing 2,Testing 2,1,,,1,14,PIE-29,,,,false,false,,2025-07-04T15:23:54.278Z,2025-07-12T11:59:12.859Z
+40,QuickTest 2,Quick Test after state change,1,,,1,15,PIE-30,,,,false,false,,2025-07-04T19:25:34.501Z,2025-07-11T20:48:35.483Z
+41,Brand new task,The best description ever.,1,4,3,1,16,PIE-31,,,,false,false,,2025-07-08T16:36:24.687Z,2025-07-12T11:31:20.166Z
+42,Testing 2,This is a description going into a box Status Assignee Relation (optional) pull downs are empty,1,,,1,15,PIE-32,,,,false,false,,2025-07-10T14:16:25.635Z,2025-07-11T20:49:36.827Z
+43,Test new task,with a description,1,,,1,16,PIE-33,,,,false,false,,2025-07-10T14:35:46.611Z,2025-07-10T14:35:46.611Z
+44,Bob is making tasks,Bob is making tasks he can fix it,1,,1,1,17,PIE-34,,,,false,false,,2025-07-10T14:42:42.814Z,2025-07-10T14:42:42.814Z
+45,Previously Undefined,the worlds worst description,1,,2,1,18,PIE-35,related-to,26,,false,false,,2025-07-10T15:32:01.009Z,2025-07-11T20:12:38.891Z
+46,create another task please,create another task please,1,,1,1,19,PIE-36,,,,false,false,,2025-07-10T15:34:38.815Z,2025-07-10T15:34:38.815Z
+47,create another task please2,create another task please,1,,4,1,20,PIE-37,,,,false,false,,2025-07-10T15:34:59.493Z,2025-07-10T15:34:59.493Z
+48,Test Task 1 - updated,This is a test task 1 - updated,4,10,,1,1,NEW-3,,,,false,false,,2025-07-13T12:08:51.221Z,2025-07-13T12:10:59.895Z
+49,Test Task 2 - updated,This is a test task 2 - updated,4,12,,1,2,NEW-4,,,,false,false,,2025-07-13T12:09:05.479Z,2025-07-13T12:10:59.908Z
+50,Test Task 3 - updated,This is a test task 3 - updated,4,12,,1,3,NEW-5,,,,false,false,,2025-07-13T12:09:05.638Z,2025-07-13T12:10:59.911Z
+100,VibeMCP Implementation,Main implementation track for VibeMCP orchestrator,10,52,1,1,0,SPEC-1,,,,true,true,,2026-04-11T13:07:04.945Z,2026-04-11T21:22:45.521Z
+101,Agent API Endpoints,Agent REST API design and implementation,10,51,,1,1,SPEC-2,,,,false,false,,2026-04-11T13:07:04.945Z,2026-04-11T13:07:04.945Z
+102,Rust MCP Binary,Rust MCP binary scaffolding and tooling,10,50,,1,1,SPEC-3,,,,false,false,,2026-04-11T13:07:04.945Z,2026-04-11T13:07:04.945Z
+103,Frontend Integration,Vue frontend integration with backend APIs,10,50,,1,2,SPEC-4,,,,false,false,,2026-04-11T13:07:04.945Z,2026-04-11T13:07:04.945Z
+104,Documentation,Technical documentation and specs,10,52,,1,1,SPEC-5,,,,false,false,,2026-04-11T13:07:04.945Z,2026-04-11T21:19:51.211Z
+110,VibeMCP: Technical Requirements,,10,54,,1,1,SPEC-1-1,spec,100,100,false,false,,2026-04-11T13:07:04.947Z,2026-04-11T13:07:04.947Z
+111,VibeMCP: Architectural Design,,10,54,,1,2,SPEC-1-2,spec,100,100,false,false,,2026-04-11T13:07:04.947Z,2026-04-11T13:07:04.947Z
+112,VibeMCP: Implementation Tasks,,10,52,,1,2,SPEC-1-3,spec,100,100,false,false,,2026-04-11T13:07:04.947Z,2026-04-11T21:19:51.211Z

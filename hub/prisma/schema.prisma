@@ -1,0 +1,400 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  email                   String                   @unique
+  name                    String?
+  surname                 String?
+  password                String?
+  avatarUrl               String?
+  emailVerified           Boolean                  @default(false)
+  image                   String?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  id                      Int                      @id @default(autoincrement())
+  role                    UserRole                 @default(USER)
+  accounts                Account[]
+  adminAuditLogs          AdminAuditLog[]
+  delegationsGranted      AgentDelegation[]        @relation("DelegatedBy")
+  agentLifecycleAuditLogs AgentLifecycleAuditLog[]
+  ownedProjects           Project[]                @relation("ProjectOwner")
+  createdDocuments        ProjectDocument[]
+  projectMemberships      ProjectUser[]
+  sessions                Session[]
+  assignedTasks           Task[]                   @relation("TaskAssignee")
+  createdTasks            Task[]                   @relation("TaskCreator")
+  comments                TaskComment[]            @relation("UserToComment")
+  taskLogs                TaskLog[]
+  settingsLayout          UserSettingsLayout?
+}
+
+model AdminAuditLog {
+  id           Int      @id @default(autoincrement())
+  createdAt    DateTime @default(now())
+  actorUserId  Int
+  action       String   @db.VarChar(64)
+  targetUserId Int?
+  metadata     Json?
+  actor        User     @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([actorUserId])
+}
+
+model UserSettingsLayout {
+  userId    Int      @id
+  payload   Json
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    Int
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  userId                Int
+  id                    Int       @id @default(autoincrement())
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+}
+
+model Verification {
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  id         Int      @id @default(autoincrement())
+
+  @@unique([identifier, value])
+}
+
+model apikey {
+  id                  String    @id @default(cuid())
+  configId            String    @default("default")
+  name                String?
+  prefix              String
+  key                 String    @unique
+  start               String
+  referenceId         String
+  expiresAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  enabled             Boolean   @default(true)
+  metadata            Json?
+  lastUsedAt          DateTime?
+  permissions         Json?
+  rateLimitEnabled    Boolean   @default(true)
+  rateLimitTimeWindow Int       @default(86400000)
+  rateLimitMax        Int       @default(10)
+  requestCount        Int       @default(0)
+  remaining           Int?
+  lastRequest         DateTime?
+  refillInterval      Int?
+  refillAmount        Int?
+  lastRefillAt        DateTime?
+
+  @@index([referenceId])
+  @@index([key])
+  @@index([configId])
+}
+
+model Project {
+  id               Int               @id @default(autoincrement())
+  name             String
+  description      String?
+  prefix           String            @db.VarChar(10)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  ownerId          Int
+  settings         Json?
+  agentDelegations AgentDelegation[]
+  owner            User              @relation("ProjectOwner", fields: [ownerId], references: [id])
+  columns          ProjectColumn[]
+  documents        ProjectDocument[]
+  members          ProjectUser[]
+  tasks            Task[]
+}
+
+model ProjectColumn {
+  id          Int         @id @default(autoincrement())
+  name        String
+  projectId   Int
+  order       Int
+  color       String?
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  roleType    ColumnType? @default(STANDARD)
+  type        String?
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+}
+
+model Task {
+  id                   Int                @id @default(autoincrement())
+  name                 String
+  description          String?
+  projectId            Int
+  projectColumnId      Int?
+  order                Int
+  identifier           String
+  relationMode         String?
+  relationId           Int?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  createdById          Int
+  assigneeId           Int?
+  isContainer          Boolean            @default(false)
+  parentId             Int?
+  planAccepted         Boolean            @default(false)
+  subBoardOutlineColor String?
+  assigneeApiKeyId     String?
+  assignee             User?              @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy            User               @relation("TaskCreator", fields: [createdById], references: [id])
+  parent               Task?              @relation("TaskChildren", fields: [parentId], references: [id])
+  children             Task[]             @relation("TaskChildren")
+  column               ProjectColumn?     @relation(fields: [projectColumnId], references: [id])
+  project              Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  relatedTo            Task?              @relation("TaskRelations", fields: [relationId], references: [id])
+  relationsFrom        Task[]             @relation("TaskRelations")
+  comments             TaskComment[]      @relation("TaskToComment")
+  docLinks             TaskDocumentLink[]
+  taskLogs             TaskLog[]
+  monitorPasses        TaskMonitorPass[]
+}
+
+model ProjectUser {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  role      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    Int
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+}
+
+model TaskComment {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  content   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    Int
+  task      Task     @relation("TaskToComment", fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation("UserToComment", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TaskLog {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  text      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    Int
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AgentDelegation {
+  id                 String               @id @default(cuid())
+  apiKeyId           String
+  projectId          Int
+  permissionLevel    AgentPermissionLevel @default(VIEWER)
+  delegatedById      Int
+  isActive           Boolean              @default(true)
+  revokedAt          DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  allowedMoveRange   Int                  @default(1)
+  delegationMode     DelegationMode       @default(FULL)
+  restrictedColumnId Int?
+  auditLogs          AgentAuditLog[]
+  delegatedBy        User                 @relation("DelegatedBy", fields: [delegatedById], references: [id], onDelete: Cascade)
+  project            Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([apiKeyId, projectId])
+  @@index([apiKeyId])
+  @@index([projectId])
+  @@index([delegatedById])
+}
+
+model AgentAuditLog {
+  id             String          @id @default(cuid())
+  delegationId   String
+  action         String
+  entityType     String?
+  entityId       Int?
+  ipAddress      String?
+  userAgent      String?
+  requestBody    Json?
+  responseStatus Int?
+  createdAt      DateTime        @default(now())
+  delegation     AgentDelegation @relation(fields: [delegationId], references: [id], onDelete: Cascade)
+
+  @@index([delegationId])
+  @@index([createdAt])
+  @@index([action])
+}
+
+model AgentLifecycleAuditLog {
+  id          String   @id @default(cuid())
+  apiKeyId    String
+  action      String
+  performedBy Int
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [performedBy], references: [id], onDelete: Cascade)
+
+  @@index([apiKeyId])
+  @@index([performedBy])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model RateLimitConfig {
+  id              Int      @id @default(autoincrement())
+  name            String
+  endpointPattern String
+  windowMs        Int
+  maxRequests     Int
+  enabled         Boolean  @default(true)
+  description     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([endpointPattern])
+  @@index([enabled])
+}
+
+model ProjectDocument {
+  id            Int                @id @default(autoincrement())
+  projectId     Int
+  title         String
+  content       String             @default("")
+  docType       DocType            @default(SPECIFICATION)
+  version       Int                @default(1)
+  createdById   Int
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  searchVector  Unsupported("tsvector")?
+  createdBy     User               @relation(fields: [createdById], references: [id])
+  project       Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  links         TaskDocumentLink[]
+
+  @@index([projectId])
+  @@index([createdById])
+}
+
+model TaskDocumentLink {
+  id            Int             @id @default(autoincrement())
+  projectId     Int
+  taskId        Int
+  documentId    Int
+  role          DocLinkRole?
+  pinnedVersion Int?
+  createdAt     DateTime        @default(now())
+  createdBy     Int?
+  document      ProjectDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  task          Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, documentId])
+  @@index([projectId])
+  @@index([documentId])
+  @@index([taskId])
+}
+
+model TaskMonitorPass {
+  id       Int       @id @default(autoincrement())
+  taskId   Int
+  columnId Int
+  passed   Boolean   @default(false)
+  passedAt DateTime?
+  task     Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, columnId])
+  @@index([taskId])
+  @@index([columnId])
+}
+
+model UserPreference {
+  userId             Int      @id
+  locale             String?  @default("en") @db.VarChar(10)
+  timezone           String?  @default("UTC") @db.VarChar(80)
+  emailTaskAssigned  Boolean? @default(true)
+  emailTaskCommented Boolean? @default(true)
+  emailDailyDigest   Boolean? @default(false)
+  createdAt          DateTime @default(now()) @db.Timestamp(6)
+  updatedAt          DateTime @default(now()) @db.Timestamp(6)
+}
+
+enum UserRole {
+  USER
+  SUPPORT
+  ADMIN
+}
+
+enum AgentPermissionLevel {
+  VIEWER
+  USER
+}
+
+enum ColumnType {
+  STANDARD
+  AGENT_REVIEW
+  AGENT_ONLY
+  COMPLETE
+}
+
+enum DocType {
+  CONSTITUTION
+  SPECIFICATION
+  BRAINSTORM
+  POST_MORTEM
+  IMPLEMENTATION_PLAN
+  OTHER
+}
+
+enum DocLinkRole {
+  SPECIFICATION
+  IMPLEMENTATION_PLAN
+  REFERENCE
+  ATTACHMENT
+}
+
+enum DelegationMode {
+  FULL
+  COLUMN_BOUND
+}

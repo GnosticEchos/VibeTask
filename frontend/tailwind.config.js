@@ -1,0 +1,58 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./index.html",
+    "./src/**/*.{vue,js,ts,jsx,tsx}"
+  ],
+  important: true,
+  theme: {
+    extend: {},
+  },
+  daisyui: { 
+    themes: [
+      'light', 
+      'dark',
+      'cupcake', 
+      'bumblebee', 
+      'emerald', 
+      'corporate', 
+      'lemonade', 
+      'winter', 
+      'synthwave', 
+      'retro', 
+      'cyberpunk', 
+      'valentine', 
+      'halloween', 
+      'garden', 
+      'forest', 
+      'aqua', 
+      'lofi', 
+      'pastel', 
+      'fantasy', 
+      'wireframe', 
+      'black', 
+      'luxury', 
+      'dracula', 
+      'cmyk', 
+      'autumn', 
+      'business', 
+      'acid', 
+      'night', 
+      'coffee', 
+      'dim', 
+      'nord', 
+      'sunset', 
+      'caramellatte', 
+      'abyss', 
+      'silk',
+      'customlight',
+      'customdark',
+      'random'
+    ],
+    darkTheme: "dracula",
+  },
+  plugins: [
+    require('@headlessui/tailwindcss'),
+    require('daisyui'),
+  ],
+}

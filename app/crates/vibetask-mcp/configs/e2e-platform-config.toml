@@ -1,0 +1,17 @@
+
+[server]
+name = "E2E Test Orchestrator"
+version = "1.0.0"
+active_agent = "E2EPlatformAgent"
+
+[[agents]]
+name = "E2EPlatformAgent"
+type = "Platform"
+key_hash = "sha256:e2e-platform-hash"
+allowed_endpoints = ["/api/agent/projects", "/api/agent/projects/:projectId/docs"]
+effective_endpoints = [
+    "/api/agent/health",
+    "/api/agent/me", 
+    "/api/agent/projects",
+    "/api/agent/projects/:projectId/docs"
+]

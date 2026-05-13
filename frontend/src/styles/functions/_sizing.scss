@@ -1,0 +1,15 @@
+@function calculate-vh($subtract: 0) {
+  @return calc(100vh - #{$subtract}px);
+}
+
+@function calculate-vw($subtract: 0) {
+  @return calc(100vw - #{$subtract}px);
+}
+
+@function rem($pixels) {
+  @return #{$pixels / 16}rem;
+}
+
+@function em($pixels, $context: 16) {
+  @return #{$pixels / $context}em;
+} 

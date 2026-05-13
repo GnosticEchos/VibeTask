@@ -1,0 +1,67 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0" version="27.1.6">
+  <diagram name="Page-1" id="-e_BUAogQmKMkbp0fND9">
+    <mxGraphModel dx="1110" dy="679" grid="1" gridSize="10" guides="0" tooltips="1" connect="0" arrows="0" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="3xdld0_OU71YwabG1hjG-1" value="" style="whiteSpace=wrap;html=1;aspect=fixed;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" parent="1" vertex="1">
+          <mxGeometry x="200" y="160" width="370" height="370" as="geometry" />
+        </mxCell>
+        <mxCell id="3xdld0_OU71YwabG1hjG-2" value="Sidebar" style="rounded=0;whiteSpace=wrap;html=1;direction=south;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" parent="1" vertex="1">
+          <mxGeometry x="200" y="200" width="60" height="330" as="geometry" />
+        </mxCell>
+        <mxCell id="3xdld0_OU71YwabG1hjG-3" value="top menu" style="rounded=1;whiteSpace=wrap;html=1;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" parent="1" vertex="1">
+          <mxGeometry x="200" y="160" width="370" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="3xdld0_OU71YwabG1hjG-4" value="Panel with Scroll listing every tailwind color palette" style="whiteSpace=wrap;html=1;aspect=fixed;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" parent="1" vertex="1">
+          <mxGeometry x="270" y="280" width="130" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="3xdld0_OU71YwabG1hjG-9" value="&lt;div&gt;Light and dark&amp;nbsp;&lt;/div&gt;&lt;div&gt;card that display selection per theme value&lt;/div&gt;" style="whiteSpace=wrap;html=1;aspect=fixed;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" parent="1" vertex="1">
+          <mxGeometry x="420" y="280" width="130" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="3xdld0_OU71YwabG1hjG-10" value="" style="rounded=0;whiteSpace=wrap;html=1;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" parent="1" vertex="1">
+          <mxGeometry x="270" y="420" width="40" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="3xdld0_OU71YwabG1hjG-11" value="" style="rounded=1;whiteSpace=wrap;html=1;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" parent="1" vertex="1">
+          <mxGeometry x="320" y="420" width="40" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="hx--fA_9ZdnH02nPyw-X-2" value="" style="rounded=1;whiteSpace=wrap;html=1;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" parent="1" vertex="1">
+          <mxGeometry x="370" y="420" width="40" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="hx--fA_9ZdnH02nPyw-X-4" value="larger area for view theme colors together" style="rounded=1;whiteSpace=wrap;html=1;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" parent="1" vertex="1">
+          <mxGeometry x="270" y="450" width="280" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="hx--fA_9ZdnH02nPyw-X-6" value="" style="shape=crossbar;whiteSpace=wrap;html=1;rounded=1;direction=south;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" parent="1" vertex="1">
+          <mxGeometry x="470" y="280" width="20" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="hx--fA_9ZdnH02nPyw-X-9" value="t1" style="line;strokeWidth=4;html=1;perimeter=backbonePerimeter;points=[];outlineConnect=0;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" parent="1" vertex="1">
+          <mxGeometry x="265" y="240" width="35" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="hx--fA_9ZdnH02nPyw-X-11" value="t3" style="line;strokeWidth=4;html=1;perimeter=backbonePerimeter;points=[];outlineConnect=0;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" parent="1" vertex="1">
+          <mxGeometry x="355" y="240" width="35" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="hx--fA_9ZdnH02nPyw-X-12" value="t2" style="line;strokeWidth=4;html=1;perimeter=backbonePerimeter;points=[];outlineConnect=0;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" parent="1" vertex="1">
+          <mxGeometry x="312.5" y="240" width="35" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="mrtU-X4LAecMjiRETxQQ-1" value="" style="rounded=1;whiteSpace=wrap;html=1;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" vertex="1" parent="1">
+          <mxGeometry x="510" y="420" width="40" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="mrtU-X4LAecMjiRETxQQ-2" value="" style="rounded=1;whiteSpace=wrap;html=1;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" vertex="1" parent="1">
+          <mxGeometry x="420" y="420" width="40" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="mrtU-X4LAecMjiRETxQQ-3" value="" style="rounded=1;whiteSpace=wrap;html=1;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" vertex="1" parent="1">
+          <mxGeometry x="465" y="420" width="40" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="mrtU-X4LAecMjiRETxQQ-4" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="640" y="380" as="sourcePoint" />
+            <mxPoint x="550" y="430" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mrtU-X4LAecMjiRETxQQ-5" value="Carousel of pre-built themes&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="640" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

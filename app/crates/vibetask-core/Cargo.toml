@@ -1,0 +1,11 @@
+[package]
+name = "vibetask-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = { workspace = true }
+nanoid = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }

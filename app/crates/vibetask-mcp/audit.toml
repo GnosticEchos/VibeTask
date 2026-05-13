@@ -1,0 +1,25 @@
+# Security audit configuration for cargo-audit
+# This file documents known security advisories and our mitigation strategies
+
+[advisories]
+# Unmaintained crates that we cannot easily replace due to ecosystem dependencies
+
+# RUSTSEC-2025-0134: rustls-pemfile is unmaintained
+# Used by: axum-server -> rust-mcp-sdk
+# Mitigation: rust-mcp-sdk is actively maintained and will likely update
+# Risk: Low - only affects TLS certificate parsing in MCP SDK
+# Action: Monitor rust-mcp-sdk updates for rustls-pemfile replacement
+ignore = ["RUSTSEC-2025-0134"]
+
+# RUSTSEC-2026-0097: Rand unsound with custom logger
+# Used by: nanoid (direct) and reqwest (transitive)
+# Mitigation: We don't use custom loggers with rand::rng()
+# Risk: Low - we use standard logging and don't customize rand behavior
+# Action: This is a future advisory (2026) - monitor for fixes
+# Note: Only affects applications that use custom loggers, which we don't
+ignore = ["RUSTSEC-2026-0097"]
+
+[bans]
+# We explicitly allow these crates despite security advisories
+# because they are transitive dependencies we cannot easily replace
+multiple-versions = "allow"

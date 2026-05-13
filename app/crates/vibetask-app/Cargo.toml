@@ -1,0 +1,29 @@
+[package]
+name = "vibetask-app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+async-trait = { workspace = true }
+chrono = { workspace = true }
+keyring = { workspace = true }
+nanoid = { workspace = true }
+reqwest = { workspace = true }
+regex = { workspace = true }
+rust-mcp-sdk = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+similar = { workspace = true }
+tempfile = { workspace = true }
+thiserror = { workspace = true }
+tiktoken-rs = { workspace = true }
+tokio = { workspace = true }
+toml = { workspace = true }
+tracing = { workspace = true }
+url = { workspace = true }
+uuid = { workspace = true }
+vibetask-core = { path = "../vibetask-core" }
+vibetask-hub-client = { path = "../vibetask-hub-client" }
+vibetask-tool-catalog = { path = "../vibetask-tool-catalog" }

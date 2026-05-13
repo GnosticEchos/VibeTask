@@ -1,0 +1,89 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+.agents/
+.claude/
+.crush/
+.kilocode/
+.kiro/skills/
+.qwen/
+.windsurf/
+#Testing log files
+
+vibetask_logs/*
+
+# Cargo lock file (uncomment if this is a library)
+# Cargo.lock
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cursor
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Environment files (contain sensitive keys)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+scripts/__pycache__/
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Dependency directories
+node_modules/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+
+# Temporary files
+*.tmp
+*.temp
+
+# MCP specific ignores
+vibe-mcp.toml
+*.toml.backup.*
+
+# Local-only project notes (not published; see docs/README.md)
+docs/project/
+.gitnexus
+
+# Agent framework dirs
+.gemini/
+CLAUDE.md
+history.txt
+test.toml
+health-test-config.toml
+offline-test-config.toml

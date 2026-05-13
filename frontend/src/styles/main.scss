@@ -1,0 +1,34 @@
+*, *::before, *::after {
+  box-sizing: border-box !important;
+}
+
+/* Base styles */
+html {
+  font-size: 16px;
+}
+
+/* Apply global compatibility fixes */
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+// DataGridVue theming overrides for DaisyUI/Material 3
+:root {
+  /* Grid background and text */
+  --dgv-bg: var(--color-base-100);
+  --dgv-header-bg: var(--color-base-200);
+  --dgv-header-text: var(--color-base-content);
+  --dgv-row-bg: var(--color-base-100);
+  --dgv-row-hover-bg: var(--color-base-200);
+  --dgv-row-selected-bg: var(--color-primary);
+  --dgv-row-selected-text: var(--color-primary-content);
+  --dgv-border-color: var(--color-base-300);
+  --dgv-focus-outline: 2px solid var(--color-primary);
+  --dgv-sort-icon-color: var(--color-primary);
+  --dgv-filter-icon-color: var(--color-secondary);
+  --dgv-pagination-bg: var(--color-base-100);
+  --dgv-pagination-text: var(--color-base-content);
+  --dgv-pagination-active-bg: var(--color-primary);
+  --dgv-pagination-active-text: var(--color-primary-content);
+  --dgv-radius: var(--radius-box);
+}
