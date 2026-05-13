@@ -23,7 +23,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:install": "playwright install chromium",
-    "openapi:sync": "node ../Kanban-rewrite/scripts/sync-openapi-to-frontend.mjs",
+    "openapi:sync": "node ../hub/scripts/sync-openapi-to-frontend.mjs",
     "openapi:check-sync": "node scripts/check-openapi-sync.mjs",
     "openapi:gen-types": "node scripts/generate-openapi-types.mjs"
   },
