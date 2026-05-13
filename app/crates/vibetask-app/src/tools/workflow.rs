@@ -102,7 +102,7 @@ impl ReflectOnWorkTool {
         // STEP 2: Get task context to verify we're in Verify column
         let task_details = ctx
             .api_client
-            .get_task_context(&api_key, project_id, task_num)
+            .get_task_context(api_key, project_id, task_num)
             .await
             .map_err(|e| {
                 tool_error(
@@ -181,7 +181,7 @@ impl ReflectOnWorkTool {
 
         let doc_response = ctx
             .api_client
-            .create_document(&api_key, project_id, &document_data)
+            .create_document(api_key, project_id, &document_data)
             .await
             .map_err(|e| {
                 tool_error(
@@ -198,7 +198,7 @@ impl ReflectOnWorkTool {
         });
 
         ctx.api_client
-            .create_document_link(&api_key, project_id, &link_data)
+            .create_document_link(api_key, project_id, &link_data)
             .await
             .map_err(|e| {
                 tool_error("runtime", format!("Failed to link work log to task: {}", e))
@@ -208,7 +208,7 @@ impl ReflectOnWorkTool {
         let progress_body = agent_progress_json(format!("[WORK_LOG]\n{}", work_log.tldr));
 
         ctx.api_client
-            .update_task_progress(&api_key, project_id, task_num, &progress_body)
+            .update_task_progress(api_key, project_id, task_num, &progress_body)
             .await
             .map_err(|e| tool_error("runtime", format!("Failed to add TLDR comment: {}", e)))?;
 
@@ -387,7 +387,7 @@ impl ApproveCompletionTool {
         // Get task context to verify we're in Verify column
         let task_details = ctx
             .api_client
-            .get_task_context(&api_key, project_id, task_num)
+            .get_task_context(api_key, project_id, task_num)
             .await
             .map_err(|e| {
                 tool_error(
@@ -416,7 +416,7 @@ impl ApproveCompletionTool {
 
         ctx.api_client
             .update_task_progress(
-                &api_key,
+                api_key,
                 project_id,
                 task_num,
                 &agent_progress_json(completion_text),
@@ -443,7 +443,7 @@ impl ApproveCompletionTool {
         let audit_body = agent_progress_json(format!("[COMPLETION_AUDIT]\n{}", audit_comment));
 
         ctx.api_client
-            .update_task_progress(&api_key, project_id, task_num, &audit_body)
+            .update_task_progress(api_key, project_id, task_num, &audit_body)
             .await
             .map_err(|e| {
                 tool_error(
@@ -534,7 +534,7 @@ impl RejectToExecuteTool {
         // Get task context to verify we're in Verify column
         let task_details = ctx
             .api_client
-            .get_task_context(&api_key, project_id, task_num)
+            .get_task_context(api_key, project_id, task_num)
             .await
             .map_err(|e| {
                 tool_error(
@@ -563,7 +563,7 @@ impl RejectToExecuteTool {
 
         ctx.api_client
             .update_task_progress(
-                &api_key,
+                api_key,
                 project_id,
                 task_num,
                 &agent_progress_json(rejection_text),
@@ -606,7 +606,7 @@ impl RejectToExecuteTool {
             agent_progress_json(format!("[REJECTION_FEEDBACK]\n{}", rejection_comment));
 
         ctx.api_client
-            .update_task_progress(&api_key, project_id, task_num, &rejection_body)
+            .update_task_progress(api_key, project_id, task_num, &rejection_body)
             .await
             .map_err(|e| {
                 tool_error("runtime", format!("Failed to add rejection comment: {}", e))
@@ -758,7 +758,7 @@ impl MoveTaskTool {
         ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "move_task")?;
         let api_key = &active.api_key;
 
-        let me_response = ctx.api_client.get_agent_me(&api_key).await.map_err(|e| {
+        let me_response = ctx.api_client.get_agent_me(api_key).await.map_err(|e| {
             tool_error(
                 "runtime",
                 format!(
@@ -784,7 +784,7 @@ impl MoveTaskTool {
 
         ctx.api_client
             .update_agent_task_column_with_precheck(
-                &api_key,
+                api_key,
                 self.project_id,
                 self.task_id,
                 self.target_column_id,
@@ -861,7 +861,7 @@ impl UpdateTaskProgressTool {
         // Get current task context to verify column
         match ctx
             .api_client
-            .get_task_context(&api_key, self.project_id, self.task_id)
+            .get_task_context(api_key, self.project_id, self.task_id)
             .await
         {
             Ok(task_context) => {
@@ -899,7 +899,7 @@ impl UpdateTaskProgressTool {
                 // Update task progress via Hub API
                 match ctx
                     .api_client
-                    .update_task_progress(&api_key, self.project_id, self.task_id, &progress_update)
+                    .update_task_progress(api_key, self.project_id, self.task_id, &progress_update)
                     .await
                 {
                     Ok(_) => {
@@ -1019,7 +1019,7 @@ impl LinkDocumentTool {
         // Get current task context to verify column
         match ctx
             .api_client
-            .get_task_context(&api_key, self.project_id, self.task_id)
+            .get_task_context(api_key, self.project_id, self.task_id)
             .await
         {
             Ok(task_context) => {
@@ -1049,7 +1049,7 @@ impl LinkDocumentTool {
 
                 match ctx
                     .api_client
-                    .create_document(&api_key, self.project_id, &document_payload)
+                    .create_document(api_key, self.project_id, &document_payload)
                     .await
                 {
                     Ok(document_response) => {
@@ -1068,7 +1068,7 @@ impl LinkDocumentTool {
 
                         match ctx
                             .api_client
-                            .create_document_link(&api_key, self.project_id, &link_payload)
+                            .create_document_link(api_key, self.project_id, &link_payload)
                             .await
                         {
                             Ok(_) => {
@@ -1194,7 +1194,7 @@ impl RequestHelpTool {
         // Get current task context to verify column
         match ctx
             .api_client
-            .get_task_context(&api_key, self.project_id, self.task_id)
+            .get_task_context(api_key, self.project_id, self.task_id)
             .await
         {
             Ok(task_context) => {
@@ -1228,7 +1228,7 @@ impl RequestHelpTool {
                 // Create help request via Hub API
                 match ctx
                     .api_client
-                    .create_help_request(&api_key, self.project_id, &help_request)
+                    .create_help_request(api_key, self.project_id, &help_request)
                     .await
                 {
                     Ok(help_response) => {
