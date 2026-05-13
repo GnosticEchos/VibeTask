@@ -72,10 +72,6 @@ Real-time updates use PostgreSQL `LISTEN/NOTIFY` via the `pg-listen` npm package
 | `BETTER_AUTH_URL` | `http://localhost:3000` | | Public-facing URL for OAuth callbacks |
 | `PLATFORM_SESSION_SECRET` | — | ✅ | HMAC secret for agent JWT, `openssl rand -hex 32` |
 | `DEVELOPMENT_FE_ORIGIN` | `http://localhost:5173` | | CORS origins, comma-separated |
-| `GOOGLE_CLIENT_ID` | — | | Google OAuth |
-| `GOOGLE_CLIENT_SECRET` | — | | Google OAuth |
-| `GITHUB_CLIENT_ID` | — | | GitHub OAuth |
-| `GITHUB_CLIENT_SECRET` | — | | GitHub OAuth |
 
 ### Database Scripts
 
