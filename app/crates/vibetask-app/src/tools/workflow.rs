@@ -70,44 +70,9 @@ pub struct IntegrityCheckInput {
 impl ReflectOnWorkTool {
     pub async fn call_tool(&self, ctx: &ToolContext) -> Result<CallToolResult, CallToolError> {
         info!("Starting work reflection for task: {}", self.task_id);
-
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Only Project Agents can use this tool
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error(
-                "runtime",
-                "reflect_on_work is only available for Project Agents".to_string(),
-            ));
-        }
-
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "reflect_on_work")?;
+        let api_key = &active.api_key;
 
         // STEP 1: Parse task_id to extract project_id and task_id
         let parts: Vec<&str> = self.task_id.split('-').collect();
@@ -193,7 +158,7 @@ impl ReflectOnWorkTool {
         let mut work_log = crate::domain::WorkLog::new(
             self.task_id.clone(),
             task_details.name.clone(),
-            active_agent.name.clone(),
+            active.entry.name.clone(),
         );
 
         work_log.work_summary = self.work_summary.clone();
@@ -274,7 +239,7 @@ impl ReflectOnWorkTool {
             {}",
             task_details.name,
             self.task_id,
-            active_agent.name,
+            active.entry.name,
             self.files_touched.len(),
             self.integrity_check.requirements_met,
             self.integrity_check.tests_passing,
@@ -390,44 +355,9 @@ impl ApproveCompletionTool {
                 "Cannot approve completion without confirming integrity checks have passed. Set confirm_integrity_passed to true.".to_string(),
             ));
         }
-
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Only Project Agents can use this tool
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error(
-                "runtime",
-                "approve_completion is only available for Project Agents".to_string(),
-            ));
-        }
-
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "approve_completion")?;
+        let api_key = &active.api_key;
 
         // Parse task_id to extract project_id and task_id
         let parts: Vec<&str> = self.task_id.split('-').collect();
@@ -479,7 +409,7 @@ impl ApproveCompletionTool {
 
         let completion_text = format!(
             "[COMPLETION] status=COMPLETED approvedBy={} approvedAt={} notes={}",
-            active_agent.name,
+            active.entry.name,
             chrono::Utc::now().to_rfc3339(),
             self.completion_notes
         );
@@ -505,7 +435,7 @@ impl ApproveCompletionTool {
             • Work reflection: ✅ Completed\n\
             • Final approval: ✅ Approved\n\n\
             *Task moved to COMPLETED status via MCP Orchestrator*",
-            active_agent.name,
+            active.entry.name,
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
             self.completion_notes
         );
@@ -536,7 +466,7 @@ impl ApproveCompletionTool {
             🏆 Task has been successfully completed and is ready for delivery!",
             task_details.name,
             self.task_id,
-            active_agent.name,
+            active.entry.name,
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
             self.completion_notes
         );
@@ -572,44 +502,9 @@ pub struct RejectToExecuteTool {
 impl RejectToExecuteTool {
     pub async fn call_tool(&self, ctx: &ToolContext) -> Result<CallToolResult, CallToolError> {
         info!("Rejecting task to Execute column: {}", self.task_id);
-
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Only Project Agents can use this tool
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error(
-                "runtime",
-                "reject_to_execute is only available for Project Agents".to_string(),
-            ));
-        }
-
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "reject_to_execute")?;
+        let api_key = &active.api_key;
 
         // Parse task_id to extract project_id and task_id
         let parts: Vec<&str> = self.task_id.split('-').collect();
@@ -661,7 +556,7 @@ impl RejectToExecuteTool {
 
         let rejection_text = format!(
             "[REJECTION] columnName=Execute status=IN_PROGRESS rejectedBy={} rejectedAt={} reason={}",
-            active_agent.name,
+            active.entry.name,
             chrono::Utc::now().to_rfc3339(),
             self.rejection_reason
         );
@@ -701,7 +596,7 @@ impl RejectToExecuteTool {
             • Re-run tests and quality checks\n\
             • Use 'reflect_on_work' when ready for re-verification\n\n\
             *Task moved back to Execute column for additional work*",
-            active_agent.name,
+            active.entry.name,
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
             self.rejection_reason,
             required_actions_list
@@ -735,7 +630,7 @@ impl RejectToExecuteTool {
             • Use 'reflect_on_work' when ready for re-verification",
             task_details.name,
             self.task_id,
-            active_agent.name,
+            active.entry.name,
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
             self.rejection_reason,
             self.required_actions.len(),
@@ -771,36 +666,17 @@ pub struct SetWorkflowContextTool {
 
 impl SetWorkflowContextTool {
     pub async fn call_tool(&self, ctx: &ToolContext) -> Result<CallToolResult, CallToolError> {
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "set_workflow_context")?;
 
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error(
-                "runtime",
-                "set_workflow_context is only available for Project Agents".to_string(),
-            ));
-        }
-
-        if let Some(projects) = &active_agent.projects {
+        if let Some(projects) = &active.entry.projects {
             if !projects.contains(&self.project_id) {
                 return Err(tool_error(
                     "runtime",
                     format!(
                         "Project {} is not delegated to agent '{}'. Delegated projects: {}",
                         self.project_id,
-                        active_agent.name,
+                        active.entry.name,
                         projects
                             .iter()
                             .map(std::string::ToString::to_string)
@@ -878,46 +754,16 @@ pub struct MoveTaskTool {
 
 impl MoveTaskTool {
     pub async fn call_tool(&self, ctx: &ToolContext) -> Result<CallToolResult, CallToolError> {
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error(
-                "runtime",
-                "move_task is only available for Project Agents".to_string(),
-            ));
-        }
-
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "move_task")?;
+        let api_key = &active.api_key;
 
         let me_response = ctx.api_client.get_agent_me(&api_key).await.map_err(|e| {
             tool_error(
                 "runtime",
                 format!(
                     "Failed to verify active agent '{}' with Hub: {}",
-                    active_agent.name, e
+                    active.entry.name, e
                 ),
             )
         })?;
@@ -930,7 +776,7 @@ impl MoveTaskTool {
                     "runtime",
                     format!(
                         "Agent '{}' has no delegation for project {}",
-                        active_agent.name, self.project_id
+                        active.entry.name, self.project_id
                     ),
                 )
             })?
@@ -998,44 +844,9 @@ impl UpdateTaskProgressTool {
             self.task_id, self.project_id
         );
 
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Only Project Agents can use this tool
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error(
-                "runtime",
-                "update_task_progress is only available for Project Agents in Execute column"
-                    .to_string(),
-            ));
-        }
-
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "update_task_progress")?;
+        let api_key = &active.api_key;
 
         // Validate completion percentage
         if let Some(percentage) = self.completion_percentage {
@@ -1079,7 +890,7 @@ impl UpdateTaskProgressTool {
                 }
                 progress_text.push_str(&format!(
                     "\n\nUpdated by: {} at {}",
-                    active_agent.name,
+                    active.entry.name,
                     chrono::Utc::now().to_rfc3339()
                 ));
 
@@ -1121,7 +932,7 @@ impl UpdateTaskProgressTool {
 
                         response.push_str(&format!(
                             "\nUpdated by: {} at {}",
-                            active_agent.name,
+                            active.entry.name,
                             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
                         ));
 
@@ -1188,43 +999,9 @@ impl LinkDocumentTool {
             self.document_title, self.task_id, self.project_id
         );
 
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Only Project Agents can use this tool
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error(
-                "runtime",
-                "link_document is only available for Project Agents in Execute column".to_string(),
-            ));
-        }
-
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "link_document")?;
+        let api_key = &active.api_key;
 
         // Validate document role
         let valid_roles = ["SPEC", "PLAN", "WORK_LOG", "REFERENCE", "NOTES", "RESEARCH"];
@@ -1262,7 +1039,7 @@ impl LinkDocumentTool {
                     "title": self.document_title,
                     "content": self.document_content,
                     "role": self.document_role,
-                    "created_by": active_agent.name,
+                    "created_by": active.entry.name,
                     "created_at": chrono::Utc::now().to_rfc3339(),
                     "metadata": {
                         "linked_task_id": self.task_id,
@@ -1285,7 +1062,7 @@ impl LinkDocumentTool {
                                 "{} document for task execution",
                                 self.document_role
                             )),
-                            "created_by": active_agent.name,
+                            "created_by": active.entry.name,
                             "created_at": chrono::Utc::now().to_rfc3339()
                         });
 
@@ -1314,7 +1091,7 @@ impl LinkDocumentTool {
                                     self.task_id,
                                     self.document_role,
                                     self.document_content.len(),
-                                    active_agent.name,
+                                    active.entry.name,
                                     chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
                                 );
 
@@ -1396,64 +1173,10 @@ impl RequestHelpTool {
             self.task_id, self.project_id, self.help_type
         );
 
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "request_help")?;
+        let api_key = &active.api_key;
 
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Only Project Agents can use this tool
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error(
-                "runtime",
-                "request_help is only available for Project Agents in Execute column".to_string(),
-            ));
-        }
-
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
-
-        // Validate help type
-        let valid_help_types = [
-            "TECHNICAL",
-            "CLARIFICATION",
-            "REVIEW",
-            "BLOCKED",
-            "COLLABORATION",
-        ];
-        if !valid_help_types.contains(&self.help_type.as_str()) {
-            return Err(tool_error(
-                "runtime",
-                format!(
-                    "Invalid help type '{}'. Valid types: {}",
-                    self.help_type,
-                    valid_help_types.join(", ")
-                ),
-            ));
-        }
-
-        // Validate priority if provided
         if let Some(priority) = &self.priority {
             let valid_priorities = ["LOW", "MEDIUM", "HIGH", "URGENT"];
             if !valid_priorities.contains(&priority.as_str()) {
@@ -1492,7 +1215,7 @@ impl RequestHelpTool {
                     "project_id": self.project_id,
                     "help_type": self.help_type,
                     "description": self.help_description,
-                    "requested_by": active_agent.name,
+                    "requested_by": active.entry.name,
                     "requested_from": self.requested_from,
                     "priority": self.priority.as_ref().unwrap_or(&"MEDIUM".to_string()),
                     "context": self.context,
@@ -1531,7 +1254,7 @@ impl RequestHelpTool {
                             self.project_id,
                             self.help_type,
                             self.priority.as_ref().unwrap_or(&"MEDIUM".to_string()),
-                            active_agent.name,
+                            active.entry.name,
                             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
                             self.help_description
                         );
