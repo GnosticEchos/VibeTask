@@ -1,7 +1,6 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-#[allow(dead_code)]
 pub enum InitError {
     #[error("Configuration error: {0}")]
     Config(#[from] ConfigError),
@@ -38,7 +37,6 @@ pub enum ConfigError {
 }
 
 #[derive(Debug, Error)]
-#[allow(dead_code)]
 pub enum AgentError {
     #[error("Agent not found: {0}")]
     NotFound(String),
@@ -63,7 +61,6 @@ pub enum AgentError {
 }
 
 #[derive(Debug, Error)]
-#[allow(dead_code)]
 pub enum ApiError {
     #[error("Invalid input: {0}")]
     InvalidInput(String),
@@ -127,7 +124,6 @@ pub enum ApiError {
 }
 
 #[derive(Debug, Error)]
-#[allow(dead_code)]
 pub enum McpError {
     #[error("Invalid tool call: {0}")]
     InvalidToolCall(String),

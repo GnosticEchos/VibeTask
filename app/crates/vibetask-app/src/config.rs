@@ -86,7 +86,6 @@ fn default_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
-#[allow(dead_code)]
 impl AgentConfig {
     /// Load configuration from TOML file
     pub async fn load<P: AsRef<Path>>(path: P) -> Result<Self, ConfigError> {

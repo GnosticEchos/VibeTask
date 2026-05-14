@@ -1,7 +1,7 @@
 [server]
 name = "Vibe Orchestrator"
 version = "1.0.0"
-active_agent = "McpTesting"
+active_agent = "AgentSmith"
 hub_url = "http://localhost:3000"
 allow_no_fences = false
 

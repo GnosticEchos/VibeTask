@@ -74,30 +74,7 @@ impl ReflectOnWorkTool {
         ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "reflect_on_work")?;
         let api_key = &active.api_key;
 
-        // STEP 1: Parse task_id to extract project_id and task_id
-        let parts: Vec<&str> = self.task_id.split('-').collect();
-        if parts.len() < 2 {
-            return Err(tool_error(
-                "runtime",
-                format!(
-                    "Invalid task ID format: {}. Expected format: project_id-task_id",
-                    self.task_id
-                ),
-            ));
-        }
-
-        let project_id: i32 = parts[0].parse().map_err(|_| {
-            tool_error(
-                "runtime",
-                format!("Cannot parse project ID from task ID: {}", self.task_id),
-            )
-        })?;
-        let task_num: i32 = parts[1].parse().map_err(|_| {
-            tool_error(
-                "runtime",
-                format!("Cannot parse task number from task ID: {}", self.task_id),
-            )
-        })?;
+        let (project_id, task_num) = parse_compound_task_id(&self.task_id)?;
 
         // STEP 2: Get task context to verify we're in Verify column
         let task_details = ctx
@@ -359,30 +336,7 @@ impl ApproveCompletionTool {
         ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "approve_completion")?;
         let api_key = &active.api_key;
 
-        // Parse task_id to extract project_id and task_id
-        let parts: Vec<&str> = self.task_id.split('-').collect();
-        if parts.len() < 2 {
-            return Err(tool_error(
-                "runtime",
-                format!(
-                    "Invalid task ID format: {}. Expected format: project_id-task_id",
-                    self.task_id
-                ),
-            ));
-        }
-
-        let project_id: i32 = parts[0].parse().map_err(|_| {
-            tool_error(
-                "runtime",
-                format!("Cannot parse project ID from task ID: {}", self.task_id),
-            )
-        })?;
-        let task_num: i32 = parts[1].parse().map_err(|_| {
-            tool_error(
-                "runtime",
-                format!("Cannot parse task number from task ID: {}", self.task_id),
-            )
-        })?;
+        let (project_id, task_num) = parse_compound_task_id(&self.task_id)?;
 
         // Get task context to verify we're in Verify column
         let task_details = ctx
@@ -506,30 +460,7 @@ impl RejectToExecuteTool {
         ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "reject_to_execute")?;
         let api_key = &active.api_key;
 
-        // Parse task_id to extract project_id and task_id
-        let parts: Vec<&str> = self.task_id.split('-').collect();
-        if parts.len() < 2 {
-            return Err(tool_error(
-                "runtime",
-                format!(
-                    "Invalid task ID format: {}. Expected format: project_id-task_id",
-                    self.task_id
-                ),
-            ));
-        }
-
-        let project_id: i32 = parts[0].parse().map_err(|_| {
-            tool_error(
-                "runtime",
-                format!("Cannot parse project ID from task ID: {}", self.task_id),
-            )
-        })?;
-        let task_num: i32 = parts[1].parse().map_err(|_| {
-            tool_error(
-                "runtime",
-                format!("Cannot parse task number from task ID: {}", self.task_id),
-            )
-        })?;
+        let (project_id, task_num) = parse_compound_task_id(&self.task_id)?;
 
         // Get task context to verify we're in Verify column
         let task_details = ctx

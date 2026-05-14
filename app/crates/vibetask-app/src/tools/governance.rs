@@ -475,7 +475,6 @@ struct CreateTaskRequest {
 
 /// Response structure for created tasks
 #[derive(Debug, Deserialize, Clone)]
-#[allow(dead_code)]
 struct CreatedTask {
     id: i32,
     name: String,

@@ -9,10 +9,8 @@ use tracing::{info, warn};
 
 /// Atomic configuration writer that ensures configuration integrity
 /// Uses tempfile + rename pattern for atomic writes
-#[allow(dead_code)]
 pub struct AtomicConfigWriter;
 
-#[allow(dead_code)]
 impl AtomicConfigWriter {
     /// Atomic write: create temp file, write content, then rename
     /// If process crashes during write, original config remains intact
@@ -74,10 +72,8 @@ impl AtomicConfigWriter {
 }
 
 /// Secure key management utilities with rotation and validation
-#[allow(dead_code)]
 pub struct SecureKeyManager;
 
-#[allow(dead_code)]
 impl SecureKeyManager {
     const KEYRING_SERVICE: &'static str = "vibetask";
 
@@ -472,7 +468,6 @@ pub enum ExpirationNotification {
     ExpiringThisMonth { days_remaining: i64 },
 }
 
-#[allow(dead_code)]
 impl ExpirationNotification {
     pub fn message(&self) -> String {
         match self {

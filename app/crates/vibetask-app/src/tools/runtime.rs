@@ -90,6 +90,23 @@ impl ToolContext {
     }
 }
 
+/// Parse a compound task ID string ("projectId-taskNum") into its components.
+pub fn parse_compound_task_id(task_id: &str) -> Result<(i32, i32), CallToolError> {
+    let parts: Vec<&str> = task_id.split('-').collect();
+    if parts.len() < 2 {
+        return Err(tool_error("runtime", format!(
+            "Invalid task ID format: {}. Expected format: project_id-task_id", task_id
+        )));
+    }
+    let project_id: i32 = parts[0].parse().map_err(|_| {
+        tool_error("runtime", format!("Cannot parse project ID from task ID: {}", task_id))
+    })?;
+    let task_num: i32 = parts[1].parse().map_err(|_| {
+        tool_error("runtime", format!("Cannot parse task number from task ID: {}", task_id))
+    })?;
+    Ok((project_id, task_num))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
