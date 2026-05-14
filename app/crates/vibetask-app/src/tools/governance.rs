@@ -24,30 +24,8 @@ impl EstimateComplexityTool {
     pub async fn call_tool(&self, ctx: &ToolContext) -> Result<CallToolResult, CallToolError> {
         info!("Starting complexity estimation");
 
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Only Project Agents can use this tool
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error(
-                "runtime",
-                "estimate_complexity is only available for Project Agents".to_string(),
-            ));
-        }
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "estimate_complexity")?;
 
         // Parse implementation plan into tasks
         let mut implementation_plan = crate::domain::ImplementationPlan::new(
@@ -262,43 +240,9 @@ impl SpawnSubBoardTool {
             self.parent_task_id
         );
 
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Only Project Agents can use this tool
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error(
-                "runtime",
-                "spawn_sub_board is only available for Project Agents".to_string(),
-            ));
-        }
-
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "spawn_sub_board")?;
+        let api_key = &active.api_key;
 
         // STEP 1: Get parent task details to validate context and get project ID
         let project_id = if let Some(pid) = self.project_id {
@@ -314,7 +258,7 @@ impl SpawnSubBoardTool {
 
         let parent_task = ctx
             .api_client
-            .get_task_details(&api_key, project_id, self.parent_task_id, &[], true, true)
+            .get_task_details(api_key, project_id, self.parent_task_id, &[], true, true)
             .await
             .map_err(|e| {
                 tool_error(
@@ -443,7 +387,7 @@ impl SpawnSubBoardTool {
             };
 
             match self
-                .create_task_via_api(&api_key, &create_request, ctx)
+                .create_task_via_api(api_key, &create_request, ctx)
                 .await
             {
                 Ok(created_task) => {
@@ -675,45 +619,14 @@ impl CreateTaskTool {
             self.name, self.project_id
         );
 
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error(
-                "runtime",
-                "create_task is only available for Project Agents".to_string(),
-            ));
-        }
-
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "create_task")?;
+        let api_key = &active.api_key;
 
         let column_id = if let Some(cid) = self.column_id {
             cid
         } else {
-            resolve_plan_column_id(ctx, &api_key, self.project_id).await?
+            resolve_plan_column_id(ctx, api_key, self.project_id).await?
         };
 
         let request = CreateTaskRequest {
@@ -727,7 +640,7 @@ impl CreateTaskTool {
             relation_mode: None,
         };
 
-        match create_project_task_via_api(ctx, &api_key, &request).await {
+        match create_project_task_via_api(ctx, api_key, &request).await {
             Ok(created) => Ok(CallToolResult::text_content(vec![TextContent::from(
                 format!(
                     "✅ Task created\n\n\
@@ -786,49 +699,14 @@ impl CommitArtifactTool {
             self.project_id, self.task_id
         );
 
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Only Project Agents can use this tool
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error(
-                "runtime",
-                "commit_artifact is only available for Project Agents (ProjectDelegated type)"
-                    .to_string(),
-            ));
-        }
-
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "commit_artifact")?;
+        let api_key = &active.api_key;
 
         // STEP 1: Verify task exists and get column information
         let task_context = ctx
             .api_client
-            .get_task_context(&api_key, self.project_id, self.task_id)
+            .get_task_context(api_key, self.project_id, self.task_id)
             .await
             .map_err(|e| {
                 tool_error(
@@ -883,7 +761,7 @@ impl CommitArtifactTool {
         // STEP 6: Check if SPECIFICATION.md already exists
         let existing_docs = ctx
             .api_client
-            .get_project_documents(&api_key, self.project_id, &[], None, None, None)
+            .get_project_documents(api_key, self.project_id, &[], None, None, None)
             .await
             .map_err(|e| {
                 tool_error(
@@ -907,7 +785,7 @@ impl CommitArtifactTool {
 
             let updated_doc = ctx
                 .api_client
-                .update_document(&api_key, self.project_id, existing_doc.id, &patch_input)
+                .update_document(api_key, self.project_id, existing_doc.id, &patch_input)
                 .await
                 .map_err(|e| {
                     tool_error(
@@ -924,7 +802,7 @@ impl CommitArtifactTool {
             // STEP 7b: Create new specification
             let new_doc = ctx
                 .api_client
-                .create_document(&api_key, self.project_id, &create_doc_input)
+                .create_document(api_key, self.project_id, &create_doc_input)
                 .await
                 .map_err(|e| {
                     tool_error(
@@ -1039,47 +917,14 @@ impl RequestArchitectureReviewTool {
             self.project_id, self.task_id
         );
 
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Only Project Agents can use this tool
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error("runtime", 
-                "request_architecture_review is only available for Project Agents (ProjectDelegated type)".to_string(),
-            ));
-        }
-
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "request_architecture_review")?;
+        let api_key = &active.api_key;
 
         // STEP 1: Verify task exists and get column information
         let task_context = ctx
             .api_client
-            .get_task_context(&api_key, self.project_id, self.task_id)
+            .get_task_context(api_key, self.project_id, self.task_id)
             .await
             .map_err(|e| {
                 tool_error(
@@ -1139,7 +984,7 @@ impl RequestArchitectureReviewTool {
 
         let document = ctx
             .api_client
-            .create_document(&api_key, self.project_id, &create_doc_input)
+            .create_document(api_key, self.project_id, &create_doc_input)
             .await
             .map_err(|e| {
                 tool_error(
@@ -1290,47 +1135,14 @@ impl ProposeConstitutionAmendmentTool {
             self.project_id, self.task_id
         );
 
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Only Project Agents can use this tool
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error("runtime", 
-                "propose_constitution_amendment is only available for Project Agents (ProjectDelegated type)".to_string(),
-            ));
-        }
-
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "propose_constitution_amendment")?;
+        let api_key = &active.api_key;
 
         // STEP 1: Verify task exists and get column information
         let task_context = ctx
             .api_client
-            .get_task_context(&api_key, self.project_id, self.task_id)
+            .get_task_context(api_key, self.project_id, self.task_id)
             .await
             .map_err(|e| {
                 tool_error(
@@ -1354,7 +1166,7 @@ impl ProposeConstitutionAmendmentTool {
         // STEP 3: Find existing Constitution document
         let existing_docs = ctx
             .api_client
-            .get_project_documents(&api_key, self.project_id, &[], None, None, None)
+            .get_project_documents(api_key, self.project_id, &[], None, None, None)
             .await
             .map_err(|e| {
                 tool_error("runtime", format!("Failed to get project documents: {}", e))
@@ -1394,7 +1206,7 @@ impl ProposeConstitutionAmendmentTool {
 
         let proposal_doc = ctx
             .api_client
-            .create_document(&api_key, self.project_id, &create_doc_input)
+            .create_document(api_key, self.project_id, &create_doc_input)
             .await
             .map_err(|e| {
                 tool_error(
@@ -1553,47 +1365,14 @@ impl ConfirmConstitutionAmendmentTool {
             self.project_id, self.confirmation_code
         );
 
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Only Project Agents can use this tool
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error("runtime", 
-                "confirm_constitution_amendment is only available for Project Agents (ProjectDelegated type)".to_string(),
-            ));
-        }
-
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "confirm_constitution_amendment")?;
+        let api_key = &active.api_key;
 
         // STEP 1: Find the proposal document with matching confirmation code
         let existing_docs = ctx
             .api_client
-            .get_project_documents(&api_key, self.project_id, &[], None, None, None)
+            .get_project_documents(api_key, self.project_id, &[], None, None, None)
             .await
             .map_err(|e| {
                 tool_error("runtime", format!("Failed to get project documents: {}", e))
@@ -1658,7 +1437,7 @@ impl ConfirmConstitutionAmendmentTool {
 
         let updated_constitution = ctx
             .api_client
-            .update_document(&api_key, self.project_id, constitution_doc.id, &patch_input)
+            .update_document(api_key, self.project_id, constitution_doc.id, &patch_input)
             .await
             .map_err(|e| tool_error("runtime", format!("Failed to update Constitution: {}", e)))?;
 
@@ -1682,7 +1461,7 @@ impl ConfirmConstitutionAmendmentTool {
 
         ctx.api_client
             .update_document(
-                &api_key,
+                api_key,
                 self.project_id,
                 proposal_doc.id,
                 &update_proposal_input,
