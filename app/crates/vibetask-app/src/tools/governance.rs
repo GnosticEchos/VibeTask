@@ -830,14 +830,25 @@ impl CommitArtifactTool {
             "📝 Document created. Link to task manually in VibeTask UI if needed.".to_string()
         };
 
-        // STEP 9: Format response
+        let response = Self::format_commit_response(
+            action, &document, should_ratify, specification.content.len(), &linking_note,
+        );
+
+        Ok(CallToolResult::text_content(vec![TextContent::from(
+            response,
+        )]))
+    }
+
+    fn format_commit_response(
+        action: &str, document: &serde_json::Value, should_ratify: bool,
+        content_len: usize, linking_note: &str,
+    ) -> String {
         let ratification_status = if should_ratify {
             "✅ RATIFIED - Ready for transition to Plan column"
         } else {
             "📝 DRAFT - Use ratify: true to mark as [RATIFIED]"
         };
-
-        let response = format!(
+        format!(
             "✅ Specification {} successfully\n\n\
             📋 Document Details:\n\
             • Title: {}\n\
@@ -858,7 +869,7 @@ impl CommitArtifactTool {
                 .and_then(|v: &serde_json::Value| v.as_i64())
                 .unwrap_or(0),
             ratification_status,
-            specification.content.len(),
+            content_len,
             linking_note,
             if should_ratify {
                 "• Task can now transition to 'Plan' column\n\
@@ -868,11 +879,7 @@ impl CommitArtifactTool {
                 • Use commit_artifact with ratify: true when ready for implementation\n\
                 • Only ratified specifications can transition to Plan column"
             }
-        );
-
-        Ok(CallToolResult::text_content(vec![TextContent::from(
-            response,
-        )]))
+        )
     }
 }
 
