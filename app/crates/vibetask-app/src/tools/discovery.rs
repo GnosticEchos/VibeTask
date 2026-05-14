@@ -312,77 +312,9 @@ impl QueryTasksTool {
             .get_project_tasks(api_key, project_id, api_allowed_endpoints)
             .await
         {
-            Ok(tasks_response) => {
-                let agent_type_label = if is_platform_agent {
-                    "Platform Agent"
-                } else {
-                    "Project Agent"
-                };
-                let mut response = format!(
-                    "📋 {} '{}' - Tasks for Project {}\n\n",
-                    agent_type_label, active.entry.name, project_id
-                );
-
-                if tasks_response.data.is_empty() {
-                    response.push_str("No tasks found in this project.\n");
-                } else {
-                    let tasks_to_show = if let Some(limit) = self.limit {
-                        std::cmp::min(limit as usize, tasks_response.data.len())
-                    } else {
-                        tasks_response.data.len()
-                    };
-
-                    response.push_str(&format!(
-                        "Showing {} of {} tasks:\n\n",
-                        tasks_to_show,
-                        tasks_response.data.len()
-                    ));
-
-                    for (i, task) in tasks_response.data.iter().take(tasks_to_show).enumerate() {
-                        response.push_str(&format!(
-                            "{}. {} ({})\n",
-                            i + 1,
-                            task.name,
-                            task.identifier
-                        ));
-                        response.push_str(&format!("   Status: {:?}\n", task.status));
-                        response.push_str(&format!("   Column: {}\n", task.column.name));
-                        if let Some(description) = &task.description {
-                            let truncated_desc = truncate_preview(description, 100);
-                            response.push_str(&format!("   Description: {}\n", truncated_desc));
-                        }
-                        response.push_str(&format!(
-                            "   Created: {}\n",
-                            task.created_at.format("%Y-%m-%d %H:%M:%S UTC")
-                        ));
-                        if let Some(assignee_id) = task.assignee_id {
-                            response.push_str(&format!("   Assignee ID: {}\n", assignee_id));
-                        }
-                        response.push('\n');
-                    }
-
-                    if let Some(pagination) = &tasks_response.pagination {
-                        response.push_str(&format!(
-                            "📄 Pagination: Page {} of {} (Total: {} tasks)\n\n",
-                            pagination.page, pagination.total_pages, pagination.total
-                        ));
-                    }
-                }
-
-                response.push_str("💡 Available actions:\n");
-                response.push_str(
-                    "• Use 'get_context <project_id> <task_id>' to get detailed task context\n",
-                );
-                if is_platform_agent {
-                    response.push_str("• Use a delegated Project Agent for task modifications\n");
-                } else {
-                    response.push_str("• Use task commands to update project workflow state\n");
-                }
-
-                Ok(CallToolResult::text_content(vec![TextContent::from(
-                    response,
-                )]))
-            }
+            Ok(tasks_response) => Self::format_project_task_result(
+                &active.entry.name, is_platform_agent, project_id, &tasks_response, self.limit,
+            ),
             Err(e) => {
                 let agent_type_label = if is_platform_agent {
                     "Platform Agent"
@@ -405,6 +337,84 @@ impl QueryTasksTool {
                 )]))
             }
         }
+    }
+
+    fn format_project_task_result(
+        agent_name: &str,
+        is_platform_agent: bool,
+        project_id: i32,
+        tasks_response: &crate::generated_types::TaskListResponse,
+        limit: Option<i32>,
+    ) -> Result<CallToolResult, CallToolError> {
+        let agent_type_label = if is_platform_agent {
+            "Platform Agent"
+        } else {
+            "Project Agent"
+        };
+        let mut response = format!(
+            "📋 {} '{}' - Tasks for Project {}\n\n",
+            agent_type_label, agent_name, project_id
+        );
+
+        if tasks_response.data.is_empty() {
+            response.push_str("No tasks found in this project.\n");
+        } else {
+            let tasks_to_show = if let Some(limit) = limit {
+                std::cmp::min(limit as usize, tasks_response.data.len())
+            } else {
+                tasks_response.data.len()
+            };
+
+            response.push_str(&format!(
+                "Showing {} of {} tasks:\n\n",
+                tasks_to_show,
+                tasks_response.data.len()
+            ));
+
+            for (i, task) in tasks_response.data.iter().take(tasks_to_show).enumerate() {
+                response.push_str(&format!(
+                    "{}. {} ({})\n",
+                    i + 1,
+                    task.name,
+                    task.identifier
+                ));
+                response.push_str(&format!("   Status: {:?}\n", task.status));
+                response.push_str(&format!("   Column: {}\n", task.column.name));
+                if let Some(description) = &task.description {
+                    let truncated_desc = truncate_preview(description, 100);
+                    response.push_str(&format!("   Description: {}\n", truncated_desc));
+                }
+                response.push_str(&format!(
+                    "   Created: {}\n",
+                    task.created_at.format("%Y-%m-%d %H:%M:%S UTC")
+                ));
+                if let Some(assignee_id) = task.assignee_id {
+                    response.push_str(&format!("   Assignee ID: {}\n", assignee_id));
+                }
+                response.push('\n');
+            }
+
+            if let Some(pagination) = &tasks_response.pagination {
+                response.push_str(&format!(
+                    "📄 Pagination: Page {} of {} (Total: {} tasks)\n\n",
+                    pagination.page, pagination.total_pages, pagination.total
+                ));
+            }
+        }
+
+        response.push_str("💡 Available actions:\n");
+        response.push_str(
+            "• Use 'get_context <project_id> <task_id>' to get detailed task context\n",
+        );
+        if is_platform_agent {
+            response.push_str("• Use a delegated Project Agent for task modifications\n");
+        } else {
+            response.push_str("• Use task commands to update project workflow state\n");
+        }
+
+        Ok(CallToolResult::text_content(vec![TextContent::from(
+            response,
+        )]))
     }
 }
 
