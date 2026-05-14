@@ -34,20 +34,9 @@ impl QueryProjectsTool {
                 .any(|endpoint| endpoint.contains("/api/agent/projects"));
 
             if !has_projects_access {
-                let response = format!(
-                    "❌ Platform Agent '{}' - Insufficient Permissions\n\n\
-                    Required Endpoint: /api/agent/projects\n\
-                    Allowed Endpoints: {}\n\n\
-                    💡 To enable project access:\n\
-                    1. Contact your administrator to configure project access\n\
-                    2. Re-register the agent to update permissions\n\
-                    3. Use agent delegation to access projects through project agents",
-                    active.entry.name,
-                    allowed_endpoints.join(", ")
-                );
-
-                return Ok(ResponseBuilder::text(
-                    response,
+                return Ok(ResponseBuilder::permission_denied(
+                    &active.entry.name, "/api/agent/projects", allowed_endpoints,
+                    "To enable project access:\n1. Contact your administrator to configure project access\n2. Re-register the agent to update permissions\n3. Use agent delegation to access projects through project agents",
                 ));
             }
         }
@@ -207,29 +196,17 @@ impl QueryTasksTool {
                 .any(|endpoint| endpoint.contains("/api/agent/projects"));
 
             if !has_tasks_access {
-                let response = format!(
-                    "❌ Platform Agent '{}' - Insufficient Permissions\n\n\
-                    Required Endpoint: {}\n\
-                    Allowed Endpoints: {}\n\n\
-                    💡 To enable task access:\n\
-                    1. Contact your administrator to configure task access\n\
-                    2. Add '/api/agent/projects/:projectId/tasks' to allowed endpoints\n\
-                    3. Use a delegated Project Agent for project workflow operations",
-                    active.entry.name,
-                    tasks_endpoint_pattern,
-                    allowed_endpoints.join(", ")
-                );
-
-                return Ok(ResponseBuilder::text(
-                    response,
+                return Ok(ResponseBuilder::permission_denied(
+                    &active.entry.name, tasks_endpoint_pattern, allowed_endpoints,
+                    "To enable task access:\n1. Contact your administrator to configure task access\n2. Add '.../projects/:projectId/tasks' to allowed endpoints\n3. Use a delegated Project Agent for project workflow operations",
                 ));
             }
             if global && !has_projects_access {
-                return Ok(CallToolResult::text_content(vec![TextContent::from(format!(
+                return Ok(ResponseBuilder::text(format!(
                     "❌ Platform Agent '{}' - Insufficient Permissions\n\n\
                      Global task listing requires endpoint '/api/agent/projects' in addition to task access.",
                     active.entry.name
-                ))]));
+                )));
             }
         }
 
@@ -663,21 +640,9 @@ impl ReadDocumentsTool {
             });
 
             if !has_docs_access {
-                let response = format!(
-                    "❌ Platform Agent '{}' - Insufficient Permissions\n\n\
-                    Required Endpoint: {}\n\
-                    Allowed Endpoints: {}\n\n\
-                    💡 To enable document access:\n\
-                    1. Contact your administrator to configure document access\n\
-                    2. Add '/api/agent/projects/:projectId/docs' to allowed endpoints\n\
-                    3. Use agent delegation to access documents through project agents",
-                    active.entry.name,
-                    docs_endpoint_pattern,
-                    allowed_endpoints.join(", ")
-                );
-
-                return Ok(ResponseBuilder::text(
-                    response,
+                return Ok(ResponseBuilder::permission_denied(
+                    &active.entry.name, docs_endpoint_pattern, allowed_endpoints,
+                    "To enable document access:\n1. Contact your administrator to configure document access\n2. Add '.../projects/:projectId/docs' to allowed endpoints\n3. Use agent delegation to access documents through project agents",
                 ));
             }
         }
@@ -940,21 +905,9 @@ impl GetContextTool {
             });
 
             if !has_task_access {
-                let response = format!(
-                    "❌ Platform Agent '{}' - Insufficient Permissions\n\n\
-                    Required Endpoint: {}\n\
-                    Allowed Endpoints: {}\n\n\
-                    💡 To enable task context access:\n\
-                    1. Contact your administrator to configure task access\n\
-                    2. Add '/api/agent/projects/:projectId/tasks/:taskId' to allowed endpoints\n\
-                    3. Use a delegated Project Agent for project workflow operations",
-                    active.entry.name,
-                    task_endpoint_pattern,
-                    allowed_endpoints.join(", ")
-                );
-
-                return Ok(ResponseBuilder::text(
-                    response,
+                return Ok(ResponseBuilder::permission_denied(
+                    &active.entry.name, task_endpoint_pattern, allowed_endpoints,
+                    "To enable task context access:\n1. Contact your administrator to configure task access\n2. Add '.../projects/:projectId/tasks/:taskId' to allowed endpoints\n3. Use a delegated Project Agent for project workflow operations",
                 ));
             }
         }

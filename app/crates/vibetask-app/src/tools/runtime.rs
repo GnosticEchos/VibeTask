@@ -125,14 +125,14 @@ impl ResponseBuilder {
         )
     }
 
-    /// Platform agent permission denied.
-    pub fn permission_denied(agent_name: &str, required: &str, allowed: &[String]) -> CallToolResult {
+    /// Platform agent permission denied — with optional tool-specific hint.
+    pub fn permission_denied(agent_name: &str, required: &str, allowed: &[String], hint: &str) -> CallToolResult {
         let allowed_str = if allowed.is_empty() { "None".to_string() } else { allowed.join(", ") };
         Self::text(format!(
             "❌ Platform Agent '{}' - Insufficient Permissions\n\n\
             Required Endpoint: {}\n\
             Allowed Endpoints: {}\n\n\
-            💡 Contact your administrator to configure endpoint access.",
+            💡 {hint}",
             agent_name, required, allowed_str
         ))
     }
