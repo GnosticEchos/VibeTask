@@ -173,9 +173,9 @@ impl EstimateComplexityTool {
         response.push_str("• Ensure each task has clear requirements references\n");
         response.push_str("• Use spawn_sub_board when ready to create tasks\n");
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response,
-        )]))
+        ))
     }
 
     /// Analyze description for complexity indicators
@@ -443,9 +443,9 @@ impl SpawnSubBoardTool {
         response_summary.push_str("• Use task management tools to track progress\n");
         response_summary.push_str("• Monitor complexity and adjust scope as needed\n");
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response_summary,
-        )]))
+        ))
     }
 
     /// Create a task via the Hub API
@@ -834,9 +834,9 @@ impl CommitArtifactTool {
             action, &document, should_ratify, specification.content.len(), &linking_note,
         );
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response,
-        )]))
+        ))
     }
 
     fn format_commit_response(
@@ -1028,9 +1028,9 @@ impl RequestArchitectureReviewTool {
             review_content,
         );
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response,
-        )]))
+        ))
     }
 
     fn generate_review_document(
@@ -1255,9 +1255,9 @@ impl ProposeConstitutionAmendmentTool {
             confirmation_code
         );
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response,
-        )]))
+        ))
     }
 
     fn generate_diff(&self, current: &str, proposed: &str) -> String {
@@ -1507,9 +1507,9 @@ impl ConfirmConstitutionAmendmentTool {
             now.format("%Y-%m-%d %H:%M:%S UTC")
         );
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response,
-        )]))
+        ))
     }
 
     fn extract_expiration_from_proposal(

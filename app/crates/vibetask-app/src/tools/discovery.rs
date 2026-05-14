@@ -46,9 +46,9 @@ impl QueryProjectsTool {
                     allowed_endpoints.join(", ")
                 );
 
-                return Ok(CallToolResult::text_content(vec![TextContent::from(
+                return Ok(ResponseBuilder::text(
                     response,
-                )]));
+                ));
             }
         }
         // Project Agents have full API access, so no permission check needed
@@ -126,9 +126,9 @@ impl QueryProjectsTool {
                 response.push_str("• Use 'read_documents <project_id>' to view project documents (if configured)\n");
                 response.push_str("• Use agent delegation for write operations\n");
 
-                Ok(CallToolResult::text_content(vec![TextContent::from(
+                Ok(ResponseBuilder::text(
                     response,
-                )]))
+                ))
             }
             Err(e) => {
                 let agent_type_label = if is_platform_agent {
@@ -146,9 +146,9 @@ impl QueryProjectsTool {
                     agent_type_label, active.entry.name, e
                 );
 
-                Ok(CallToolResult::text_content(vec![TextContent::from(
+                Ok(ResponseBuilder::text(
                     error_response,
-                )]))
+                ))
             }
         }
     }
@@ -220,9 +220,9 @@ impl QueryTasksTool {
                     allowed_endpoints.join(", ")
                 );
 
-                return Ok(CallToolResult::text_content(vec![TextContent::from(
+                return Ok(ResponseBuilder::text(
                     response,
-                )]));
+                ));
             }
             if global && !has_projects_access {
                 return Ok(CallToolResult::text_content(vec![TextContent::from(format!(
@@ -301,9 +301,9 @@ impl QueryTasksTool {
             }
 
             response.push_str("💡 Tip: set global=false to scope to one project.\n");
-            return Ok(CallToolResult::text_content(vec![TextContent::from(
+            return Ok(ResponseBuilder::text(
                 response,
-            )]));
+            ));
         }
 
         let project_id = self.project_id.expect("validated above");
@@ -332,9 +332,9 @@ impl QueryTasksTool {
                     agent_type_label, active.entry.name, project_id, e
                 );
 
-                Ok(CallToolResult::text_content(vec![TextContent::from(
+                Ok(ResponseBuilder::text(
                     error_response,
-                )]))
+                ))
             }
         }
     }
@@ -412,9 +412,9 @@ impl QueryTasksTool {
             response.push_str("• Use task commands to update project workflow state\n");
         }
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response,
-        )]))
+        ))
     }
 }
 
@@ -583,9 +583,9 @@ impl QueryAggregateTool {
             }
         }
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response,
-        )]))
+        ))
     }
 }
 
@@ -676,9 +676,9 @@ impl ReadDocumentsTool {
                     allowed_endpoints.join(", ")
                 );
 
-                return Ok(CallToolResult::text_content(vec![TextContent::from(
+                return Ok(ResponseBuilder::text(
                     response,
-                )]));
+                ));
             }
         }
         // Project Agents have full API access
@@ -696,9 +696,9 @@ impl ReadDocumentsTool {
                 let Some(normalized) = canonical_document_type(raw) else {
                     let mut response = format!("❌ Invalid document type '{}'.\n\n", raw.trim());
                     response.push_str(available_document_types_help());
-                    return Ok(CallToolResult::text_content(vec![TextContent::from(
+                    return Ok(ResponseBuilder::text(
                         response,
-                    )]));
+                    ));
                 };
                 Some(normalized.to_string())
             }
@@ -776,9 +776,9 @@ impl ReadDocumentsTool {
 
                 response.push_str(available_document_types_help());
 
-                Ok(CallToolResult::text_content(vec![TextContent::from(
+                Ok(ResponseBuilder::text(
                     response,
-                )]))
+                ))
             }
             Err(e) => {
                 let agent_type_label = if is_platform_agent {
@@ -797,9 +797,9 @@ impl ReadDocumentsTool {
                     agent_type_label, active.entry.name, self.project_id, e
                 );
 
-                Ok(CallToolResult::text_content(vec![TextContent::from(
+                Ok(ResponseBuilder::text(
                     error_response,
-                )]))
+                ))
             }
         }
     }
@@ -864,9 +864,9 @@ impl ReadDocumentTool {
                 response.push_str("---\n\n");
                 response.push_str(&doc.content);
 
-                Ok(CallToolResult::text_content(vec![TextContent::from(
+                Ok(ResponseBuilder::text(
                     response,
-                )]))
+                ))
             }
             Err(e) => Err(tool_error(
                 "runtime",
@@ -953,9 +953,9 @@ impl GetContextTool {
                     allowed_endpoints.join(", ")
                 );
 
-                return Ok(CallToolResult::text_content(vec![TextContent::from(
+                return Ok(ResponseBuilder::text(
                     response,
-                )]));
+                ));
             }
         }
 
@@ -1083,9 +1083,9 @@ impl GetContextTool {
                 response.push_str("• Use 'read_documents' to access full document content\n");
                 response.push_str("• Use 'query_tasks' to see related tasks in the project\n");
 
-                Ok(CallToolResult::text_content(vec![TextContent::from(
+                Ok(ResponseBuilder::text(
                     response,
-                )]))
+                ))
             }
             Err(e) => {
                 let agent_type_label = if is_platform_agent {
@@ -1105,9 +1105,9 @@ impl GetContextTool {
                     agent_type_label, active.entry.name, self.project_id, self.task_id, e
                 );
 
-                Ok(CallToolResult::text_content(vec![TextContent::from(
+                Ok(ResponseBuilder::text(
                     error_response,
-                )]))
+                ))
             }
         }
     }
@@ -1239,9 +1239,9 @@ impl CreateKnowledgeDocumentTool {
                     }
                 );
 
-                Ok(CallToolResult::text_content(vec![TextContent::from(
+                Ok(ResponseBuilder::text(
                     response_text,
-                )]))
+                ))
             }
             Err(e) => Err(tool_error(
                 "runtime",
@@ -1408,9 +1408,9 @@ impl AnnotateDocumentTool {
                     annotation.context.complexity_level
                 );
 
-                Ok(CallToolResult::text_content(vec![TextContent::from(
+                Ok(ResponseBuilder::text(
                     response_text,
-                )]))
+                ))
             }
             Err(e) => Err(tool_error(
                 "runtime",
@@ -1496,9 +1496,9 @@ impl PinDocumentVersionTool {
                     chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
                 );
 
-                Ok(CallToolResult::text_content(vec![TextContent::from(
+                Ok(ResponseBuilder::text(
                     response_text,
-                )]))
+                ))
             }
             Err(e) => Err(tool_error(
                 "runtime",
@@ -1659,9 +1659,9 @@ impl QuerySimilarDocumentsTool {
                     response.push_str("• Similar patterns may apply to your current task\n");
                 }
 
-                Ok(CallToolResult::text_content(vec![TextContent::from(
+                Ok(ResponseBuilder::text(
                     response,
-                )]))
+                ))
             }
             Err(e) => Err(tool_error(
                 "runtime",

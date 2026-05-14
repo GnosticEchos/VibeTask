@@ -168,9 +168,9 @@ impl RegisterAgentTool {
             )
         };
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response,
-        )]))
+        ))
     }
 }
 
@@ -357,9 +357,9 @@ impl QueryHealthTool {
             );
         }
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             health_report,
-        )]))
+        ))
     }
 }
 
@@ -528,9 +528,9 @@ impl ListAgentsTool {
             }
         }
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response,
-        )]))
+        ))
     }
 }
 
@@ -686,9 +686,9 @@ impl SwitchAgentTool {
             old_agent, self.agent_name, me_response.agent.id, target_agent.agent_type
         );
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response,
-        )]))
+        ))
     }
 }
 
@@ -886,9 +886,9 @@ impl AgentStatusTool {
             _ => {}
         }
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             status_report,
-        )]))
+        ))
     }
 }
 
@@ -1064,9 +1064,9 @@ impl DelegateAgentTool {
             operation_result
         );
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response,
-        )]))
+        ))
     }
 
     async fn execute_get_status(
@@ -1377,8 +1377,8 @@ impl RemoveAgentTool {
             self.agent_name
         );
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response,
-        )]))
+        ))
     }
 }

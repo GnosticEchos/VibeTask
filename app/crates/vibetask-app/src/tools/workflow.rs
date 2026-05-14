@@ -228,9 +228,9 @@ impl ReflectOnWorkTool {
             truncate_preview(&self.work_summary, 200)
         );
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response,
-        )]))
+        ))
     }
 
     /// Format work log as a structured document
@@ -410,9 +410,9 @@ impl ApproveCompletionTool {
             &task_details.name, &self.task_id, &active.entry.name, &self.completion_notes,
         );
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response,
-        )]))
+        ))
     }
 
     fn format_approval_response(task_name: &str, task_id: &str, agent_name: &str, notes: &str) -> String {
@@ -573,9 +573,9 @@ impl RejectToExecuteTool {
             required_actions_list
         );
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             response,
-        )]))
+        ))
     }
 }
 
@@ -878,9 +878,9 @@ impl UpdateTaskProgressTool {
                             .push_str("• Use 'link_document' to attach relevant documentation\n");
                         response.push_str("• Use 'request_help' if you encounter blockers\n");
 
-                        Ok(CallToolResult::text_content(vec![TextContent::from(
+                        Ok(ResponseBuilder::text(
                             response,
-                        )]))
+                        ))
                     }
                     Err(e) => Err(tool_error(
                         "runtime",
@@ -1031,9 +1031,9 @@ impl LinkDocumentTool {
                                     chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
                                 );
 
-                                Ok(CallToolResult::text_content(vec![TextContent::from(
+                                Ok(ResponseBuilder::text(
                                     response,
-                                )]))
+                                ))
                             }
                             Err(e) => {
                                 // Document was created but linking failed
@@ -1253,9 +1253,9 @@ impl RequestHelpTool {
                             _ => {}
                         }
 
-                        Ok(CallToolResult::text_content(vec![TextContent::from(
+                        Ok(ResponseBuilder::text(
                             response,
-                        )]))
+                        ))
                     }
                     Err(e) => Err(tool_error(
                         "runtime",

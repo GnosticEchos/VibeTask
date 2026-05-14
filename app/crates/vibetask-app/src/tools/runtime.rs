@@ -2,7 +2,7 @@ use crate::atomic_writer::SecureKeyManager;
 use crate::config::{AgentConfig, AgentEntry};
 use crate::tools::tool_error;
 use crate::vibetask_client::VibeTaskClient;
-use rust_mcp_sdk::schema::CallToolError;
+use rust_mcp_sdk::schema::{CallToolError, CallToolResult, TextContent};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -87,6 +87,54 @@ impl ToolContext {
             ));
         }
         Ok(())
+    }
+}
+
+/// Response formatting helpers — eliminate inline format!() duplication across tools.
+pub struct ResponseBuilder;
+
+impl ResponseBuilder {
+    /// Simple text response from a pre-formatted string.
+    pub fn text(msg: impl Into<String>) -> CallToolResult {
+        CallToolResult::text_content(vec![TextContent::from(msg.into())])
+    }
+
+    /// Success response with title, agent, and detail lines.
+    pub fn success(title: &str, agent_name: &str, details: &[(&str, &str)]) -> CallToolResult {
+        let mut msg = format!("✅ {}\n\n👤 Agent: {}\n", title, agent_name);
+        for (k, v) in details {
+            msg.push_str(&format!("   {k}: {v}\n"));
+        }
+        msg.push_str("\n💡 Use 'list_agents' to see all agents.");
+        Self::text(msg)
+    }
+
+    /// Error response with agent context.
+    pub fn error_tool(title: &str, agent_name: &str, message: &str) -> CallToolResult {
+        Self::text(format!(
+            "❌ {} - {}\n\n👤 Agent: {}\n",
+            title, message, agent_name
+        ))
+    }
+
+    /// Task list header with agent context.
+    pub fn task_list_header(label: &str, agent_name: &str, total: usize, shown: usize) -> String {
+        format!(
+            "📋 {} '{}'\n\nShowing {} of {} tasks\n\n",
+            label, agent_name, shown, total
+        )
+    }
+
+    /// Platform agent permission denied.
+    pub fn permission_denied(agent_name: &str, required: &str, allowed: &[String]) -> CallToolResult {
+        let allowed_str = if allowed.is_empty() { "None".to_string() } else { allowed.join(", ") };
+        Self::text(format!(
+            "❌ Platform Agent '{}' - Insufficient Permissions\n\n\
+            Required Endpoint: {}\n\
+            Allowed Endpoints: {}\n\n\
+            💡 Contact your administrator to configure endpoint access.",
+            agent_name, required, allowed_str
+        ))
     }
 }
 
