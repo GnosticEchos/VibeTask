@@ -19,30 +19,13 @@ impl QueryProjectsTool {
     pub async fn call_tool(&self, ctx: &ToolContext) -> Result<CallToolResult, CallToolError> {
         info!("Executing project query");
 
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Both Platform and Project Agents can use this tool, but with different access patterns
-        let is_platform_agent = active_agent.agent_type == "Platform";
+        let active = ctx.resolve_active_agent().await?;
+        let is_platform_agent = active.entry.agent_type == "Platform";
 
         if is_platform_agent {
             // Platform Agent: Check endpoint permissions
             let empty_endpoints = vec![];
-            let allowed_endpoints = active_agent
+            let allowed_endpoints = active.entry
                 .effective_endpoints
                 .as_ref()
                 .unwrap_or(&empty_endpoints);
@@ -59,7 +42,7 @@ impl QueryProjectsTool {
                     1. Contact your administrator to configure project access\n\
                     2. Re-register the agent to update permissions\n\
                     3. Use agent delegation to access projects through project agents",
-                    active_agent.name,
+                    active.entry.name,
                     allowed_endpoints.join(", ")
                 );
 
@@ -70,23 +53,12 @@ impl QueryProjectsTool {
         }
         // Project Agents have full API access, so no permission check needed
 
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let api_key = &active.api_key;
 
-        // Make API call to get projects (Project Agents use empty allowed_endpoints for no filtering)
+        // Make API call to get projects
         let empty_endpoints = vec![];
         let allowed_endpoints = if is_platform_agent {
-            active_agent
+            active.entry
                 .effective_endpoints
                 .as_ref()
                 .unwrap_or(&empty_endpoints)
@@ -96,7 +68,7 @@ impl QueryProjectsTool {
 
         match ctx
             .api_client
-            .get_projects(&api_key, allowed_endpoints)
+            .get_projects(api_key, allowed_endpoints)
             .await
         {
             Ok(projects_response) => {
@@ -107,7 +79,7 @@ impl QueryProjectsTool {
                 };
                 let mut response = format!(
                     "📋 {} '{}' - Projects Query\n\n",
-                    agent_type_label, active_agent.name
+                    agent_type_label, active.entry.name
                 );
 
                 if projects_response.data.is_empty() {
@@ -171,7 +143,7 @@ impl QueryProjectsTool {
                     • Check Hub connectivity with 'query_health'\n\
                     • Verify agent permissions are up to date\n\
                     • Ensure the /api/agent/projects endpoint is accessible",
-                    agent_type_label, active_agent.name, e
+                    agent_type_label, active.entry.name, e
                 );
 
                 Ok(CallToolResult::text_content(vec![TextContent::from(
@@ -215,42 +187,13 @@ impl QueryTasksTool {
             self.project_id, global
         );
 
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Platform Agents need endpoint authorization; Project Agents have delegated project access.
-        let is_platform_agent = active_agent.agent_type == "Platform";
-
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        let is_platform_agent = active.entry.agent_type == "Platform";
+        let api_key = &active.api_key;
 
         // Check if platform agent has access to task/project endpoints.
         let empty_endpoints = vec![];
-        let allowed_endpoints = active_agent
+        let allowed_endpoints = active.entry
             .effective_endpoints
             .as_ref()
             .unwrap_or(&empty_endpoints);
@@ -272,7 +215,7 @@ impl QueryTasksTool {
                     1. Contact your administrator to configure task access\n\
                     2. Add '/api/agent/projects/:projectId/tasks' to allowed endpoints\n\
                     3. Use a delegated Project Agent for project workflow operations",
-                    active_agent.name,
+                    active.entry.name,
                     tasks_endpoint_pattern,
                     allowed_endpoints.join(", ")
                 );
@@ -285,7 +228,7 @@ impl QueryTasksTool {
                 return Ok(CallToolResult::text_content(vec![TextContent::from(format!(
                     "❌ Platform Agent '{}' - Insufficient Permissions\n\n\
                      Global task listing requires endpoint '/api/agent/projects' in addition to task access.",
-                    active_agent.name
+                    active.entry.name
                 ))]));
             }
         }
@@ -308,7 +251,7 @@ impl QueryTasksTool {
         if global {
             let projects_response = ctx
                 .api_client
-                .get_projects(&api_key, api_allowed_endpoints)
+                .get_projects(api_key, api_allowed_endpoints)
                 .await
                 .map_err(|e| {
                     tool_error(
@@ -320,7 +263,7 @@ impl QueryTasksTool {
             for project in &projects_response.data {
                 if let Ok(tasks) = ctx
                     .api_client
-                    .get_project_tasks(&api_key, project.id, api_allowed_endpoints)
+                    .get_project_tasks(api_key, project.id, api_allowed_endpoints)
                     .await
                 {
                     for task in tasks.data {
@@ -338,7 +281,7 @@ impl QueryTasksTool {
                 } else {
                     "Project Agent"
                 },
-                active_agent.name,
+                active.entry.name,
                 shown,
                 total,
                 projects_response.data.len()
@@ -366,7 +309,7 @@ impl QueryTasksTool {
         let project_id = self.project_id.expect("validated above");
         match ctx
             .api_client
-            .get_project_tasks(&api_key, project_id, api_allowed_endpoints)
+            .get_project_tasks(api_key, project_id, api_allowed_endpoints)
             .await
         {
             Ok(tasks_response) => {
@@ -377,7 +320,7 @@ impl QueryTasksTool {
                 };
                 let mut response = format!(
                     "📋 {} '{}' - Tasks for Project {}\n\n",
-                    agent_type_label, active_agent.name, project_id
+                    agent_type_label, active.entry.name, project_id
                 );
 
                 if tasks_response.data.is_empty() {
@@ -454,7 +397,7 @@ impl QueryTasksTool {
                     • Verify the project ID exists and is accessible\n\
                     • Check Hub connectivity with 'query_health' (platform agent)\n\
                     • Ensure the /api/agent/projects/:projectId/tasks endpoint is accessible",
-                    agent_type_label, active_agent.name, project_id, e
+                    agent_type_label, active.entry.name, project_id, e
                 );
 
                 Ok(CallToolResult::text_content(vec![TextContent::from(
@@ -496,47 +439,18 @@ impl QueryAggregateTool {
             return Err(tool_error("runtime", "query cannot be empty".to_string()));
         }
 
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-        if active_agent.agent_type != "ProjectDelegated" {
-            return Err(tool_error(
-                "runtime",
-                "query_aggregate is only available for Project Agents".to_string(),
-            ));
-        }
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "query_aggregate")?;
+        let api_key = &active.api_key;
 
         let context_project = ctx.workflow_context.read().await.current_project_id;
         let scoped_project = self.project_id.or(context_project);
         let limit = self.limit.unwrap_or(10).clamp(1, 50);
 
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
-
         let no_endpoint_filters: Vec<String> = vec![];
         let projects = ctx
             .api_client
-            .get_projects(&api_key, &no_endpoint_filters)
+            .get_projects(api_key, &no_endpoint_filters)
             .await
             .map_err(|e| tool_error("runtime", format!("Failed to list projects: {}", e)))?;
         let filtered_projects: Vec<_> = projects
@@ -558,7 +472,7 @@ impl QueryAggregateTool {
         let task_search = ctx
             .api_client
             .search_tasks(
-                &api_key,
+                api_key,
                 query,
                 scoped_project,
                 Some(1),
@@ -586,7 +500,7 @@ impl QueryAggregateTool {
             if let Ok(docs) = ctx
                 .api_client
                 .get_project_documents(
-                    &api_key,
+                    api_key,
                     project.id,
                     &no_endpoint_filters,
                     Some(1),
@@ -717,42 +631,13 @@ impl ReadDocumentsTool {
     pub async fn call_tool(&self, ctx: &ToolContext) -> Result<CallToolResult, CallToolError> {
         info!("Executing documents query for project {}", self.project_id);
 
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Both Platform and Project Agents can use this tool
-        let is_platform_agent = active_agent.agent_type == "Platform";
-
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        let is_platform_agent = active.entry.agent_type == "Platform";
+        let api_key = &active.api_key;
 
         // Check if agent has access to project documents endpoint
         let empty_endpoints = vec![];
-        let allowed_endpoints = active_agent
+        let allowed_endpoints = active.entry
             .effective_endpoints
             .as_ref()
             .unwrap_or(&empty_endpoints);
@@ -776,7 +661,7 @@ impl ReadDocumentsTool {
                     1. Contact your administrator to configure document access\n\
                     2. Add '/api/agent/projects/:projectId/docs' to allowed endpoints\n\
                     3. Use agent delegation to access documents through project agents",
-                    active_agent.name,
+                    active.entry.name,
                     docs_endpoint_pattern,
                     allowed_endpoints.join(", ")
                 );
@@ -813,7 +698,7 @@ impl ReadDocumentsTool {
         match ctx
             .api_client
             .get_project_documents(
-                &api_key,
+                api_key,
                 self.project_id,
                 api_call_allowed_endpoints,
                 None, // page
@@ -830,7 +715,7 @@ impl ReadDocumentsTool {
                 };
                 let mut response = format!(
                     "📚 {} '{}' - Documents for Project {}\n\n",
-                    agent_type_label, active_agent.name, self.project_id
+                    agent_type_label, active.entry.name, self.project_id
                 );
 
                 if let Some(doc_type) = &normalized_doc_type {
@@ -899,7 +784,7 @@ impl ReadDocumentsTool {
                     • Verify the project ID exists and is accessible\n\
                     • Check Hub connectivity with 'query_health'\n\
                     • Ensure the /api/agent/projects/:projectId/docs endpoint is configured",
-                    agent_type_label, active_agent.name, self.project_id, e
+                    agent_type_label, active.entry.name, self.project_id, e
                 );
 
                 Ok(CallToolResult::text_content(vec![TextContent::from(
@@ -937,39 +822,13 @@ impl ReadDocumentTool {
             self.doc_id, self.project_id
         );
 
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        let is_platform_agent = active_agent.agent_type == "Platform";
-
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        let is_platform_agent = active.entry.agent_type == "Platform";
+        let api_key = &active.api_key;
 
         let empty_endpoints = vec![];
         let allowed_endpoints = if is_platform_agent {
-            active_agent
+            active.entry
                 .effective_endpoints
                 .as_ref()
                 .unwrap_or(&empty_endpoints)
@@ -979,7 +838,7 @@ impl ReadDocumentTool {
 
         match ctx
             .api_client
-            .get_document(&api_key, self.project_id, self.doc_id, allowed_endpoints)
+            .get_document(api_key, self.project_id, self.doc_id, allowed_endpoints)
             .await
         {
             Ok(doc) => {
@@ -1048,41 +907,13 @@ impl GetContextTool {
         );
 
         // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Platform Agents require endpoint authorization; Project Agents can access delegated tasks.
-        let is_platform_agent = active_agent.agent_type == "Platform";
-
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        let is_platform_agent = active.entry.agent_type == "Platform";
+        let api_key = &active.api_key;
 
         // Check if platform agent has access to task details endpoint
         let empty_endpoints = vec![];
-        let allowed_endpoints = active_agent
+        let allowed_endpoints = active.entry
             .effective_endpoints
             .as_ref()
             .unwrap_or(&empty_endpoints);
@@ -1107,7 +938,7 @@ impl GetContextTool {
                     1. Contact your administrator to configure task access\n\
                     2. Add '/api/agent/projects/:projectId/tasks/:taskId' to allowed endpoints\n\
                     3. Use a delegated Project Agent for project workflow operations",
-                    active_agent.name,
+                    active.entry.name,
                     task_endpoint_pattern,
                     allowed_endpoints.join(", ")
                 );
@@ -1128,7 +959,7 @@ impl GetContextTool {
         match ctx
             .api_client
             .get_task_details(
-                &api_key,
+                api_key,
                 self.project_id,
                 self.task_id,
                 api_allowed_endpoints,
@@ -1145,7 +976,7 @@ impl GetContextTool {
                 };
                 let mut response = format!(
                     "🎯 {} '{}' - Task Context\n\n",
-                    agent_type_label, active_agent.name
+                    agent_type_label, active.entry.name
                 );
 
                 // Task basic information
@@ -1261,7 +1092,7 @@ impl GetContextTool {
                     • Verify the project and task IDs exist and are accessible\n\
                     • Check Hub connectivity with 'query_health' (platform agent)\n\
                     • Ensure the /api/agent/projects/:projectId/tasks/:taskId endpoint is configured",
-                    agent_type_label, active_agent.name, self.project_id, self.task_id, e
+                    agent_type_label, active.entry.name, self.project_id, self.task_id, e
                 );
 
                 Ok(CallToolResult::text_content(vec![TextContent::from(
@@ -1312,30 +1143,9 @@ impl CreateKnowledgeDocumentTool {
     pub async fn call_tool(&self, ctx: &ToolContext) -> Result<CallToolResult, CallToolError> {
         info!("Creating Knowledge Hub document: {}", self.title);
 
-        // Load configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Only Project Agents can create documents
-        if active_agent.agent_type == "Platform" {
-            return Err(tool_error(
-                "runtime",
-                "create_knowledge_document is only available for Project Agents".to_string(),
-            ));
-        }
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "create_knowledge_document")?;
+        let api_key = &active.api_key;
 
         // Validate document role
         let document_role = match self.role.as_str() {
@@ -1354,26 +1164,13 @@ impl CreateKnowledgeDocumentTool {
             }
         };
 
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
-
         // Create Knowledge Hub document
         let mut knowledge_doc = crate::domain::KnowledgeDocument::new(
             self.title.clone(),
             self.content.clone(),
             document_role,
             self.project_id,
-            active_agent.name.clone(),
+            active.entry.name.clone(),
         );
 
         // Set version if provided
@@ -1392,7 +1189,7 @@ impl CreateKnowledgeDocumentTool {
         // Create document via API
         match ctx
             .api_client
-            .create_knowledge_document(&api_key, self.project_id, &knowledge_doc)
+            .create_knowledge_document(api_key, self.project_id, &knowledge_doc)
             .await
         {
             Ok(response) => {
@@ -1490,30 +1287,9 @@ impl AnnotateDocumentTool {
             self.document_id, self.project_id
         );
 
-        // Load configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Only Project Agents can annotate documents
-        if active_agent.agent_type == "Platform" {
-            return Err(tool_error(
-                "runtime",
-                "annotate_document is only available for Project Agents".to_string(),
-            ));
-        }
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "annotate_document")?;
+        let api_key = &active.api_key;
 
         // Validate annotation type
         let annotation_type = match self.annotation_type.as_str() {
@@ -1551,19 +1327,6 @@ impl AnnotateDocumentTool {
             }
         }
 
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
-
         // Create annotation context
         let context = crate::domain::AnnotationContext {
             task_similarity_score: self.task_similarity_score,
@@ -1577,7 +1340,7 @@ impl AnnotateDocumentTool {
             id: format!("ann_{}", nanoid::nanoid!(8)),
             annotation_type,
             content: self.content.clone(),
-            agent_name: active_agent.name.clone(),
+            agent_name: active.entry.name.clone(),
             created_at: chrono::Utc::now(),
             tags: self.tags.clone(),
             context,
@@ -1586,7 +1349,7 @@ impl AnnotateDocumentTool {
         // Add annotation via API
         match ctx
             .api_client
-            .add_document_annotation(&api_key, self.project_id, self.document_id, &annotation)
+            .add_document_annotation(api_key, self.project_id, self.document_id, &annotation)
             .await
         {
             Ok(_response) => {
@@ -1676,30 +1439,9 @@ impl PinDocumentVersionTool {
             self.version, self.document_id, self.project_id
         );
 
-        // Load configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Only Project Agents can pin document versions
-        if active_agent.agent_type == "Platform" {
-            return Err(tool_error(
-                "runtime",
-                "pin_document_version is only available for Project Agents".to_string(),
-            ));
-        }
+        let active = ctx.resolve_active_agent().await?;
+        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "pin_document_version")?;
+        let api_key = &active.api_key;
 
         // Validate version format (basic semantic versioning)
         let version_regex = regex::Regex::new(r"^\d+\.\d+\.\d+$").map_err(|e| {
@@ -1713,23 +1455,10 @@ impl PinDocumentVersionTool {
             ));
         }
 
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
-
         // Pin document version via API
         match ctx
             .api_client
-            .pin_document_version(&api_key, self.project_id, self.document_id, &self.version)
+            .pin_document_version(api_key, self.project_id, self.document_id, &self.version)
             .await
         {
             Ok(_response) => {
@@ -1753,7 +1482,7 @@ impl PinDocumentVersionTool {
                     self.document_id,
                     self.project_id,
                     self.version,
-                    active_agent.name,
+                    active.entry.name,
                     chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
                 );
 
@@ -1805,30 +1534,13 @@ impl QuerySimilarDocumentsTool {
             self.project_id, self.similarity_threshold
         );
 
-        // Load configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Both Platform and Project Agents can query similar documents
-        let is_platform_agent = active_agent.agent_type == "Platform";
+        let active = ctx.resolve_active_agent().await?;
+        let is_platform_agent = active.entry.agent_type == "Platform";
 
         if is_platform_agent {
             // Platform Agent: Check endpoint permissions
             let empty_endpoints = vec![];
-            let allowed_endpoints = active_agent
+            let allowed_endpoints = active.entry
                 .effective_endpoints
                 .as_ref()
                 .unwrap_or(&empty_endpoints);
@@ -1839,7 +1551,7 @@ impl QuerySimilarDocumentsTool {
             if !has_docs_access {
                 return Err(tool_error("runtime", format!(
                     "Platform Agent '{}' lacks document access permissions. Required endpoint: /api/agent/projects/:projectId/docs",
-                    active_agent.name
+                    active.entry.name
                 )));
             }
         }
@@ -1862,23 +1574,12 @@ impl QuerySimilarDocumentsTool {
             ));
         }
 
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let api_key = &active.api_key;
 
         // Get allowed endpoints for Platform Agents
         let empty_endpoints = vec![];
         let allowed_endpoints = if is_platform_agent {
-            active_agent
+            active.entry
                 .effective_endpoints
                 .as_ref()
                 .unwrap_or(&empty_endpoints)
@@ -1890,7 +1591,7 @@ impl QuerySimilarDocumentsTool {
         match ctx
             .api_client
             .get_similar_documents(
-                &api_key,
+                api_key,
                 self.project_id,
                 &self.reference_content,
                 threshold,
