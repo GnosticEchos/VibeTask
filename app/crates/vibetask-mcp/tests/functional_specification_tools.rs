@@ -445,7 +445,7 @@ async fn test_platform_agent_tool_restriction() {
     let error = result.unwrap_err();
     assert!(error
         .to_string()
-        .contains("only available for Project Agents"));
+        .contains("is only available for ProjectDelegated Agents"));
 }
 
 #[tokio::test]
