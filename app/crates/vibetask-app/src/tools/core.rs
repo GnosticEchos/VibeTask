@@ -193,44 +193,17 @@ impl QueryHealthTool {
     pub async fn call_tool(&self, ctx: &ToolContext) -> Result<CallToolResult, CallToolError> {
         info!("Executing comprehensive health check");
 
-        // Load current configuration to get active agent
-        let config = AgentConfig::load(&ctx.config_path)
-            .await
-            .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
-
-        let active_agent = config
-            .get_agent(&config.server.active_agent)
-            .ok_or_else(|| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Active agent '{}' not found in configuration",
-                        config.server.active_agent
-                    ),
-                )
-            })?;
-
-        // Get the agent key for API calls
-        let api_key = SecureKeyManager::retrieve_key(&active_agent.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        active_agent.name, e
-                    ),
-                )
-            })?;
+        let active = ctx.resolve_active_agent().await?;
+        let api_key = &active.api_key;
 
         let mut health_report = format!(
             "🔍 Agent '{}' Health Report ({})\n\n",
-            active_agent.name, active_agent.agent_type
+            active.entry.name, active.entry.agent_type
         );
 
         // STEP 1: Test Hub connectivity with /api/agent/health
         health_report.push_str("📡 Hub Connectivity:\n");
-        match ctx.api_client.get_health(&api_key).await {
+        match ctx.api_client.get_health(api_key).await {
             Ok(health_response) => {
                 health_report.push_str(&format!("   ✅ Hub Status: {}\n", health_response.status));
                 if let Some(scope) = &health_response.scope {
@@ -250,7 +223,7 @@ impl QueryHealthTool {
 
         // STEP 2: Validate agent identity and permissions
         health_report.push_str("\n🔐 Agent Identity Validation:\n");
-        match ctx.api_client.get_agent_me(&api_key).await {
+        match ctx.api_client.get_agent_me(api_key).await {
             Ok(me_response) => {
                 health_report.push_str(&format!("   ✅ Agent ID: {}\n", me_response.agent.id));
                 health_report.push_str(&format!("   ✅ Agent Name: {}\n", me_response.agent.name));
@@ -302,8 +275,8 @@ impl QueryHealthTool {
                                 match ctx
                                     .api_client
                                     .get_projects(
-                                        &api_key,
-                                        &me_response.api_allowance.effective_read_endpoints,
+                                    api_key,
+                                    &me_response.api_allowance.effective_read_endpoints,
                                     )
                                     .await
                                 {
@@ -324,13 +297,13 @@ impl QueryHealthTool {
                 health_report.push_str(&format!("   ✅ Config File: {}\n", ctx.config_path));
                 health_report.push_str(&format!(
                     "   ✅ Active Agent: {}\n",
-                    config.server.active_agent
+                    active.config.server.active_agent
                 ));
-                health_report.push_str(&format!("   ✅ Total Agents: {}\n", config.agents.len()));
+                health_report.push_str(&format!("   ✅ Total Agents: {}\n", active.config.agents.len()));
 
                 // Check if stored endpoints match API response
                 let empty_endpoints = vec![];
-                let stored_endpoints = active_agent
+                let stored_endpoints = active.entry
                     .effective_endpoints
                     .as_ref()
                     .unwrap_or(&empty_endpoints);
@@ -374,7 +347,7 @@ impl QueryHealthTool {
         health_report
             .push_str("   • Use 'query_projects' to test project access (if configured)\n");
         health_report.push_str("   • Use 'list_agents' to view all registered agents\n");
-        if active_agent.agent_type == "Platform" {
+        if active.entry.agent_type == "Platform" {
             health_report.push_str(
                 "   • Use agent delegation for write operations through project agents\n",
             );
