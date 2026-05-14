@@ -43,6 +43,7 @@ router.get('/health', (req, res) => {
 });
 
 router.use(async (req, res, next) => {
+  try {
   const auth = (req as any).auth;
   if (!auth || auth.type !== 'agent') {
     return next();
@@ -78,6 +79,9 @@ router.use(async (req, res, next) => {
   }
 
   return next();
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.get('/me', async (req, res) => {
