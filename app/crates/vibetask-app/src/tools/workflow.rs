@@ -406,8 +406,17 @@ impl ApproveCompletionTool {
                 )
             })?;
 
-        // Format success response
-        let response = format!(
+        let response = Self::format_approval_response(
+            &task_details.name, &self.task_id, &active.entry.name, &self.completion_notes,
+        );
+
+        Ok(CallToolResult::text_content(vec![TextContent::from(
+            response,
+        )]))
+    }
+
+    fn format_approval_response(task_name: &str, task_id: &str, agent_name: &str, notes: &str) -> String {
+        format!(
             "✅ Task Completion Approved Successfully\n\n\
             📋 Task: {} ({})\n\
             👤 Approved by: {}\n\
@@ -418,16 +427,12 @@ impl ApproveCompletionTool {
             • Completion audit trail added\n\
             • Provenance tracking recorded\n\n\
             🏆 Task has been successfully completed and is ready for delivery!",
-            task_details.name,
-            self.task_id,
-            active.entry.name,
+            task_name,
+            task_id,
+            agent_name,
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
-            self.completion_notes
-        );
-
-        Ok(CallToolResult::text_content(vec![TextContent::from(
-            response,
-        )]))
+            notes,
+        )
     }
 }
 
