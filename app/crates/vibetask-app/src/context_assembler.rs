@@ -1758,6 +1758,57 @@ fn test_token_budget_remaining_calculation() {
     assert!(result.is_err());
 }
 
+#[allow(dead_code)]
+fn create_test_assembly_request(use_emergency: bool) -> ContextAssemblyRequest {
+    ContextAssemblyRequest {
+        metadata: TaskMetadata {
+            task_id: "task-123".to_string(),
+            title: "Test Task".to_string(),
+            description: "Test task description".to_string(),
+            status: "In Progress".to_string(),
+            column: "Execute".to_string(),
+            assignee: Some("TestAgent".to_string()),
+            project_id: 1,
+            project_name: "Test Project".to_string(),
+            created_at: "2024-01-01T00:00:00Z".to_string(),
+            updated_at: "2024-01-01T00:00:00Z".to_string(),
+            requirements_refs: vec!["1.1".to_string(), "2.3".to_string()],
+        },
+        persona: AgentPersona {
+            name: "Coder".to_string(),
+            role: "Implementation Agent".to_string(),
+            column: "Execute".to_string(),
+            instructions: "Implement features according to specifications".to_string(),
+            capabilities: vec![
+                "Code generation".to_string(),
+                "Testing".to_string(),
+                "Documentation".to_string(),
+            ],
+            constraints: vec![
+                "Follow coding standards".to_string(),
+                "Write comprehensive tests".to_string(),
+            ],
+        },
+        constitution: ConstitutionDocument {
+            version: "1.0.0".to_string(),
+            content: "# Project Constitution\n\nCore principles and governance rules.".to_string(),
+            updated_at: "2024-01-01T00:00:00Z".to_string(),
+        },
+        specification: SpecificationDocument {
+            title: "Feature Specification".to_string(),
+            version: "1.0.0".to_string(),
+            content: "# Feature Specification\n\nDetailed feature requirements and design."
+                .to_string(),
+            state: crate::domain::DocumentState::Ratified,
+            updated_at: "2024-01-01T00:00:00Z".to_string(),
+        },
+        task_context: "API implementation task".to_string(),
+        version_pin: Some("1.0.0".to_string()),
+        use_emergency_budget: use_emergency,
+        bypass_safety: false,
+    }
+}
+
 #[cfg(test)]
 mod knowledge_hub_tests {
     use super::*;
