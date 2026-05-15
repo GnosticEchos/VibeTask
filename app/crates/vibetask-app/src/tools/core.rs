@@ -387,9 +387,9 @@ impl ListAgentsTool {
             .map_err(|e| tool_error("config", format!("Failed to load config: {}", e)))?;
 
         if config.agents.is_empty() {
-            return Ok(CallToolResult::text_content(vec![TextContent::from(
+            return Ok(ResponseBuilder::text(
                 "No agents registered. Use 'register_agent' to add an agent.".to_string(),
-            )]));
+            ));
         }
 
         let mut response = format!(

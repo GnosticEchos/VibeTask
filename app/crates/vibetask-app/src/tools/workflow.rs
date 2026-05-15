@@ -654,15 +654,14 @@ impl SetWorkflowContextTool {
         let column_line = normalized_column
             .as_deref()
             .unwrap_or("None (base tool surface only)");
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             format!(
                 "✅ Workflow context set\n\
 Project: {}\n\
 Column: {}\n\n\
 Run tools/list again to see the updated tool surface for this session.",
                 self.project_id, column_line
-            ),
-        )]))
+            ),))
     }
 }
 
@@ -729,7 +728,7 @@ impl MoveTaskTool {
             .await
             .map_err(|e| tool_error("runtime", format!("Failed to move task: {}", e)))?;
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             format!(
                 "✅ Task moved successfully\n\
 Project: {}\n\
@@ -737,8 +736,7 @@ Task: {}\n\
 Target Column ID: {}\n\
 Delegation Mode: {:?}",
                 self.project_id, self.task_id, self.target_column_id, delegation.delegation_mode
-            ),
-        )]))
+            ),))
     }
 }
 

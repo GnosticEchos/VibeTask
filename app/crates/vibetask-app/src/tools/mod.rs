@@ -2,7 +2,7 @@ use crate::atomic_writer::SecureKeyManager;
 use crate::config::AgentConfig;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
-    schema::{schema_utils::CallToolError, CallToolResult, TextContent},
+    schema::{schema_utils::CallToolError, CallToolResult},
     tool_box,
 };
 use serde::{Deserialize, Serialize};

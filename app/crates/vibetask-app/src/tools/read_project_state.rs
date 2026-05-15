@@ -134,8 +134,8 @@ impl ReadProjectStateTool {
             "summary_line": format!("Project \"{name}\" ({prefix}): {total_task_count} tasks across {col_count} columns"),
         });
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             serde_json::to_string_pretty(&result).unwrap_or_else(|_| "{}".to_string()),
-        )]))
+        ))
     }
 }

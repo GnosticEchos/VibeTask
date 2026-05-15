@@ -59,9 +59,9 @@ impl EstimateComplexityTool {
         };
 
         if tasks_to_analyze.is_empty() {
-            return Ok(CallToolResult::text_content(vec![TextContent::from(
+            return Ok(ResponseBuilder::text(
                 "No tasks found to analyze. Check implementation plan format.".to_string(),
-            )]));
+            ));
         }
 
         response.push_str(&format!("Analyzing {} tasks:\n\n", tasks_to_analyze.len()));
@@ -640,7 +640,7 @@ impl CreateTaskTool {
         };
 
         match create_project_task_via_api(ctx, api_key, &request).await {
-            Ok(created) => Ok(CallToolResult::text_content(vec![TextContent::from(
+            Ok(created) => Ok(ResponseBuilder::text(
                 format!(
                     "✅ Task created\n\n\
                     Project: {}\n\
@@ -655,7 +655,7 @@ impl CreateTaskTool {
                     created.column_id,
                     created.parent_id
                 ),
-            )])),
+            )),
             Err(e) => Err(tool_error(
                 "runtime",
                 format!("Failed to create task: {}", e),

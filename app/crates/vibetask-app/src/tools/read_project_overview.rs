@@ -87,8 +87,8 @@ impl ReadProjectOverviewTool {
             "summary_line": format!("{} projects, {} total tasks", project_count, total_all),
         });
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
+        Ok(ResponseBuilder::text(
             serde_json::to_string_pretty(&output).unwrap_or_else(|_| "{}".to_string()),
-        )]))
+        ))
     }
 }
