@@ -87,7 +87,8 @@ router.use(async (req, res, next) => {
   }
 });
 
-router.get('/me', async (req, res) => {
+router.get('/me', async (req, res, next) => {
+  try {
   const auth = (req as any).auth;
   if (!auth || auth.type !== 'agent') {
     return res.status(403).json({ error: 'Agent authentication required' });
@@ -166,6 +167,9 @@ router.get('/me', async (req, res) => {
       ])),
     },
   });
+  } catch (err) {
+    next(err);
+  }
 });
 
 /**
