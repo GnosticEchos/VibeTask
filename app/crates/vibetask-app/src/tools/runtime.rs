@@ -67,6 +67,9 @@ impl ToolContext {
                 )
             })?;
 
+        debug_assert!(!entry.name.is_empty(), "Active agent name must not be empty");
+        debug_assert!(!api_key.is_empty(), "Retrieved API key must not be empty");
+
         Ok(ActiveAgent {
             config,
             entry,
@@ -80,6 +83,7 @@ impl ToolContext {
         required: &str,
         tool_name: &str,
     ) -> Result<(), CallToolError> {
+        debug_assert!(!tool_name.is_empty(), "Tool name must not be empty");
         if entry.agent_type != required {
             return Err(tool_error(
                 "runtime",
@@ -126,8 +130,17 @@ impl ResponseBuilder {
     }
 
     /// Platform agent permission denied — with optional tool-specific hint.
-    pub fn permission_denied(agent_name: &str, required: &str, allowed: &[String], hint: &str) -> CallToolResult {
-        let allowed_str = if allowed.is_empty() { "None".to_string() } else { allowed.join(", ") };
+    pub fn permission_denied(
+        agent_name: &str,
+        required: &str,
+        allowed: &[String],
+        hint: &str,
+    ) -> CallToolResult {
+        let allowed_str = if allowed.is_empty() {
+            "None".to_string()
+        } else {
+            allowed.join(", ")
+        };
         Self::text(format!(
             "❌ Platform Agent '{}' - Insufficient Permissions\n\n\
             Required Endpoint: {}\n\
@@ -140,17 +153,28 @@ impl ResponseBuilder {
 
 /// Parse a compound task ID string ("projectId-taskNum") into its components.
 pub fn parse_compound_task_id(task_id: &str) -> Result<(i32, i32), CallToolError> {
+    debug_assert!(!task_id.is_empty(), "Task ID must not be empty");
     let parts: Vec<&str> = task_id.split('-').collect();
     if parts.len() < 2 {
-        return Err(tool_error("runtime", format!(
-            "Invalid task ID format: {}. Expected format: project_id-task_id", task_id
-        )));
+        return Err(tool_error(
+            "runtime",
+            format!(
+                "Invalid task ID format: {}. Expected format: project_id-task_id",
+                task_id
+            ),
+        ));
     }
     let project_id: i32 = parts[0].parse().map_err(|_| {
-        tool_error("runtime", format!("Cannot parse project ID from task ID: {}", task_id))
+        tool_error(
+            "runtime",
+            format!("Cannot parse project ID from task ID: {}", task_id),
+        )
     })?;
     let task_num: i32 = parts[1].parse().map_err(|_| {
-        tool_error("runtime", format!("Cannot parse task number from task ID: {}", task_id))
+        tool_error(
+            "runtime",
+            format!("Cannot parse task number from task ID: {}", task_id),
+        )
     })?;
     Ok((project_id, task_num))
 }

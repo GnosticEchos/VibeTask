@@ -25,7 +25,8 @@ impl QueryProjectsTool {
         if is_platform_agent {
             // Platform Agent: Check endpoint permissions
             let empty_endpoints = vec![];
-            let allowed_endpoints = active.entry
+            let allowed_endpoints = active
+                .entry
                 .effective_endpoints
                 .as_ref()
                 .unwrap_or(&empty_endpoints);
@@ -47,7 +48,8 @@ impl QueryProjectsTool {
         // Make API call to get projects
         let empty_endpoints = vec![];
         let allowed_endpoints = if is_platform_agent {
-            active.entry
+            active
+                .entry
                 .effective_endpoints
                 .as_ref()
                 .unwrap_or(&empty_endpoints)
@@ -115,9 +117,7 @@ impl QueryProjectsTool {
                 response.push_str("• Use 'read_documents <project_id>' to view project documents (if configured)\n");
                 response.push_str("• Use agent delegation for write operations\n");
 
-                Ok(ResponseBuilder::text(
-                    response,
-                ))
+                Ok(ResponseBuilder::text(response))
             }
             Err(e) => {
                 let agent_type_label = if is_platform_agent {
@@ -135,9 +135,7 @@ impl QueryProjectsTool {
                     agent_type_label, active.entry.name, e
                 );
 
-                Ok(ResponseBuilder::text(
-                    error_response,
-                ))
+                Ok(ResponseBuilder::text(error_response))
             }
         }
     }
@@ -182,7 +180,8 @@ impl QueryTasksTool {
 
         // Check if platform agent has access to task/project endpoints.
         let empty_endpoints = vec![];
-        let allowed_endpoints = active.entry
+        let allowed_endpoints = active
+            .entry
             .effective_endpoints
             .as_ref()
             .unwrap_or(&empty_endpoints);
@@ -278,9 +277,7 @@ impl QueryTasksTool {
             }
 
             response.push_str("💡 Tip: set global=false to scope to one project.\n");
-            return Ok(ResponseBuilder::text(
-                response,
-            ));
+            return Ok(ResponseBuilder::text(response));
         }
 
         let project_id = self.project_id.expect("validated above");
@@ -290,7 +287,11 @@ impl QueryTasksTool {
             .await
         {
             Ok(tasks_response) => Self::format_project_task_result(
-                &active.entry.name, is_platform_agent, project_id, &tasks_response, self.limit,
+                &active.entry.name,
+                is_platform_agent,
+                project_id,
+                &tasks_response,
+                self.limit,
             ),
             Err(e) => {
                 let agent_type_label = if is_platform_agent {
@@ -309,9 +310,7 @@ impl QueryTasksTool {
                     agent_type_label, active.entry.name, project_id, e
                 );
 
-                Ok(ResponseBuilder::text(
-                    error_response,
-                ))
+                Ok(ResponseBuilder::text(error_response))
             }
         }
     }
@@ -349,12 +348,7 @@ impl QueryTasksTool {
             ));
 
             for (i, task) in tasks_response.data.iter().take(tasks_to_show).enumerate() {
-                response.push_str(&format!(
-                    "{}. {} ({})\n",
-                    i + 1,
-                    task.name,
-                    task.identifier
-                ));
+                response.push_str(&format!("{}. {} ({})\n", i + 1, task.name, task.identifier));
                 response.push_str(&format!("   Status: {:?}\n", task.status));
                 response.push_str(&format!("   Column: {}\n", task.column.name));
                 if let Some(description) = &task.description {
@@ -380,18 +374,15 @@ impl QueryTasksTool {
         }
 
         response.push_str("💡 Available actions:\n");
-        response.push_str(
-            "• Use 'get_context <project_id> <task_id>' to get detailed task context\n",
-        );
+        response
+            .push_str("• Use 'get_context <project_id> <task_id>' to get detailed task context\n");
         if is_platform_agent {
             response.push_str("• Use a delegated Project Agent for task modifications\n");
         } else {
             response.push_str("• Use task commands to update project workflow state\n");
         }
 
-        Ok(ResponseBuilder::text(
-            response,
-        ))
+        Ok(ResponseBuilder::text(response))
     }
 }
 
@@ -560,9 +551,7 @@ impl QueryAggregateTool {
             }
         }
 
-        Ok(ResponseBuilder::text(
-            response,
-        ))
+        Ok(ResponseBuilder::text(response))
     }
 }
 
@@ -624,7 +613,8 @@ impl ReadDocumentsTool {
 
         // Check if agent has access to project documents endpoint
         let empty_endpoints = vec![];
-        let allowed_endpoints = active.entry
+        let allowed_endpoints = active
+            .entry
             .effective_endpoints
             .as_ref()
             .unwrap_or(&empty_endpoints);
@@ -661,9 +651,7 @@ impl ReadDocumentsTool {
                 let Some(normalized) = canonical_document_type(raw) else {
                     let mut response = format!("❌ Invalid document type '{}'.\n\n", raw.trim());
                     response.push_str(available_document_types_help());
-                    return Ok(ResponseBuilder::text(
-                        response,
-                    ));
+                    return Ok(ResponseBuilder::text(response));
                 };
                 Some(normalized.to_string())
             }
@@ -741,9 +729,7 @@ impl ReadDocumentsTool {
 
                 response.push_str(available_document_types_help());
 
-                Ok(ResponseBuilder::text(
-                    response,
-                ))
+                Ok(ResponseBuilder::text(response))
             }
             Err(e) => {
                 let agent_type_label = if is_platform_agent {
@@ -762,9 +748,7 @@ impl ReadDocumentsTool {
                     agent_type_label, active.entry.name, self.project_id, e
                 );
 
-                Ok(ResponseBuilder::text(
-                    error_response,
-                ))
+                Ok(ResponseBuilder::text(error_response))
             }
         }
     }
@@ -803,7 +787,8 @@ impl ReadDocumentTool {
 
         let empty_endpoints = vec![];
         let allowed_endpoints = if is_platform_agent {
-            active.entry
+            active
+                .entry
                 .effective_endpoints
                 .as_ref()
                 .unwrap_or(&empty_endpoints)
@@ -829,9 +814,7 @@ impl ReadDocumentTool {
                 response.push_str("---\n\n");
                 response.push_str(&doc.content);
 
-                Ok(ResponseBuilder::text(
-                    response,
-                ))
+                Ok(ResponseBuilder::text(response))
             }
             Err(e) => Err(tool_error(
                 "runtime",
@@ -888,7 +871,8 @@ impl GetContextTool {
 
         // Check if platform agent has access to task details endpoint
         let empty_endpoints = vec![];
-        let allowed_endpoints = active.entry
+        let allowed_endpoints = active
+            .entry
             .effective_endpoints
             .as_ref()
             .unwrap_or(&empty_endpoints);
@@ -1036,9 +1020,7 @@ impl GetContextTool {
                 response.push_str("• Use 'read_documents' to access full document content\n");
                 response.push_str("• Use 'query_tasks' to see related tasks in the project\n");
 
-                Ok(ResponseBuilder::text(
-                    response,
-                ))
+                Ok(ResponseBuilder::text(response))
             }
             Err(e) => {
                 let agent_type_label = if is_platform_agent {
@@ -1058,9 +1040,7 @@ impl GetContextTool {
                     agent_type_label, active.entry.name, self.project_id, self.task_id, e
                 );
 
-                Ok(ResponseBuilder::text(
-                    error_response,
-                ))
+                Ok(ResponseBuilder::text(error_response))
             }
         }
     }
@@ -1107,7 +1087,11 @@ impl CreateKnowledgeDocumentTool {
         info!("Creating Knowledge Hub document: {}", self.title);
 
         let active = ctx.resolve_active_agent().await?;
-        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "create_knowledge_document")?;
+        ToolContext::require_agent_type(
+            &active.entry,
+            "ProjectDelegated",
+            "create_knowledge_document",
+        )?;
         let api_key = &active.api_key;
 
         // Validate document role
@@ -1192,9 +1176,7 @@ impl CreateKnowledgeDocumentTool {
                     }
                 );
 
-                Ok(ResponseBuilder::text(
-                    response_text,
-                ))
+                Ok(ResponseBuilder::text(response_text))
             }
             Err(e) => Err(tool_error(
                 "runtime",
@@ -1361,9 +1343,7 @@ impl AnnotateDocumentTool {
                     annotation.context.complexity_level
                 );
 
-                Ok(ResponseBuilder::text(
-                    response_text,
-                ))
+                Ok(ResponseBuilder::text(response_text))
             }
             Err(e) => Err(tool_error(
                 "runtime",
@@ -1449,9 +1429,7 @@ impl PinDocumentVersionTool {
                     chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
                 );
 
-                Ok(ResponseBuilder::text(
-                    response_text,
-                ))
+                Ok(ResponseBuilder::text(response_text))
             }
             Err(e) => Err(tool_error(
                 "runtime",
@@ -1503,7 +1481,8 @@ impl QuerySimilarDocumentsTool {
         if is_platform_agent {
             // Platform Agent: Check endpoint permissions
             let empty_endpoints = vec![];
-            let allowed_endpoints = active.entry
+            let allowed_endpoints = active
+                .entry
                 .effective_endpoints
                 .as_ref()
                 .unwrap_or(&empty_endpoints);
@@ -1542,7 +1521,8 @@ impl QuerySimilarDocumentsTool {
         // Get allowed endpoints for Platform Agents
         let empty_endpoints = vec![];
         let allowed_endpoints = if is_platform_agent {
-            active.entry
+            active
+                .entry
                 .effective_endpoints
                 .as_ref()
                 .unwrap_or(&empty_endpoints)
@@ -1612,9 +1592,7 @@ impl QuerySimilarDocumentsTool {
                     response.push_str("• Similar patterns may apply to your current task\n");
                 }
 
-                Ok(ResponseBuilder::text(
-                    response,
-                ))
+                Ok(ResponseBuilder::text(response))
             }
             Err(e) => Err(tool_error(
                 "runtime",

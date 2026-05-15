@@ -131,6 +131,8 @@ impl ReflectOnWorkTool {
             return Err(tool_error("runtime", error_message));
         }
 
+        debug_assert!(integrity_check.all_checks_pass(), "All integrity checks must pass at this point");
+
         // STEP 4: Create work log with TLDR generation
         let mut work_log = crate::domain::WorkLog::new(
             self.task_id.clone(),
@@ -228,9 +230,7 @@ impl ReflectOnWorkTool {
             truncate_preview(&self.work_summary, 200)
         );
 
-        Ok(ResponseBuilder::text(
-            response,
-        ))
+        Ok(ResponseBuilder::text(response))
     }
 
     /// Format work log as a structured document
@@ -407,15 +407,21 @@ impl ApproveCompletionTool {
             })?;
 
         let response = Self::format_approval_response(
-            &task_details.name, &self.task_id, &active.entry.name, &self.completion_notes,
+            &task_details.name,
+            &self.task_id,
+            &active.entry.name,
+            &self.completion_notes,
         );
 
-        Ok(ResponseBuilder::text(
-            response,
-        ))
+        Ok(ResponseBuilder::text(response))
     }
 
-    fn format_approval_response(task_name: &str, task_id: &str, agent_name: &str, notes: &str) -> String {
+    fn format_approval_response(
+        task_name: &str,
+        task_id: &str,
+        agent_name: &str,
+        notes: &str,
+    ) -> String {
         format!(
             "✅ Task Completion Approved Successfully\n\n\
             📋 Task: {} ({})\n\
@@ -573,9 +579,7 @@ impl RejectToExecuteTool {
             required_actions_list
         );
 
-        Ok(ResponseBuilder::text(
-            response,
-        ))
+        Ok(ResponseBuilder::text(response))
     }
 }
 
@@ -654,14 +658,13 @@ impl SetWorkflowContextTool {
         let column_line = normalized_column
             .as_deref()
             .unwrap_or("None (base tool surface only)");
-        Ok(ResponseBuilder::text(
-            format!(
-                "✅ Workflow context set\n\
+        Ok(ResponseBuilder::text(format!(
+            "✅ Workflow context set\n\
 Project: {}\n\
 Column: {}\n\n\
 Run tools/list again to see the updated tool surface for this session.",
-                self.project_id, column_line
-            ),))
+            self.project_id, column_line
+        )))
     }
 }
 
@@ -728,15 +731,14 @@ impl MoveTaskTool {
             .await
             .map_err(|e| tool_error("runtime", format!("Failed to move task: {}", e)))?;
 
-        Ok(ResponseBuilder::text(
-            format!(
-                "✅ Task moved successfully\n\
+        Ok(ResponseBuilder::text(format!(
+            "✅ Task moved successfully\n\
 Project: {}\n\
 Task: {}\n\
 Target Column ID: {}\n\
 Delegation Mode: {:?}",
-                self.project_id, self.task_id, self.target_column_id, delegation.delegation_mode
-            ),))
+            self.project_id, self.task_id, self.target_column_id, delegation.delegation_mode
+        )))
     }
 }
 
@@ -876,9 +878,7 @@ impl UpdateTaskProgressTool {
                             .push_str("• Use 'link_document' to attach relevant documentation\n");
                         response.push_str("• Use 'request_help' if you encounter blockers\n");
 
-                        Ok(ResponseBuilder::text(
-                            response,
-                        ))
+                        Ok(ResponseBuilder::text(response))
                     }
                     Err(e) => Err(tool_error(
                         "runtime",
@@ -1029,9 +1029,7 @@ impl LinkDocumentTool {
                                     chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
                                 );
 
-                                Ok(ResponseBuilder::text(
-                                    response,
-                                ))
+                                Ok(ResponseBuilder::text(response))
                             }
                             Err(e) => {
                                 // Document was created but linking failed
@@ -1251,9 +1249,7 @@ impl RequestHelpTool {
                             _ => {}
                         }
 
-                        Ok(ResponseBuilder::text(
-                            response,
-                        ))
+                        Ok(ResponseBuilder::text(response))
                     }
                     Err(e) => Err(tool_error(
                         "runtime",

@@ -173,9 +173,7 @@ impl EstimateComplexityTool {
         response.push_str("• Ensure each task has clear requirements references\n");
         response.push_str("• Use spawn_sub_board when ready to create tasks\n");
 
-        Ok(ResponseBuilder::text(
-            response,
-        ))
+        Ok(ResponseBuilder::text(response))
     }
 
     /// Analyze description for complexity indicators
@@ -443,9 +441,7 @@ impl SpawnSubBoardTool {
         response_summary.push_str("• Use task management tools to track progress\n");
         response_summary.push_str("• Monitor complexity and adjust scope as needed\n");
 
-        Ok(ResponseBuilder::text(
-            response_summary,
-        ))
+        Ok(ResponseBuilder::text(response_summary))
     }
 
     /// Create a task via the Hub API
@@ -640,22 +636,24 @@ impl CreateTaskTool {
         };
 
         match create_project_task_via_api(ctx, api_key, &request).await {
-            Ok(created) => Ok(ResponseBuilder::text(
-                format!(
-                    "✅ Task created\n\n\
+            Ok(created) => {
+                debug_assert!(created.id > 0, "Created task must have valid ID");
+                debug_assert!(!created.identifier.is_empty(), "Created task must have identifier");
+                Ok(ResponseBuilder::text(format!(
+                "✅ Task created\n\n\
                     Project: {}\n\
                     Task: {} ({})\n\
                     ID: {}\n\
                     Column ID: {}\n\
                     Parent: {:?}\n",
-                    created.project_id,
-                    created.name,
-                    created.identifier,
-                    created.id,
-                    created.column_id,
-                    created.parent_id
-                ),
-            )),
+                created.project_id,
+                created.name,
+                created.identifier,
+                created.id,
+                created.column_id,
+                created.parent_id
+            )))
+            }
             Err(e) => Err(tool_error(
                 "runtime",
                 format!("Failed to create task: {}", e),
@@ -831,17 +829,22 @@ impl CommitArtifactTool {
         };
 
         let response = Self::format_commit_response(
-            action, &document, should_ratify, specification.content.len(), &linking_note,
+            action,
+            &document,
+            should_ratify,
+            specification.content.len(),
+            &linking_note,
         );
 
-        Ok(ResponseBuilder::text(
-            response,
-        ))
+        Ok(ResponseBuilder::text(response))
     }
 
     fn format_commit_response(
-        action: &str, document: &serde_json::Value, should_ratify: bool,
-        content_len: usize, linking_note: &str,
+        action: &str,
+        document: &serde_json::Value,
+        should_ratify: bool,
+        content_len: usize,
+        linking_note: &str,
     ) -> String {
         let ratification_status = if should_ratify {
             "✅ RATIFIED - Ready for transition to Plan column"
@@ -924,7 +927,11 @@ impl RequestArchitectureReviewTool {
         );
 
         let active = ctx.resolve_active_agent().await?;
-        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "request_architecture_review")?;
+        ToolContext::require_agent_type(
+            &active.entry,
+            "ProjectDelegated",
+            "request_architecture_review",
+        )?;
         let api_key = &active.api_key;
 
         // STEP 1: Verify task exists and get column information
@@ -1028,9 +1035,7 @@ impl RequestArchitectureReviewTool {
             review_content,
         );
 
-        Ok(ResponseBuilder::text(
-            response,
-        ))
+        Ok(ResponseBuilder::text(response))
     }
 
     fn generate_review_document(
@@ -1142,7 +1147,11 @@ impl ProposeConstitutionAmendmentTool {
         );
 
         let active = ctx.resolve_active_agent().await?;
-        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "propose_constitution_amendment")?;
+        ToolContext::require_agent_type(
+            &active.entry,
+            "ProjectDelegated",
+            "propose_constitution_amendment",
+        )?;
         let api_key = &active.api_key;
 
         // STEP 1: Verify task exists and get column information
@@ -1255,9 +1264,7 @@ impl ProposeConstitutionAmendmentTool {
             confirmation_code
         );
 
-        Ok(ResponseBuilder::text(
-            response,
-        ))
+        Ok(ResponseBuilder::text(response))
     }
 
     fn generate_diff(&self, current: &str, proposed: &str) -> String {
@@ -1372,7 +1379,11 @@ impl ConfirmConstitutionAmendmentTool {
         );
 
         let active = ctx.resolve_active_agent().await?;
-        ToolContext::require_agent_type(&active.entry, "ProjectDelegated", "confirm_constitution_amendment")?;
+        ToolContext::require_agent_type(
+            &active.entry,
+            "ProjectDelegated",
+            "confirm_constitution_amendment",
+        )?;
         let api_key = &active.api_key;
 
         // STEP 1: Find the proposal document with matching confirmation code
@@ -1507,9 +1518,7 @@ impl ConfirmConstitutionAmendmentTool {
             now.format("%Y-%m-%d %H:%M:%S UTC")
         );
 
-        Ok(ResponseBuilder::text(
-            response,
-        ))
+        Ok(ResponseBuilder::text(response))
     }
 
     fn extract_expiration_from_proposal(

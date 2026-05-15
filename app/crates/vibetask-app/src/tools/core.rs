@@ -168,9 +168,7 @@ impl RegisterAgentTool {
             )
         };
 
-        Ok(ResponseBuilder::text(
-            response,
-        ))
+        Ok(ResponseBuilder::text(response))
     }
 }
 
@@ -275,8 +273,8 @@ impl QueryHealthTool {
                                 match ctx
                                     .api_client
                                     .get_projects(
-                                    api_key,
-                                    &me_response.api_allowance.effective_read_endpoints,
+                                        api_key,
+                                        &me_response.api_allowance.effective_read_endpoints,
                                     )
                                     .await
                                 {
@@ -299,11 +297,15 @@ impl QueryHealthTool {
                     "   ✅ Active Agent: {}\n",
                     active.config.server.active_agent
                 ));
-                health_report.push_str(&format!("   ✅ Total Agents: {}\n", active.config.agents.len()));
+                health_report.push_str(&format!(
+                    "   ✅ Total Agents: {}\n",
+                    active.config.agents.len()
+                ));
 
                 // Check if stored endpoints match API response
                 let empty_endpoints = vec![];
-                let stored_endpoints = active.entry
+                let stored_endpoints = active
+                    .entry
                     .effective_endpoints
                     .as_ref()
                     .unwrap_or(&empty_endpoints);
@@ -357,9 +359,7 @@ impl QueryHealthTool {
             );
         }
 
-        Ok(ResponseBuilder::text(
-            health_report,
-        ))
+        Ok(ResponseBuilder::text(health_report))
     }
 }
 
@@ -528,9 +528,7 @@ impl ListAgentsTool {
             }
         }
 
-        Ok(ResponseBuilder::text(
-            response,
-        ))
+        Ok(ResponseBuilder::text(response))
     }
 }
 
@@ -686,9 +684,7 @@ impl SwitchAgentTool {
             old_agent, self.agent_name, me_response.agent.id, target_agent.agent_type
         );
 
-        Ok(ResponseBuilder::text(
-            response,
-        ))
+        Ok(ResponseBuilder::text(response))
     }
 }
 
@@ -886,9 +882,7 @@ impl AgentStatusTool {
             _ => {}
         }
 
-        Ok(ResponseBuilder::text(
-            status_report,
-        ))
+        Ok(ResponseBuilder::text(status_report))
     }
 }
 
@@ -1064,9 +1058,7 @@ impl DelegateAgentTool {
             operation_result
         );
 
-        Ok(ResponseBuilder::text(
-            response,
-        ))
+        Ok(ResponseBuilder::text(response))
     }
 
     async fn execute_get_status(
@@ -1377,8 +1369,6 @@ impl RemoveAgentTool {
             self.agent_name
         );
 
-        Ok(ResponseBuilder::text(
-            response,
-        ))
+        Ok(ResponseBuilder::text(response))
     }
 }

@@ -54,6 +54,9 @@ router.use(async (req, res, next) => {
     select: { metadata: true },
   });
 
+  console.assert(key, 'Agent key not found');
+  console.assert(key?.metadata, 'Agent metadata missing');
+
   if (!key || !isPlatformAgentMetadata(key.metadata)) {
     return next();
   }
