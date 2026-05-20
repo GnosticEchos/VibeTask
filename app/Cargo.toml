@@ -47,8 +47,9 @@ schemars = { version = "0.8", features = ["chrono"] }
 url = "2.4"
 uuid = { version = "1.6", features = ["v4", "serde"] }
 
-# OpenAPI code generation (alternative to openapi-generator)
+# OpenAPI code generation (hub agent API client in vibetask-hub-client)
 progenitor = "0.8"
+progenitor-client = "0.8"
 clap = { version = "4.5", features = ["derive"] }
 comfy-table = "7.1"
 termimad = "0.31"

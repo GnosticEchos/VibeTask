@@ -1,22 +1,93 @@
-# Vue 3 + TypeScript + Vite
+# VibeTask Frontend
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Vue.js frontend for the VibeTask agent-orchestrated Kanban platform. Part of the [VibeTask monorepo](../README.md).
 
-## Project Helper Scripts
+## Tech Stack
 
-For workspace-specific helper commands (OpenAPI sync/check, frontend/backend utility scripts), see `docs/DEVELOPER_HELPER_TOOLS.md`.
+| Layer | Technology |
+|-------|-----------|
+| Framework | Vue 3 (Composition API, `<script setup>`) |
+| Language | TypeScript (strict mode) |
+| Build | Vite |
+| State | Pinia (UI state) + TanStack Query (server state) |
+| Styling | DaisyUI + Tailwind CSS |
+| WebSocket | Socket.IO client |
+| Auth | Better Auth session tokens |
 
-## Recommended IDE Setup
+## Quick Start
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+```bash
+npm install
+npm run dev           # Dev server on :5173
+```
 
-## Type Support For `.vue` Imports in TS
+Requires the [hub backend](../hub/) running on :3000.
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+## Project Scripts
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+See [docs/DEVELOPER_HELPER_TOOLS.md](docs/DEVELOPER_HELPER_TOOLS.md) for the full command reference.
 
-1. Disable the built-in TypeScript Extension
-   1. Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-   2. Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
+Key commands:
+- `npm run dev` — Vite dev server
+- `npm run build` — TypeScript check + production build
+- `npm run test:unit` — Unit tests
+- `npm run test:e2e` — Playwright E2E tests
+- `npm run openapi:sync` — Sync OpenAPI spec from hub
+- `npm run openapi:check-sync` — Verify spec parity with hub
+
+## Project Structure
+
+```
+src/
+├── main.ts                    # App entry point
+├── App.vue                    # Root component
+├── router/                    # Vue Router config
+├── stores/                    # Pinia stores (UI state)
+├── composables/               # TanStack Query hooks + reusable logic
+├── api/                       # API client (indexApi, authApi, membersApi)
+├── components/                # Vue components (organized by domain)
+├── utils/                     # Helpers (logger, validation, avatars)
+├── types/                     # TypeScript type definitions
+├── locale/                    # i18n (en, pl, xx)
+├── assets/                    # Static assets (SVGs, images)
+└── api/generated/             # Auto-generated OpenAPI types
+```
+
+## Key Design Decisions
+
+- **CQRS-style data flow:** Reads go through TanStack Query; writes go through store actions that invalidate query keys. See [docs/CQRS_DATA_FLOW.md](docs/CQRS_DATA_FLOW.md).
+- **No mock APIs:** Wire to real hub endpoints; handle loading, error, empty, and 403 states.
+- **Settings layout:** Draggable bento-style grid persisted to both `localStorage` and hub API.
+- **i18n:** Locale files in `src/locale/` — keep updated when adding UI strings.
+- **Logging:** Use `src/utils/logger.ts` (apiLog, storeLog, wsLog, uiLog) instead of `console.*`.
+
+## Architecture
+
+### Data Flow
+
+```
+User Action → Component → Store/Composable → API Client → Hub Backend
+                                               ↕
+                                   TanStack Query Cache
+```
+
+### WebSocket Integration
+
+Real-time updates via Socket.IO client connected to hub's WebSocket server.
+See [docs/WEBSOCKET_CONTRACT_REVIEW.md](docs/WEBSOCKET_CONTRACT_REVIEW.md) for channel contracts.
+
+### Agent Integration
+
+The frontend includes agent management UI (create, delegate, manage API keys) — see the Agents hub in Settings.
+
+## Related Docs
+
+| Document | Purpose |
+|----------|---------|
+| [OpenAPI ↔ UI gap analysis](docs/OPENAPI_UI_GAP_ANALYSIS.md) | Feature coverage vs hub OpenAPI |
+| [WebSocket Contract](docs/WEBSOCKET_CONTRACT_REVIEW.md) | Socket.IO channel contracts |
+| [CQRS Data Flow](docs/CQRS_DATA_FLOW.md) | Query/command boundaries |
+| [Account Settings API](docs/ACCOUNT_SETTINGS_API_V1.md) | Profile/password/sessions API |
+| [Settings Layout Sync](docs/SETTINGS_LAYOUT_SYNC.md) | Settings grid persistence |
+| [Developer Tools](docs/DEVELOPER_HELPER_TOOLS.md) | Command reference |
+| [Type Hardening](docs/HARDENING_STRICT_TYPES_AND_CONTRACTS.md) | Strict typing plan |

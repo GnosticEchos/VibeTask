@@ -47,8 +47,6 @@ schemars = { workspace = true }
 url = { workspace = true }
 uuid = { workspace = true }
 
-# OpenAPI code generation (alternative to openapi-generator)
-progenitor = { workspace = true }
 vibetask-app = { path = "../vibetask-app" }
 vibetask-core = { path = "../vibetask-core" }
 vibetask-hub-client = { path = "../vibetask-hub-client" }

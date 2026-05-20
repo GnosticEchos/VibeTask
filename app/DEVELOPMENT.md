@@ -1,6 +1,6 @@
 # Development Guide
 
-This guide covers development setup and workflow for the VibeTasks multi-crate workspace.
+This guide covers development setup and workflow for the VibeTask Rust workspace (`app/`).
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ Some shells export **`ARGV0`** as the name of the program that launched the shel
 1. **Clone and setup**:
    ```bash
    git clone <repository-url>
-   cd VibeTasks
+   cd VibeTask/app
    make dev-setup
    ```
 
@@ -110,11 +110,9 @@ Security is a top priority:
 - `crates/vibetask-mcp`
 - `crates/vibetask-cli`
 
-### Hub API contract (OpenAPI snapshot)
+### Hub API contract (OpenAPI spec in monorepo)
 
-The workspace keeps a **checked-in copy** of the Kanban backend OpenAPI document at:
-
-- `KanbanAPI/openapi.json`
+The hub OpenAPI spec lives at `../hub/src/openapi.json` (shared via monorepo).
 
 When the backend team publishes an updated contract, replace that file and treat the diff as the source of truth for client behavior.
 
@@ -122,33 +120,39 @@ When the backend team publishes an updated contract, replace that file and treat
 
 ```bash
 # Recent commits touching the spec
-git log --oneline -5 -- KanbanAPI/openapi.json
+git log --oneline -5 -- ../hub/src/openapi.json
 
 # Diff against the previous revision (pick a base commit or use HEAD~1 after committing the update)
-git diff HEAD~1 -- KanbanAPI/openapi.json
+git diff HEAD~1 -- ../hub/src/openapi.json
 
 # Sanity: valid JSON
-python3 -m json.tool KanbanAPI/openapi.json > /dev/null && echo OK
+python3 -m json.tool ../hub/src/openapi.json > /dev/null && echo OK
 ```
 
-**Sync from Kanban-rewrite (sibling checkout)**
+**Sync from hub (monorepo sibling)**
 
-When the backend contract changes, copy the published spec into this workspace and re-check any hand-maintained Rust mirrors (for example `crates/vibetask-hub-client/src/generated_types.rs` when `GET /api/agent/me` delegations gain fields such as `delegationMode` or `columnAllowance`):
+Sync the published spec into the frontend copy and rebuild the Rust hub client:
 
 ```bash
-cp ../Kanban-rewrite/src/openapi.json KanbanAPI/openapi.json
-python3 -m json.tool KanbanAPI/openapi.json > /dev/null && echo OK
+# From app/
+cd ../hub && npm run openapi:sync-fe
+cd ../frontend && npm run openapi:check-sync
+cargo build -p vibetask-hub-client
 ```
 
-**Local-only notes:** draft contract reviews or internal bug reports can live under `docs/project/` (see `docs/README.md`; that directory is gitignored and is not part of the published tree).
+**OpenAPI-driven client (`vibetask-hub-client`)**
+
+`crates/vibetask-hub-client/build.rs` runs [Progenitor](https://github.com/oxidecomputer/progenitor) against `../hub/src/openapi.json`, limited to routes under `/api/agent/` (the full hub spec includes operations Progenitor cannot codegen yet).
+
+- Generated code: `OUT_DIR/generated.rs`, exposed as [`HubOpenApiClient`](crates/vibetask-hub-client/src/openapi.rs) and `openapi::types::*`.
+- [`VibeTaskClient::hub_openapi()`](crates/vibetask-hub-client/src/vibetask_client.rs) returns the generated client; production calls should still use `VibeTaskClient` methods for API-key auth, retries, and circuit breaking.
+- Hand-maintained types in `generated_types.rs` remain for MCP/CLI ergonomics (custom defaults, helpers). Migrate call sites to generated types when convenient.
+
+**Local-only notes:** draft contract reviews can live under `docs/project/` (gitignored).
 
 **Inline JIT documents on agent task GET (`TaskDocumentLink.document`)**
 
-The OpenAPI spec now documents the nested `document` object on `TaskDocumentLink` when `?inline=true` (fields such as `title`, `docType`, `content`, `version`). The hub client maps those into `ProjectDocument` for tool output; treat `KanbanAPI/openapi.json` as the contract for this behavior.
-
-**Progenitor (`progenitor = "0.8"`, workspace-pinned)**
-
-The workspace already depends on Progenitor for potential OpenAPI-driven client generation, but the MCP crate’s `build.rs` still emits a hand-maintained types path. Once `KanbanAPI/openapi.json` stays stable, consider switching generation on and deleting redundant hand-rolled types where they overlap.
+The OpenAPI spec documents the nested `document` object on `TaskDocumentLink` when `?inline=true`. The hub client maps those into `ProjectDocument` for tool output; treat `../hub/src/openapi.json` as the contract.
 
 ### CLI lattice helpers (`vibetask-cli`)
 
@@ -168,7 +172,7 @@ vibetask-cli --config config/vibe-mcp.toml task move 10 101 55
 
 `task approve` maps to `approve_completion`; it requires `--confirm-integrity-passed true|false` so Verify-column approvals cannot skip the integrity gate by omission.
 
-**Hub column moves (GateKeeper / auditor flows):** the HTTP contract for `PATCH /api/agent/projects/{projectId}/tasks/{taskId}` with body `{"columnId":…}` is documented for humans in `Kanban-frontend/docs/GATEKEEPER_PROTOCOL_TESTS.md`. The Rust hub client exposes the same call as `VibeTaskClient::update_agent_task_column` (used by future CLI/MCP task-move helpers).
+**Hub column moves (GateKeeper / auditor flows):** the HTTP contract for `PATCH /api/agent/projects/{projectId}/tasks/{taskId}` with body `{"columnId":…}` is documented in the hub OpenAPI spec at `../hub/src/openapi.json`. The Rust hub client exposes the same call as `VibeTaskClient::update_agent_task_column`.
 
 ### CLI search + output formats
 

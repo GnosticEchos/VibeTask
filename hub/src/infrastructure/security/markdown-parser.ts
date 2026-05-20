@@ -13,7 +13,11 @@
  * - Generic dangerous patterns only flagged in shell contexts
  */
 
-import { process, hasLanguage, type ProcessResult } from '@kreuzberg/tree-sitter-language-pack';
+import {
+  process,
+  hasLanguage,
+  JsDiagnosticSeverity,
+} from '@kreuzberg/tree-sitter-language-pack';
 
 /**
  * Forbidden patterns that indicate potential injection attempts
@@ -72,7 +76,9 @@ export async function parseMarkdown(content: string): Promise<MarkdownParseResul
     const result = await process(content, { language: 'markdown', diagnostics: true });
     
     // Check for parse errors
-    const errorDiagnostics = (result.diagnostics || []).filter(d => d.severity === 'error');
+    const errorDiagnostics = (result.diagnostics || []).filter(
+      d => d.severity === JsDiagnosticSeverity.Error,
+    );
     if (errorDiagnostics.length > 0) {
       errors.push(...errorDiagnostics.map(d => `Parse error: ${d.message}`));
     }
@@ -198,7 +204,9 @@ async function validateCodeBlock(block: CodeBlock): Promise<{ valid: boolean; er
     const result = await process(block.content, { language: lang, diagnostics: true });
     
     // Check for parse errors in the code
-    const errorDiagnostics = (result.diagnostics || []).filter(d => d.severity === 'error');
+    const errorDiagnostics = (result.diagnostics || []).filter(
+      d => d.severity === JsDiagnosticSeverity.Error,
+    );
     if (errorDiagnostics.length > 0) {
       errors.push(`Code block '${block.language}' has structural issues: ${errorDiagnostics.map(d => d.message).join(', ')}`);
     }

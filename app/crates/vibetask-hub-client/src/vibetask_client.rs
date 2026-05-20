@@ -8,6 +8,7 @@
 
 use crate::error::{AgentError, ApiError};
 use crate::generated_types::*;
+use crate::openapi::HubOpenApiClient;
 use reqwest::{Client, Response, StatusCode};
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
@@ -121,6 +122,7 @@ impl Default for RetryConfig {
 pub struct VibeTaskClient {
     pub client: Client,
     pub base_url: Url,
+    hub_openapi: HubOpenApiClient,
     circuit_breaker: Arc<CircuitBreaker>,
     retry_config: RetryConfig,
     platform_session: Mutex<Option<String>>,
@@ -143,13 +145,24 @@ impl VibeTaskClient {
             Duration::from_secs(60), // timeout
         ));
 
+        let hub_openapi = HubOpenApiClient::new_with_client(base_url.as_str(), client.clone());
+
         Ok(Self {
             client,
             base_url,
+            hub_openapi,
             circuit_breaker,
             retry_config: RetryConfig::default(),
             platform_session: Mutex::new(None),
         })
+    }
+
+    /// OpenAPI-generated client for `/api/agent/*` (no auth headers attached).
+    ///
+    /// Prefer the typed methods on [`VibeTaskClient`] for production use; this accessor
+    /// is for spec-aligned experimentation and gradual migration off hand-maintained types.
+    pub fn hub_openapi(&self) -> &HubOpenApiClient {
+        &self.hub_openapi
     }
 
     /// Set the platform session JWT token

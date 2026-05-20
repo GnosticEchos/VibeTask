@@ -1,0 +1,100 @@
+# Root CI for the VibeTask monorepo (hub + frontend + app).
+# Workflows under hub/.github, frontend/.github, and app/.github are legacy copies and are not used by GitHub.
+
+name: VibeTask CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  hub:
+    name: Hub (backend)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hub
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: kanban_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: hub/package-lock.json
+      - run: npm ci
+      - name: Prisma validate & generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kanban_ci
+        run: npx prisma validate && npx prisma generate
+      - run: npm run lint:full
+      - run: npm run build
+      - run: npm run test
+      - name: Integration tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kanban_ci
+        run: |
+          npx prisma migrate deploy
+          npm run test:integration
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: OpenAPI matches hub
+        run: npm run openapi:check-sync
+      - run: npm run lint:style
+      - run: npm run test:unit
+      - name: Build
+        env:
+          VITE_API_BASE_URL: http://localhost:3000
+        run: npm run build
+
+  app:
+    name: App (Rust)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            app/target
+          key: ${{ runner.os }}-cargo-app-${{ hashFiles('app/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-app-
+      - run: cargo fmt --all --check
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo test --all-features

@@ -1,3 +1,6 @@
+# Legacy: GitHub only runs workflows under the repository root .github/workflows/.
+# Active pipeline: ../.github/workflows/ci.yml (frontend job).
+
 name: Frontend CI
 
 on:
@@ -19,9 +22,8 @@ jobs:
 
       - run: npm ci
 
-      - name: OpenAPI matches Kanban-rewrite (sibling checkout)
-        run: |
-          if [ -f ../Kanban-rewrite/src/openapi.json ]; then npm run openapi:check-sync; else echo 'Skip openapi:check-sync — ../Kanban-rewrite not present'; fi
+      - name: OpenAPI matches hub
+        run: npm run openapi:check-sync
 
       - name: Run style lint
         run: npm run lint:style

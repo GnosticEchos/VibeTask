@@ -1,6 +1,6 @@
-# VibeTasks Workspace
+# VibeTask App
 
-A multi-crate Rust workspace for VibeTask orchestration. It includes thin MCP and CLI adapters over shared CQRS-oriented application and domain crates.
+Rust workspace for VibeTask agent orchestration: MCP and CLI adapters over shared application and domain crates. Part of the [VibeTask monorepo](../README.md).
 
 ## Features
 
@@ -17,10 +17,10 @@ A multi-crate Rust workspace for VibeTask orchestration. It includes thin MCP an
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
 
-2. **Clone and build**:
+2. **Clone and build** (from monorepo root):
    ```bash
    git clone <repository-url>
-   cd VibeTasks
+   cd VibeTask/app
    cargo build --release
    ```
 

@@ -1213,6 +1213,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent/projects/{projectId}/tasks/{taskId}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add progress log to a task
+         * @description Add a progress log entry to a task. Requires ADD_PROGRESS permission for agents (USER level).
+         */
+        post: operations["addAgentTaskProgress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/projects/{projectId}/tasks/{taskId}/doc-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List doc links for a task
+         * @description Returns all document links for a task. Requires VIEW_DOCS permission for agents (VIEWER level).
+         */
+        get: operations["listAgentTaskDocLinks"];
+        put?: never;
+        /**
+         * Create doc link
+         * @description Link a document to a task. Requires LINK_DOC permission for agents (USER level).
+         */
+        post: operations["createAgentTaskDocLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent/projects/{projectId}/tasks/{taskId}/comments": {
         parameters: {
             query?: never;
@@ -1291,6 +1335,150 @@ export interface paths {
         get: operations["searchAgentDocuments"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create platform agent session
+         * @description Platform agent authenticates and returns a JWT session token for write operations.
+         */
+        post: operations["createAgentSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/my-agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List user's agents
+         * @description Returns all agents owned by the authenticated user with their delegations and column allowances.
+         */
+        get: operations["listMyAgents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/projects/{projectId}/docs/{docId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get single document (Agent)
+         * @description Agent-only endpoint to retrieve a single document by ID.
+         */
+        get: operations["getAgentDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update document (Agent)
+         * @description Agent-only endpoint to update document title, content, or docType.
+         */
+        patch: operations["updateAgentDocument"];
+        trace?: never;
+    };
+    "/api/agent/projects/{projectId}/docs/{docId}/annotations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add document annotation (Agent)
+         * @description Agent-only endpoint to add an annotation to a document.
+         */
+        post: operations["annotateAgentDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/projects/{projectId}/docs/{docId}/pin-version": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pin document version (Agent)
+         * @description Agent-only endpoint to pin a specific version of a document.
+         */
+        post: operations["pinAgentDocumentVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/projects/{projectId}/help-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create help request (Agent)
+         * @description Agent-only endpoint to request human assistance on a task.
+         */
+        post: operations["createAgentHelpRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/projects/{projectId}/doc-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create document link (Agent, backward-compatible)
+         * @description Agent-only endpoint to link a document to a task. Supports both VibeTools (snake_case) and backend (camelCase) naming conventions.
+         */
+        post: operations["createAgentDocumentLink"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5970,6 +6158,179 @@ export interface operations {
             };
         };
     };
+    addAgentTaskProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: number;
+                taskId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Progress log text */
+                    text: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Progress log added successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        taskLog?: {
+                            id?: number;
+                            taskId?: number;
+                            text?: string;
+                            /** Format: date-time */
+                            createdAt?: string;
+                            userId?: number;
+                        };
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Access denied - agent lacks ADD_PROGRESS permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Task not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listAgentTaskDocLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: number;
+                taskId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Doc links retrieved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["TaskDocumentLink"][];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createAgentTaskDocLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: number;
+                taskId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Document ID to link */
+                    documentId: number;
+                    /**
+                     * @description Role of the link
+                     * @enum {string}
+                     */
+                    role?: "SPECIFICATION" | "IMPLEMENTATION_PLAN" | "REFERENCE" | "ATTACHMENT";
+                    /** @description Pin to a specific document version */
+                    pinnedVersion?: number | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Doc link created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["TaskDocumentLink"];
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Access denied - agent lacks LINK_DOC permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Task or document not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     createAgentProjectsTasksComments: {
         parameters: {
             query?: never;
@@ -6265,6 +6626,335 @@ export interface operations {
             };
             /** @description Access denied - agent lacks VIEW_DOCS permission */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createAgentSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Agent name to create session for */
+                    agent_name?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Session created with JWT token */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized - invalid or missing agent API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Access denied - not a platform agent */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listMyAgents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of agents with delegations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getAgentDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: number;
+                docId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Document details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectDocument"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Document not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateAgentDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: number;
+                docId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    title?: string;
+                    content?: string;
+                    /** @enum {string} */
+                    docType?: "CONSTITUTION" | "SPECIFICATION" | "BRAINSTORM" | "POST_MORTEM" | "IMPLEMENTATION_PLAN" | "OTHER";
+                };
+            };
+        };
+        responses: {
+            /** @description Updated document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Document not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    annotateAgentDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: number;
+                docId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    content?: string;
+                    annotationType?: string;
+                    tags?: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Annotation created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Document not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    pinAgentDocumentVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: number;
+                docId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    version?: string;
+                    pinnedVersion?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Version pinned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Document not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createAgentHelpRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description Task ID (compound format 'projectId-taskId' or plain integer) */
+                    taskId?: string;
+                    /** @enum {string} */
+                    helpType?: "TECHNICAL" | "CLARIFICATION" | "REVIEW" | "BLOCKED" | "COLLABORATION";
+                    helpDescription?: string;
+                    /** @enum {string} */
+                    priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+                    context?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Help request created as task comment */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Task not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createAgentDocumentLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description Task ID */
+                    taskId?: number;
+                    /** @description Document ID */
+                    documentId?: number;
+                    /** @enum {string} */
+                    role?: "SPECIFICATION" | "IMPLEMENTATION_PLAN" | "REFERENCE" | "ATTACHMENT";
+                };
+            };
+        };
+        responses: {
+            /** @description Document link created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Task or document not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

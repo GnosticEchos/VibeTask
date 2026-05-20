@@ -2,13 +2,13 @@
 
 This project has a few helper scripts that are easy to forget. This page is the quick reference for day-to-day workflows.
 
-## Monorepo Layout
+## Monorepo layout
 
 ```
-~/Projects/VibeTask/
-├── hub/          Express + Prisma backend
-├── frontend/     Vue.js frontend
-└── app/          Rust CLI + MCP server
+VibeTask/          (repository root)
+├── hub/           Express + Prisma backend — OpenAPI source: hub/src/openapi.json
+├── frontend/      Vue.js frontend — copy: frontend/openapi.json
+└── app/           Rust CLI + MCP — Progenitor client from hub spec at build time
 ```
 
 ## Hub (Backend) Common Scripts

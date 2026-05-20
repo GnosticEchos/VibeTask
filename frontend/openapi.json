@@ -6402,6 +6402,222 @@
         },
         "operationId": "searchAgentDocuments"
       }
+    },
+    "/api/agent/session": {
+      "post": {
+        "tags": ["Agent API"],
+        "summary": "Create platform agent session",
+        "description": "Platform agent authenticates and returns a JWT session token for write operations.",
+        "security": [{ "agentAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "agent_name": { "type": "string", "description": "Agent name to create session for" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Session created with JWT token" },
+          "401": { "description": "Unauthorized - invalid or missing agent API key" },
+          "403": { "description": "Access denied - not a platform agent" }
+        },
+        "operationId": "createAgentSession"
+      }
+    },
+    "/api/agent/my-agents": {
+      "get": {
+        "tags": ["Agent API"],
+        "summary": "List user's agents",
+        "description": "Returns all agents owned by the authenticated user with their delegations and column allowances.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of agents with delegations" },
+          "401": { "description": "Unauthorized" }
+        },
+        "operationId": "listMyAgents"
+      }
+    },
+    "/api/agent/projects/{projectId}/docs/{docId}": {
+      "get": {
+        "tags": ["Agent API"],
+        "summary": "Get single document (Agent)",
+        "description": "Agent-only endpoint to retrieve a single document by ID.",
+        "security": [{ "agentAuth": [] }],
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "docId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Document details", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectDocument" } } } },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Document not found" }
+        },
+        "operationId": "getAgentDocument"
+      },
+      "patch": {
+        "tags": ["Agent API"],
+        "summary": "Update document (Agent)",
+        "description": "Agent-only endpoint to update document title, content, or docType.",
+        "security": [{ "agentAuth": [], "platformSession": [] }],
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "docId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string", "maxLength": 200 },
+                  "content": { "type": "string", "maxLength": 100000 },
+                  "docType": { "type": "string", "enum": ["CONSTITUTION", "SPECIFICATION", "BRAINSTORM", "POST_MORTEM", "IMPLEMENTATION_PLAN", "OTHER"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated document" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Access denied" },
+          "404": { "description": "Document not found" }
+        },
+        "operationId": "updateAgentDocument"
+      }
+    },
+    "/api/agent/projects/{projectId}/docs/{docId}/annotations": {
+      "post": {
+        "tags": ["Agent API"],
+        "summary": "Add document annotation (Agent)",
+        "description": "Agent-only endpoint to add an annotation to a document.",
+        "security": [{ "agentAuth": [], "platformSession": [] }],
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "docId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": { "type": "string", "minLength": 1, "maxLength": 10000 },
+                  "annotationType": { "type": "string", "maxLength": 50 },
+                  "tags": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Annotation created" },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Document not found" }
+        },
+        "operationId": "annotateAgentDocument"
+      }
+    },
+    "/api/agent/projects/{projectId}/docs/{docId}/pin-version": {
+      "post": {
+        "tags": ["Agent API"],
+        "summary": "Pin document version (Agent)",
+        "description": "Agent-only endpoint to pin a specific version of a document.",
+        "security": [{ "agentAuth": [], "platformSession": [] }],
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "docId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "version": { "type": "string", "minLength": 1, "maxLength": 20 },
+                  "pinnedVersion": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Version pinned" },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Document not found" }
+        },
+        "operationId": "pinAgentDocumentVersion"
+      }
+    },
+    "/api/agent/projects/{projectId}/help-requests": {
+      "post": {
+        "tags": ["Agent API"],
+        "summary": "Create help request (Agent)",
+        "description": "Agent-only endpoint to request human assistance on a task.",
+        "security": [{ "agentAuth": [] }],
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "taskId": { "type": "string", "description": "Task ID (compound format 'projectId-taskId' or plain integer)" },
+                  "helpType": { "type": "string", "enum": ["TECHNICAL", "CLARIFICATION", "REVIEW", "BLOCKED", "COLLABORATION"] },
+                  "helpDescription": { "type": "string", "minLength": 1, "maxLength": 5000 },
+                  "priority": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "URGENT"] },
+                  "context": { "type": "string", "maxLength": 10000 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Help request created as task comment" },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Task not found" }
+        },
+        "operationId": "createAgentHelpRequest"
+      }
+    },
+    "/api/agent/projects/{projectId}/doc-links": {
+      "post": {
+        "tags": ["Agent API"],
+        "summary": "Create document link (Agent, backward-compatible)",
+        "description": "Agent-only endpoint to link a document to a task. Supports both VibeTools (snake_case) and backend (camelCase) naming conventions.",
+        "security": [{ "agentAuth": [], "platformSession": [] }],
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "taskId": { "type": "integer", "description": "Task ID" },
+                  "documentId": { "type": "integer", "description": "Document ID" },
+                  "role": { "type": "string", "enum": ["SPECIFICATION", "IMPLEMENTATION_PLAN", "REFERENCE", "ATTACHMENT"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Document link created" },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Task or document not found" }
+        },
+        "operationId": "createAgentDocumentLink"
+      }
     }
   },
   "components": {
@@ -6417,6 +6633,12 @@
         "in": "header",
         "name": "x-agent-api-key",
         "description": "Agent API key authentication using the x-agent-api-key header. Provide the raw key value (for example: ag_xxx). Agents must have active delegations to access projects."
+      },
+      "platformSession": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-platform-session",
+        "description": "Platform agent JWT session token obtained from POST /api/agent/session. Required for write operations (PATCH, POST, DELETE) by platform agents."
       }
     },
     "schemas": {

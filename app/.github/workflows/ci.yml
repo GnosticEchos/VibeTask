@@ -1,3 +1,6 @@
+# Legacy: GitHub only runs workflows under the repository root .github/workflows/.
+# Active pipeline: ../../.github/workflows/ci.yml (app job).
+
 name: CI
 
 on:

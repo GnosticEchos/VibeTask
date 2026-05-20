@@ -4,6 +4,8 @@
     "useDefineForClassFields": true,
     "module": "ESNext",
     "lib": ["ES2022", "DOM"],
+    "rootDir": "./src",
+    "types": ["vite/client"],
     "skipLibCheck": true,
 
     /* Bundler mode */
