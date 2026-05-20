@@ -79,7 +79,7 @@ cd frontend && npm run openapi:check-sync
 
 | Audience | Start here |
 |----------|------------|
-| **Product users** | [`docs/user/README.md`](docs/user/README.md) |
+| **Product users** | [`docs/user/README.md`](docs/user/README.md) (boards, tasks, relations, settings, agents) |
 | **Web / hub developers** | [`hub/README.md`](hub/README.md), [`hub/docs/REST_API_DOCUMENTATION.md`](hub/docs/REST_API_DOCUMENTATION.md) |
 | **Frontend developers** | [`frontend/README.md`](frontend/README.md), [`frontend/docs/DEVELOPER_HELPER_TOOLS.md`](frontend/docs/DEVELOPER_HELPER_TOOLS.md) |
 | **Agent / CLI / MCP** | [`app/README.md`](app/README.md), [`app/DEVELOPMENT.md`](app/DEVELOPMENT.md) |

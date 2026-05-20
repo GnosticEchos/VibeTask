@@ -5,18 +5,21 @@ VibeTask is a Kanban board with **AI agents** that can work on tasks in projects
 ## Quick start
 
 1. **Sign up** at your VibeTask URL (local dev: open `http://localhost:5173` after the team starts the frontend and hub).
-2. **Create a project** from Explore or the dashboard — pick a name and task ID prefix (e.g. `VT`).
+2. **Create a project** from Explore or **Settings → Project Settings** — pick a name and task ID prefix (e.g. `VT`).
 3. **Open the board** and add tasks to columns; double-click a card for full task details.
-4. **Invite teammates** from project settings (roles: Owner, Maintainer, Editor, Viewer).
+4. **Invite teammates** from **Settings → Project Settings** or the project **Members** tab (roles: Owner, Maintainer, Editor, Viewer).
 
-## Boards and tasks
+## Guide index
 
-- Columns represent workflow stages; drag cards or use the task dialog **Status** field to move work.
-- Task IDs look like `PREFIX-42` (project prefix + number).
-- **Sub-boards** (workspace containers) let you group work without deep nesting; use the sub-board menu in the project toolbar.
-- **Backlog** shows unassigned tasks for the project.
+| Topic | Document |
+|-------|----------|
+| Projects, columns, board, sub-boards | [Projects and boards](projects-and-boards.md) |
+| Create/edit tasks, assignees, comments, docs | [Tasks and assignments](tasks-and-assignments.md) |
+| Blocks, blocked-by, relates-to, duplicates | [Task relationships](task-relationships.md) |
+| Settings hub cards (account, agents, workspace, theme, admin) | [Settings guide](settings-guide.md) |
+| Platform vs delegate agents, API keys, MCP | [Working with AI agents](agents.md) |
 
-## AI agents
+## AI agents (summary)
 
 Automation uses two layers: a **platform agent** on the MCP/CLI host (provisioned by an administrator) and **delegate agents** you create under **Settings → Agents** (one per tool or workload when possible).
 
@@ -26,12 +29,6 @@ Automation uses two layers: a **platform agent** on the MCP/CLI host (provisione
 
 See [Working with AI agents](agents.md) for the full model. The first delegation to a project may create an **Agent Review** column.
 
-## Account and settings
-
-- **Profile & security** — name, password, sessions (Settings → Account).
-- **Theme** — appearance and theme playground (Settings).
-- **Workspace** — members and workspace-level options where enabled.
-
 ## Troubleshooting
 
 | Issue | What to try |
@@ -39,6 +36,7 @@ See [Working with AI agents](agents.md) for the full model. The first delegation
 | Page won’t load | Confirm hub is running on port 3000 and frontend on 5173. |
 | Login fails | Check email/password; hub must be reachable at `VITE_API_BASE_URL`. |
 | Real-time updates missing | WebSocket uses port 8080 by default; check `VITE_WS_BASE_URL`. |
-| Agent gets 403 | Verify delegation exists for that project and permission level. |
+| Agent gets 403 | Verify delegation exists for that project and permission level; MCP host needs a platform session for writes. |
+| No sub-board in menu | Sub-boards appear after a container task exists — usually via **Accept Plan & Expand** (see [Projects and boards](projects-and-boards.md)). |
 
 For development setup, see the [root README](../../README.md).
