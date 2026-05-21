@@ -40,6 +40,7 @@ import {
 import { sanitize } from '../../infrastructure/http/middleware/sanitize.js';
 import { transformTask, transformTasks } from '../../shared/transformers/index.js';
 import { paginatedResponse } from '../../validation/schemas/common.schemas.js';
+import { assertMoveAllowedWhenBlocked } from '../../services/task-relation-policy.js';
 
 const router = Router();
 
@@ -277,11 +278,15 @@ router.get('/:id', requireAuth, validateParams(taskIdParamSchema), asyncHandler(
 router.post('/', requireAuth, validateBody(createTaskSchema), sanitize(['name', 'description']), asyncHandler(async (req, res) => {
   const user = req.user!;
 
-  const body = getValidatedBody<{ projectId: number; name: string; description?: string; assigneeId?: number; projectColumnId?: number; relationMode?: string; relationId?: number; parentId?: number }>(req);
+  const body = getValidatedBody<{ projectId: number; name: string; description?: string; assigneeId?: number; projectColumnId?: number; relationMode?: string; relationId?: number; parentId?: number; isContainer?: boolean; subBoardOutlineColor?: string | null }>(req);
   if (!body) {
     throw new BadRequestError('Missing or invalid body');
   }
-  const { projectId, name, description, assigneeId, projectColumnId, relationMode, relationId, parentId } = body;
+  const { projectId, name, description, assigneeId, projectColumnId, relationMode, relationId, parentId, isContainer, subBoardOutlineColor } = body;
+
+  if (parentId != null && isContainer === true) {
+    throw new BadRequestError('Child tasks cannot be marked as workspace containers');
+  }
 
   // Check membership and permissions
   const membership = await prisma.projectUser.findFirst({
@@ -327,6 +332,8 @@ router.post('/', requireAuth, validateBody(createTaskSchema), sanitize(['name', 
       relationMode: relationMode || null,
       relationId: relationId || null,
       parentId: parentId || null,
+      isContainer: isContainer === true,
+      subBoardOutlineColor: subBoardOutlineColor ?? null,
     },
         include: {
           createdBy: { select: { id: true, name: true, surname: true, avatarUrl: true } },
@@ -517,6 +524,8 @@ router.post('/:id/move', requireAuth, validateParamsAndBody(taskIdParamSchema, m
       throw new ForbiddenError(`Cannot move task into this column — ${targetPolicy.enter} role or higher required`);
     }
   }
+
+  await assertMoveAllowedWhenBlocked(task, targetColumnId);
 
   // Wrap all database operations in a transaction
   await prisma.$transaction(async (tx) => {

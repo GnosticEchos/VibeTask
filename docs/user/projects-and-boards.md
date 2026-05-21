@@ -67,7 +67,9 @@ A **sub-board** is not a separate project. It is a **container task** on the mai
 
 ### How sub-boards are created today
 
-There is no **“New sub-board”** button. The supported human workflow is:
+You can mark a new task as a **workspace container** when adding a task (checkbox in Add New Task). That creates an empty container you can expand later.
+
+The main human workflow to spawn child tasks is still:
 
 1. Create or open a **parent task** on the main board.
 2. In the task dialog, **link a document** with role **Implementation plan** (`IMPLEMENTATION_PLAN`).

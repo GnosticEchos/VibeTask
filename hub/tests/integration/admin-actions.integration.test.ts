@@ -1,16 +1,21 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import request from 'supertest';
 import { testApp, prisma } from './setup/test-server.js';
 import { connectTestDatabase, disconnectTestDatabase } from './setup/test-db.js';
 import {
   authenticateUser,
   createTestUser,
+  cleanupTestData,
 } from '../helpers/integration-helpers.js';
 import { EXISTING_USER } from './setup/fixtures.js';
 
 describe('Admin actions (temporary password, audit, health)', () => {
   beforeAll(async () => {
     await connectTestDatabase();
+  });
+
+  afterEach(async () => {
+    await cleanupTestData();
   });
 
   afterAll(async () => {
@@ -21,7 +26,7 @@ describe('Admin actions (temporary password, audit, health)', () => {
     const { token: adminToken } = await authenticateUser(EXISTING_USER.email, EXISTING_USER.password);
     const victim = await createTestUser({ name: 'TempPwdVictim' });
 
-    const oldLogin = await authenticateUser(victim.email, 'TestPass123!');
+    const oldLogin = await authenticateUser(victim.email, 'TestPass123!', { retries: 3 });
     expect(oldLogin.token).toBeTruthy();
 
     const issue = await request(testApp)
@@ -34,7 +39,9 @@ describe('Admin actions (temporary password, audit, health)', () => {
     expect(issue.body.user?.id).toBe(victim.id);
     expect(issue.body.message).toBeTruthy();
 
-    const newLogin = await authenticateUser(victim.email, issue.body.temporaryPassword);
+    const newLogin = await authenticateUser(victim.email, issue.body.temporaryPassword, {
+      retries: 3,
+    });
     expect(newLogin.token).toBeTruthy();
 
     const audit = await prisma.adminAuditLog.findFirst({

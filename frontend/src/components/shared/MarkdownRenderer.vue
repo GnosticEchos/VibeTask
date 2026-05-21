@@ -7,6 +7,7 @@ import { ref, watch, nextTick, onMounted } from 'vue'
 import MarkdownIt from 'markdown-it'
 
 let mermaid: any = null
+let mermaidTheme: string | null = null
 
 async function ensureMermaid() {
   if (!mermaid) {
@@ -25,7 +26,6 @@ const props = defineProps<{
 }>()
 
 const contentRef = ref<HTMLElement | null>(null)
-let mermaidId = 0
 
 function isDarkTheme(): boolean {
   const theme = document.documentElement.getAttribute('data-theme');
@@ -38,51 +38,48 @@ function cssVar(name: string, fallback: string): string {
 }
 
 async function renderMermaid(container: HTMLElement) {
-  const elements = Array.from(container.querySelectorAll<HTMLElement>('.mermaid:not([data-processed])'))
+  const elements = Array.from(
+    container.querySelectorAll<HTMLElement>('.mermaid:not([data-processed])'),
+  )
   if (elements.length === 0) return
 
   const mm = await ensureMermaid()
   if (!mm) return
 
+  const theme = isDarkTheme() ? 'dark' : 'default'
   try {
-    mm.initialize({
-      startOnLoad: false,
-      theme: isDarkTheme() ? 'dark' : 'default',
-      securityLevel: 'loose',
-      themeVariables: {
-        background: 'transparent',
-        primaryColor: cssVar('--color-primary', '#6366f1'),
-        primaryTextColor: cssVar('--color-primary-content', '#ffffff'),
-        lineColor: cssVar('--color-base-content', '#1e293b'),
-        nodeBorder: cssVar('--color-base-300', '#cbd5e1'),
-        fontSize: '12px',
-        ...(isDarkTheme() ? {
-          primaryBorderColor: cssVar('--color-primary', '#6366f1'),
-          secondaryColor: cssVar('--color-secondary', '#8b5cf6'),
-          tertiaryColor: cssVar('--color-accent', '#f59e0b'),
-          mainBkg: cssVar('--color-base-200', '#1e293b'),
-          clusterBkg: cssVar('--color-base-200', '#1e293b'),
-          clusterBorder: cssVar('--color-base-300', '#475569'),
-          titleColor: cssVar('--color-base-content', '#e2e8f0'),
-          edgeLabelBackground: cssVar('--color-base-200', '#1e293b'),
-        } : {}),
-      },
-    })
-
-    for (const el of elements) {
-      const code = el.textContent || ''
-      if (!code.trim()) continue
-      try {
-        const id = `mermaid-${++mermaidId}`
-        const { svg } = await mm.render(id, code)
-        el.innerHTML = svg
-        el.setAttribute('data-processed', 'true')
-      } catch {
-        // Leave as code block if mermaid fails
-      }
+    if (mermaidTheme !== theme) {
+      mm.initialize({
+        startOnLoad: false,
+        theme,
+        securityLevel: 'loose',
+        themeVariables: {
+          background: 'transparent',
+          primaryColor: cssVar('--color-primary', '#6366f1'),
+          primaryTextColor: cssVar('--color-primary-content', '#ffffff'),
+          lineColor: cssVar('--color-base-content', '#1e293b'),
+          nodeBorder: cssVar('--color-base-300', '#cbd5e1'),
+          fontSize: '12px',
+          ...(isDarkTheme()
+            ? {
+                primaryBorderColor: cssVar('--color-primary', '#6366f1'),
+                secondaryColor: cssVar('--color-secondary', '#8b5cf6'),
+                tertiaryColor: cssVar('--color-accent', '#f59e0b'),
+                mainBkg: cssVar('--color-base-200', '#1e293b'),
+                clusterBkg: cssVar('--color-base-200', '#1e293b'),
+                clusterBorder: cssVar('--color-base-300', '#475569'),
+                titleColor: cssVar('--color-base-content', '#e2e8f0'),
+                edgeLabelBackground: cssVar('--color-base-200', '#1e293b'),
+              }
+            : {}),
+        },
+      })
+      mermaidTheme = theme
     }
+
+    await mm.run({ nodes: elements })
   } catch {
-    // Mermaid initialization failed (e.g., unsupported CSS vars) — leave as code blocks
+    // Leave fenced blocks as text if mermaid fails
   }
 }
 
@@ -112,9 +109,8 @@ async function renderContent() {
 
   contentRef.value.innerHTML = md.render(props.content)
 
-  // Wait for Vue/DOM to fully update
   await nextTick()
-  await new Promise(resolve => requestAnimationFrame(resolve))
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
   await renderMermaid(contentRef.value!)
 }
 
@@ -254,18 +250,18 @@ watch(() => document.documentElement.getAttribute('data-theme'), () => {
   margin: 1.5rem 0;
 }
 
-.mermaid-diagram {
+.markdown-body :deep(.mermaid-diagram) {
   margin: 1rem 0;
   display: flex;
   justify-content: center;
 }
 
-.mermaid-diagram :deep(svg) {
+.markdown-body :deep(.mermaid-diagram svg) {
   max-width: 100%;
   height: auto;
 }
 
-.mermaid-diagram :deep(pre) {
+.markdown-body :deep(.mermaid-diagram pre) {
   background-color: var(--bs-secondary-bg);
   border: 1px solid var(--bs-border-color);
 }

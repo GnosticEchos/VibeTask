@@ -227,6 +227,7 @@ router.get('/:id', requireAuth, validateParams(projectIdParamSchema), asyncHandl
     prefix: project.prefix,
     role: membership.role,
     userId: user.id,
+    settings: (project.settings as Record<string, unknown> | null) ?? {},
     members: project.members.map(m => ({
       id: m.user.id,
       email: m.user.email,
@@ -408,6 +409,7 @@ router.get('/:id/board', requireAuth, validateParams(projectIdParamSchema), asyn
           tasks: {
             include: {
               assignee: { select: { id: true, name: true, avatarUrl: true } },
+              relatedTo: { select: { id: true, identifier: true, name: true } },
               _count: { select: { children: true } },
             },
             orderBy: { order: 'asc' },
@@ -456,6 +458,16 @@ router.get('/:id/board', requireAuth, validateParams(projectIdParamSchema), asyn
         order: task.order,
         identifier: task.identifier,
         assigneeId: task.assigneeId,
+        relationMode: task.relationMode,
+        relationId: task.relationId,
+        relatedTask: task.relatedTo
+          ? {
+              id: task.relatedTo.id,
+              identifier: task.relatedTo.identifier,
+              name: task.relatedTo.name,
+              relationMode: task.relationMode,
+            }
+          : null,
         parentId: task.parentId,
         isContainer: task.isContainer,
         planAccepted: task.planAccepted,

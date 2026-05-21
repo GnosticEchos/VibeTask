@@ -51,12 +51,14 @@ Manages the **currently selected project** (use **Your projects** drawer to swit
 | **General Information** | Edit project name, prefix, description; save | Maintainer+ |
 | **Add Team Member** | Invite by email with initial role | Maintainer+ |
 | **Workspace Members** | Table of members, roles, remove (rules apply) | Maintainer+ view/edit |
-| **Columns & descriptions** | Per-column help text for humans and agents | Maintainer+ |
+| **Columns & descriptions** | Per-column help text plus **move policies** (min role to enter/leave a column) | Maintainer+ |
 | **Danger Zone** | Delete project (permanent) | Maintainer+ |
 
 **Your projects** drawer: create a new project inline, switch active project for these cards, see fallback if the project list fails to load.
 
 **Jump links** on the page scroll to Overview, General, Invite, Members, Columns, Danger zone.
+
+In **Columns & descriptions**, each column can have optional **enter** and **exit** role requirements (viewer through admin). Use **Save move policies** to persist them via `PATCH /api/projects/{id}/settings`. Drag-and-drop still enforces these on the server when you move tasks.
 
 ### Also on the project board (not in Settings hub)
 

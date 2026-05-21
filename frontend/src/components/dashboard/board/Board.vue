@@ -254,8 +254,12 @@ async function onDnDEnd(evt: any) {
       targetColumnId: destination.columnId,
       targetIndex: destination.taskIndex,
     })
-  } catch (err) {
+  } catch (err: unknown) {
     uiLog.error('DnD Error moving task', { error: err })
+    const message =
+      (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+      'Could not move task'
+    layoutStore.openToast({ message, type: 'error' })
     refetch()
   }
 }

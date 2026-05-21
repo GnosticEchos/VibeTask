@@ -48,8 +48,9 @@ const relationOptions = computed(() => [
   { label: 'Blocked by', value: 'Blocked by' },
   { label: 'Blocks', value: 'Blocks' },
   { label: 'Duplicate of', value: 'Duplicate of' },
-  { label: 'Duplicated by', value: 'Duplicated by' },
 ])
+
+const isWorkspaceContainer: Ref<boolean> = ref(false)
 
 // 2. Assignee dropdown: ensure fullName fallback
 const members = computed(() => {
@@ -188,6 +189,7 @@ const addTask = async () => {
     description: description.value,
     projectColumnId: projectColumnId.value,
     assigneeId: assigneeId.value,
+    ...(isWorkspaceContainer.value ? { isContainer: true } : {}),
   }
   // Omit relation fields when not set. API (Kanban-rewrite): relationId is number, relationMode is kebab-case string.
   if (relationId.value != null && relationMode.value) {
@@ -199,7 +201,6 @@ const addTask = async () => {
         'Blocked by': 'blocked-by',
         Blocks: 'blocks',
         'Duplicate of': 'duplicate-of',
-        'Duplicated by': 'duplicated-by',
       }
       params.relationMode = relationModeApiMap[relationMode.value] ?? relationMode.value
     }
@@ -310,6 +311,15 @@ const handleFieldCleared = (fieldName: string) => {
                 />
               </div>
             </div>
+          <label class="label cursor-pointer justify-start gap-2 mt-2">
+            <input
+              v-model="isWorkspaceContainer"
+              type="checkbox"
+              class="checkbox checkbox-primary checkbox-sm"
+              :disabled="loading"
+            />
+            <span class="label-text">Workspace container (sub-board parent — expand later via implementation plan)</span>
+          </label>
           <!-- Relation row -->
           <div class="flex flex-col gap-2 mt-2">
             <label class="text-base font-semibold">Relation (optional)</label>

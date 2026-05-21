@@ -22,27 +22,11 @@ Human-facing OpenAPI: **~86 operations** across **75 paths**. Agent MCP surface:
 
 ---
 
-## Critical hub quirk: `POST /api/tasks` and `isContainer`
+## `POST /api/tasks` and `isContainer` (fixed 2026-05-19)
 
-The Zod schema (`hub/src/validation/schemas/task.schemas.ts`) allows `isContainer`, `parentId`, and `subBoardOutlineColor` on create. OpenAPI **does not** document `isContainer` / `parentId` on `POST /api/tasks`.
+Hub create now persists `isContainer` and `subBoardOutlineColor`; `parentId` + `isContainer` together are rejected. OpenAPI documents these fields on `POST /api/tasks`.
 
-The route handler validates with `createTaskSchema` but **does not persist `isContainer`**:
-
-```277:330:hub/src/api/routes/tasks.ts
-router.post('/', requireAuth, validateBody(createTaskSchema), ...
-  const { projectId, name, description, assigneeId, projectColumnId, relationMode, relationId, parentId } = body;
-  // ...
-  const task = await prisma.task.create({
-    data: {
-      // parentId is persisted; isContainer is NOT included
-    },
-```
-
-**Implications:**
-
-- Sending `isContainer: true` on create is a no-op today (silent drop).
-- Container tasks for humans are created via **`POST /api/projects/{projectId}/accept-plan/{taskId}`** (sets `isContainer: true` and spawns children), or via **`PATCH /api/tasks/{id}`** with `isContainer` (UI does not expose this).
-- Sub-boards are **not** a separate REST resource — they are container tasks plus optional `parentId` children.
+**Add New Task** exposes a **workspace container** checkbox (`isContainer: true`). Accept-plan and `PATCH` remain alternate paths. Sub-boards are still container tasks plus optional `parentId` children — not a separate REST resource.
 
 ---
 
@@ -65,10 +49,10 @@ router.post('/', requireAuth, validateBody(createTaskSchema), ...
 | Switch between sub-boards | `GET .../active-workspaces` | **Covered** — `ProjectView`, `BoardTopbar` |
 | View sub-board kanban | `GET .../board?parentId=` | **Covered** — `SubBoardView` |
 | Accept plan → create container + children | `POST .../accept-plan/{taskId}` | **Partial** — `TaskDialog` only; requires `IMPLEMENTATION_PLAN` doc-link and Maintainer+ |
-| “New sub-board” / mark task as container | `POST` or `PATCH` with `isContainer` | **Gap** — create dialog omits fields; PATCH save omits `isContainer`; POST create ignores it |
+| “New sub-board” / mark task as container | `POST` with `isContainer` | **Partial** — Add New Task checkbox; accept-plan still primary for spawning children |
 | Add child task on sub-board | `POST /api/tasks` with `parentId` | **Gap** — `AddNewTaskDialog` never sends `parentId` |
 | Edit outline color | `subBoardOutlineColor` on task / project settings | **Gap** — display only |
-| Column protection on sub-board | `PATCH /api/projects/{id}/settings` | **Gap** — no settings editor |
+| Column protection on sub-board | `PATCH /api/projects/{id}/settings` | **Partial** — Workspace → Columns card: enter/exit role policies + Save move policies |
 
 ```mermaid
 flowchart LR
@@ -92,9 +76,9 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 
 | Method | Path | Summary | Notes |
 |--------|------|---------|-------|
-| `PATCH` | `/api/projects/{id}/settings` | Update project settings | `columnProtection`, default `subBoardOutlineColor` — types exist, no editor |
+| `PATCH` | `/api/projects/{id}/settings` | Update project settings | **Partial** — column enter/exit policies in Workspace settings; default `subBoardOutlineColor` still no editor |
 | `GET` | `/api/projects/{id}/summary` | Project summary | No summary dashboard |
-| `DELETE` | `/api/tasks/{id}` | Documented as “move to review” | Hub **hard-deletes**; no delete control in UI |
+| `DELETE` | `/api/tasks/{id}` | Delete task | OpenAPI summary fixed; still no delete control in UI |
 | `POST` | `/api/tasks/{id}/monitor-pass/{columnId}` | Record monitor pass | Types only |
 | `DELETE` | `/api/tasks/{id}/monitor-pass/{columnId}` | Clear monitor pass | Types only |
 | `POST` | `/api/tasks/{id}/monitor-reject/{columnId}` | Reject to previous column | Types only |
@@ -111,7 +95,7 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 
 | Area | Operation(s) | Gap detail |
 |------|----------------|------------|
-| **Tasks — create** | `POST /api/tasks` | UI sends name, column, assignee, relations only; hub drops `isContainer` even if sent |
+| **Tasks — create** | `POST /api/tasks` | **Partial** — optional `isContainer` checkbox; `parentId` still not sent from Add New Task |
 | **Tasks — update** | `PATCH /api/tasks/{id}` | Hub allows `isContainer`, `subBoardOutlineColor`, `parentId`; `TaskDialog` save does not send them |
 | **Plan / sub-board** | `POST .../accept-plan` | Single entry: task dialog after plan doc-link |
 | **Documents** | CRUD + search | `deleteDocument` and `useDocumentSearch` exist; `DocsView` does not wire delete or `DocumentSearchOverlay` |
@@ -137,27 +121,25 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 
 ---
 
-## UI-only routes (not in OpenAPI)
+## OpenAPI spec accuracy (recent fixes)
 
-These hub routes are used by the frontend but **missing from** `hub/src/openapi.json`. Add them on the next spec sync.
-
-| Method | Path (effective) | UI consumer |
-|--------|------------------|-------------|
-| `GET` | `/api/projects/templates` | `CreateNewProjectDialog` (`axiosApi.get` directly; `projectApi.getProjectTemplates` is unused) |
-| `GET` | `/api/projects/{id}/delegates` | `TaskDialog` — agent assignee picker |
+| Issue | Status |
+|-------|--------|
+| Incomplete `POST /api/tasks` body | **Fixed** — documents `isContainer`, `parentId`, `subBoardOutlineColor` |
+| Wrong `DELETE /api/tasks/{id}` summary | **Fixed** — “Delete task” |
+| Missing `GET /projects/templates`, `GET /projects/{id}/delegates` | **Fixed** in spec |
+| Duplicate comment paths | Still two routes; UI uses legacy PATCH |
+| Board payload missing relations | **Fixed** — `GET .../board` includes `relationMode`, `relationId`, `relatedTask` |
 
 ---
 
-## OpenAPI spec accuracy issues
+## Relations and board UX (2026-05-19)
 
-| Issue | Detail |
-|-------|--------|
-| Incomplete `POST /api/tasks` body | Omits `isContainer`, `parentId` though Zod allows them |
-| Wrong `DELETE /api/tasks/{id}` summary | Says “move to review”; handler deletes the row |
-| Duplicate comment paths | `PATCH /tasks/comment/{id}` and `POST /tasks/{id}/comments` |
-| Missing routes | `templates`, `delegates` (see above) |
-
-Generated `frontend/src/api/generated/openapi-types.ts` inherits these gaps.
+| Capability | Status |
+|------------|--------|
+| Relation badge on board cards | **Covered** — `TaskTile` |
+| Block Done when blocked-by open | **Covered** — hub `task-relation-policy` + board toast on 403 |
+| Remove invalid “Duplicated by” create option | **Fixed** — enum is `duplicate-of` only |
 
 ---
 
@@ -178,11 +160,11 @@ Generated `frontend/src/api/generated/openapi-types.ts` inherits these gaps.
 
 ## Suggested implementation priority (product)
 
-1. Sub-board creation UX (explicit action + fix hub `POST` create to persist `isContainer` if product wants that path)
-2. Project settings UI for `PATCH .../settings`
-3. OpenAPI sync: document `templates` / `delegates`; fix task create/delete summaries and request body
-4. Documents: wire search overlay and delete in `DocsView`
-5. Monitor pass/reject and task delete if review-column workflow is required
+1. Sub-board: send `parentId` from Add New Task on sub-board views; dedicated “New sub-board” flow beyond checkbox + accept-plan
+2. Project settings: default `subBoardOutlineColor` editor; outline color on tasks
+3. Documents: wire search overlay and delete in `DocsView`
+4. Monitor pass/reject and task delete if review-column workflow is required
+5. TaskDialog PATCH: expose `isContainer` / `subBoardOutlineColor` for edit-in-place
 
 ---
 

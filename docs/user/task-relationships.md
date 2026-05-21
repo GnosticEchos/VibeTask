@@ -32,8 +32,9 @@ When creating or editing a task, choose a **type** and a **related task**:
 |----------|------------|
 | Store relation on create/update | Yes |
 | Show relation in task dialog | Yes (when loaded from API) |
-| Show relation on board cards | **No** — cards do not show blocked/blocks badges |
-| Block drag-and-drop when “blocked by” is open | **No** |
+| Show relation on board cards | **Yes** — small badge with type and related task id |
+| Block drag into **Done** when “blocked by” open task | **Yes** — server rejects the move; board shows an error toast |
+| Block drag-and-drop in other cases | **No** |
 | Filter board by “blocked” | **No** |
 | List all tasks blocked by X | **No** |
 
@@ -48,7 +49,7 @@ Column **protection** (who may move into/out of certain columns) is separate and
 - Use **Related to** for epics, spikes, or loose coupling without implying order.
 - Use **Duplicate of** when closing duplicate tickets or tracking the same fix in two places.
 
-Until move enforcement exists, agree as a team to respect **Blocked by** manually or in standup.
+When moving into a **Done** column, the server blocks the move if a **Blocked by** dependency is not yet in a Done column. Other columns are not gated by relations yet.
 
 ## Planned improvements (product direction)
 

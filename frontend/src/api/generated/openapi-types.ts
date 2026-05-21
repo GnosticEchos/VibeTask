@@ -130,6 +130,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List project templates */
+        get: operations["listProjectTemplates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{id}": {
         parameters: {
             query?: never;
@@ -195,6 +212,23 @@ export interface paths {
          * @description Returns container tasks with planAccepted=true for the Workspace Switcher dropdown
          */
         get: operations["listActiveWorkspaces"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/delegates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List agents delegated to this project */
+        get: operations["listProjectDelegates"];
         put?: never;
         post?: never;
         delete?: never;
@@ -384,7 +418,10 @@ export interface paths {
         get: operations["getTasks"];
         put?: never;
         post?: never;
-        /** Move task to review column */
+        /**
+         * Delete task
+         * @description Permanently deletes the task record.
+         */
         delete: operations["deleteTasks"];
         options?: never;
         head?: never;
@@ -2427,6 +2464,39 @@ export interface operations {
             };
         };
     };
+    listProjectTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Templates list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            [key: string]: unknown;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     getProjects: {
         parameters: {
             query?: never;
@@ -2711,6 +2781,53 @@ export interface operations {
                             identifier?: string;
                             subBoardOutlineColor?: string | null;
                             parentId?: number | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a project member */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listProjectDelegates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delegated agents for assignee picker */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            apiKeyId?: string;
+                            name?: string;
+                            permissionLevel?: string;
+                            delegatedAt?: string;
                         }[];
                     };
                 };
@@ -3278,6 +3395,12 @@ export interface operations {
                      * @enum {string}
                      */
                     relationMode?: "blocks" | "blocked-by" | "relates-to" | "duplicate-of";
+                    /** @description Parent container task for sub-board child tasks */
+                    parentId?: number;
+                    /** @description Mark task as a workspace container (sub-board parent) */
+                    isContainer?: boolean;
+                    /** @description Hex color for sub-board outline, e.g. #6366f1 */
+                    subBoardOutlineColor?: string | null;
                 };
             };
         };
@@ -3451,7 +3574,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Task moved to review column */
+            /** @description Task deleted */
             200: {
                 headers: {
                     [name: string]: unknown;

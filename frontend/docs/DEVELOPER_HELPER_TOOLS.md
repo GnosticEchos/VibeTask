@@ -24,8 +24,17 @@ npx prisma generate        # generate Prisma client from schema
 - `npm run dev` - start API in watch mode on :3000.
 - `npm run build` - TypeScript compile check.
 - `npm run test` - backend unit/integration suite (default Vitest config).
-- `npm run test:integration` - integration tests via `vitest.integration.config.ts`.
+- `npm run test:integration` - integration tests via `vitest.integration.config.ts` (requires local Postgres per `.env.test`).
 - `npm run test:all` - runs `test` + `test:integration`.
+
+**Integration test failures**
+
+| Symptom | Cause | Fix |
+|---------|--------|-----|
+| `Failed to load native binding` / `linux-x64-musl` at import, **0 tests run** | `@kreuzberg/tree-sitter-language-pack` entrypoint mis-detects musl on Node 25+ glibc | Use hub code that imports `src/infrastructure/security/tree-sitter-pack.ts` (not the package `index.js`) |
+| `Session_userId_fkey` on `POST /api/login` (often admin temporary-password test) | Race: login before Better Auth `Account` row exists after register | Pull latest test helpers (`createTestUser` waits for credential account; login retries). Re-run `npm run test:integration` |
+
+Requires local Postgres configured in `hub/.env.test` (see hub integration setup).
 
 ### Database helpers
 - `npm run db:generate` - regenerate Prisma client.
@@ -42,6 +51,20 @@ npx prisma generate        # generate Prisma client from schema
 - `npm run openapi:validate:strict` - fail on any issue.
 - `npm run openapi:bundle` - bundle dereferenced spec to `dist/openapi.json`.
 
+**When you edit `hub/src/openapi.json`**, run this order before committing:
+
+```bash
+cd ~/Projects/VibeTask/hub
+npm run openapi:validate          # required — catches structural/spec errors
+
+cd ~/Projects/VibeTask/frontend
+npm run openapi:sync              # copy hub spec → frontend/openapi.json
+npm run openapi:check-sync        # confirm copies match
+npm run openapi:gen-types         # refresh src/api/generated/openapi-types.ts
+```
+
+Use `openapi:validate:strict` when you want zero warnings (today the spec still has legacy Redocly warnings).
+
 ## Frontend Common Scripts
 
 - `npm run dev` - start Vite dev server on :5173.
@@ -57,6 +80,8 @@ npx prisma generate        # generate Prisma client from schema
 - `npm run openapi:gen-types` - generate TS types from `openapi.json` into `src/api/generated/openapi-types.ts`.
 - `npm run openapi:check-sync` - verify frontend/backend OpenAPI specs are in sync.
 - `npm run openapi:sync` - sync OpenAPI spec from hub.
+
+After hub OpenAPI edits, run **`hub` → `openapi:validate`**, then the frontend sync/check/gen-types steps above (see **Hub → OpenAPI**).
 
 ## App (Rust CLI/MCP) Common Scripts
 

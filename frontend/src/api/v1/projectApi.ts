@@ -1,4 +1,5 @@
 import { iProject, iSimplifiedProject, CreateProjectPayload } from '../../types/projectTypes'
+import type { ProjectSettings } from '../../types/documentTypes'
 import { isValidId } from '../../utils/validation'
 import { axiosApi } from '../axios'
 
@@ -66,6 +67,14 @@ const getProjectTemplates = async () => {
   return response.data
 }
 
+const patchProjectSettings = async (id: number, settings: ProjectSettings) => {
+  if (!isValidId(id)) {
+    return Promise.reject(new Error('Invalid project ID'))
+  }
+  const response = await axiosApi.patch<{ settings: ProjectSettings }>(`/projects/${Number(id)}/settings`, settings)
+  return response.data.settings
+}
+
 export default {
   updateProject,
   getSingleProject,
@@ -75,4 +84,5 @@ export default {
   getActiveWorkspaces,
   getProjectDelegates,
   getProjectTemplates,
+  patchProjectSettings,
 }

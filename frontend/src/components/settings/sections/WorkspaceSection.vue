@@ -11,6 +11,7 @@ import projectsApi from '@/api/v1/projectApi'
 import { computed, reactive, ref, watch, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { iColumn } from '@/types/columnTypes'
+import type { ColumnProtectionPolicy, ProjectSettings } from '@/types/documentTypes'
 import { roles } from '@/const'
 import { isValidId } from '@/utils/validation'
 import WorkspaceMembersCard from '@/components/settings/workspace/WorkspaceMembersCard.vue'
@@ -121,9 +122,14 @@ const inviteRole = ref(roles[1] || 'Editor')
 const isSavingProject = ref(false)
 const isInvitingMember = ref(false)
 const isSavingColumns = ref(false)
+const isSavingPolicies = ref(false)
 
 const columnDrafts = reactive<Record<number, string>>({})
 const lastServerDescriptions = reactive<Record<number, string>>({})
+const columnExitRole = reactive<Record<number, string>>({})
+const columnEnterRole = reactive<Record<number, string>>({})
+
+const policyRoleOptions = ['', 'Editor', 'Maintainer', 'Owner'] as const
 
 const isReadOnlyWorkspace = computed(() => workspaceMode.value !== 'editable')
 
@@ -154,7 +160,18 @@ const vAutosizeTextarea = {
 watch(projectId, () => {
   for (const k of Object.keys(columnDrafts)) delete columnDrafts[Number(k)]
   for (const k of Object.keys(lastServerDescriptions)) delete lastServerDescriptions[Number(k)]
+  for (const k of Object.keys(columnExitRole)) delete columnExitRole[Number(k)]
+  for (const k of Object.keys(columnEnterRole)) delete columnEnterRole[Number(k)]
 })
+
+function applySettingsToPolicyDrafts(settings: ProjectSettings | undefined) {
+  const protection = settings?.columnProtection ?? {}
+  for (const col of sortedColumns.value) {
+    const policy = protection[String(col.id)] as ColumnProtectionPolicy | undefined
+    columnExitRole[col.id] = policy?.exit ?? ''
+    columnEnterRole[col.id] = policy?.enter ?? ''
+  }
+}
 
 watch(
   () => columnsQuery.data.value,
@@ -192,8 +209,18 @@ watch(
     localName.value = project.name || ''
     localPrefix.value = project.prefix || ''
     localDescription.value = project.description || ''
+    applySettingsToPolicyDrafts(project.settings)
   },
   { immediate: true },
+)
+
+watch(
+  () => sortedColumns.value,
+  () => {
+    if (projectQuery.data.value?.settings) {
+      applySettingsToPolicyDrafts(projectQuery.data.value.settings as ProjectSettings)
+    }
+  },
 )
 
 function selectWorkspaceProject(id: number) {
@@ -293,6 +320,36 @@ async function saveColumnDescriptions() {
     layoutStore.openToast({ message: t('settingsHub.workspace.columnsSaveError'), type: 'error' })
   } finally {
     isSavingColumns.value = false
+  }
+}
+
+async function saveColumnPolicies() {
+  if (!hasProjectSelected.value || isReadOnlyWorkspace.value) return
+  isSavingPolicies.value = true
+  try {
+    const existing = (projectQuery.data.value?.settings ?? {}) as ProjectSettings
+    const columnProtection: Record<string, ColumnProtectionPolicy> = {}
+    for (const col of sortedColumns.value) {
+      const exit = columnExitRole[col.id]
+      const enter = columnEnterRole[col.id]
+      if (exit || enter) {
+        columnProtection[String(col.id)] = {
+          ...(exit ? { exit: exit as ColumnProtectionPolicy['exit'] } : {}),
+          ...(enter ? { enter: enter as ColumnProtectionPolicy['enter'] } : {}),
+        }
+      }
+    }
+    const settings = await projectsApi.patchProjectSettings(projectId.value, {
+      ...existing,
+      columnProtection,
+    })
+    projectStore.setProject({ ...projectStore.project, settings })
+    await queryClient.invalidateQueries({ queryKey: ['project', projectId.value] })
+    layoutStore.openToast({ message: 'Column move policies saved.', type: 'success' })
+  } catch {
+    layoutStore.openToast({ message: 'Failed to save column policies.', type: 'error' })
+  } finally {
+    isSavingPolicies.value = false
   }
 }
 
@@ -547,8 +604,43 @@ function scrollToWorkspaceCard(cardId: string) {
                   @input="resizeTextarea"
                 />
               </div>
+              <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div class="form-control">
+                  <label class="label py-0" :for="`col-exit-${col.id}`">
+                    <span class="label-text text-xs">Min role to leave column</span>
+                  </label>
+                  <select
+                    :id="`col-exit-${col.id}`"
+                    v-model="columnExitRole[col.id]"
+                    class="select select-bordered select-sm w-full"
+                    :disabled="isReadOnlyWorkspace"
+                  >
+                    <option v-for="opt in policyRoleOptions" :key="`exit-${col.id}-${opt}`" :value="opt">
+                      {{ opt || 'No restriction' }}
+                    </option>
+                  </select>
+                </div>
+                <div class="form-control">
+                  <label class="label py-0" :for="`col-enter-${col.id}`">
+                    <span class="label-text text-xs">Min role to enter column</span>
+                  </label>
+                  <select
+                    :id="`col-enter-${col.id}`"
+                    v-model="columnEnterRole[col.id]"
+                    class="select select-bordered select-sm w-full"
+                    :disabled="isReadOnlyWorkspace"
+                  >
+                    <option v-for="opt in policyRoleOptions" :key="`enter-${col.id}-${opt}`" :value="opt">
+                      {{ opt || 'No restriction' }}
+                    </option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
+          <p class="text-xs text-base-content/60 mt-2">
+            Move policies apply when dragging tasks. Tasks marked <strong>Blocked by</strong> another task cannot be moved into a Done column until the blocker is Done.
+          </p>
           <template #actions>
             <button
               type="button"
@@ -557,6 +649,14 @@ function scrollToWorkspaceCard(cardId: string) {
               @click="saveColumnDescriptions"
             >
               {{ $t('settingsApp.account.saveChanges') }}
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline btn-sm"
+              :disabled="isReadOnlyWorkspace || !hasProjectSelected || isSavingPolicies"
+              @click="saveColumnPolicies"
+            >
+              {{ isSavingPolicies ? 'Saving…' : 'Save move policies' }}
             </button>
           </template>
         </SettingsCard>

@@ -6,6 +6,7 @@ import { useBoardLoading } from '@/composables/useBoardLoading'
 import { useTasksStore } from '@/stores/tasks'
 import { uiLog } from '@/utils/logger'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
   task: {
@@ -23,6 +24,19 @@ const { isBoardLoading } = useBoardLoading()
 const tasksStore = useTasksStore()
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
+
+const relationBadge = computed(() => {
+  const mode = (props.task as iTask).relationMode ?? (props.task as iTask).relatedTask?.relationMode
+  const related = (props.task as iTask).relatedTask
+  if (!mode) return null
+  const labelKey = String(mode).replace(/-/g, '_')
+  const label = t(`relations.${labelKey}`, String(mode))
+  const ref = related?.identifier ? ` ${related.identifier}` : ''
+  const variant =
+    mode === 'blocked-by' ? 'badge-warning' : mode === 'blocks' ? 'badge-info' : mode === 'duplicate-of' ? 'badge-ghost' : 'badge-neutral'
+  return { label: `${label}${ref}`, variant }
+})
 
 onMounted(() => {
   uiLog.debug('Mounted', { taskId: props.task.id })
@@ -137,6 +151,11 @@ function onKeydown(e: KeyboardEvent) {
         {{ task.name }}
         <span v-if="(task as any).isContainer" class="badge badge-xs badge-outline ml-1">⧉</span>
       </span>
+      <div v-if="relationBadge" class="flex flex-wrap gap-1">
+        <span class="badge badge-xs" :class="relationBadge.variant" :title="relationBadge.label">
+          {{ relationBadge.label }}
+        </span>
+      </div>
       <!-- Container badge with child count or plan pending -->
       <div v-if="hasSubBoard || hasPlanPending || hasDraftChildren" class="mt-auto">
         <span

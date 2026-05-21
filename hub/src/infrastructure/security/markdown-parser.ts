@@ -4,7 +4,7 @@
  * Validates markdown content to prevent injection attacks while
  * allowing rich code block documentation.
  * 
- * Uses @kreuzberg/tree-sitter-language-pack for structural parsing.
+ * Uses tree-sitter (via tree-sitter-pack loader) for structural parsing when available.
  * 
  * Security approach:
  * - Parse markdown to extract code blocks
@@ -13,11 +13,7 @@
  * - Generic dangerous patterns only flagged in shell contexts
  */
 
-import {
-  process,
-  hasLanguage,
-  JsDiagnosticSeverity,
-} from '@kreuzberg/tree-sitter-language-pack';
+import { getTreeSitterPack } from './tree-sitter-pack.js';
 
 /**
  * Forbidden patterns that indicate potential injection attempts
@@ -70,17 +66,17 @@ export interface CodeBlock {
  */
 export async function parseMarkdown(content: string): Promise<MarkdownParseResult> {
   const errors: string[] = [];
+  const treeSitter = getTreeSitterPack();
   
   try {
-    // Parse markdown using tree-sitter to get diagnostics
-    const result = await process(content, { language: 'markdown', diagnostics: true });
-    
-    // Check for parse errors
-    const errorDiagnostics = (result.diagnostics || []).filter(
-      d => d.severity === JsDiagnosticSeverity.Error,
-    );
-    if (errorDiagnostics.length > 0) {
-      errors.push(...errorDiagnostics.map(d => `Parse error: ${d.message}`));
+    if (treeSitter) {
+      const result = await treeSitter.process(content, { language: 'markdown', diagnostics: true });
+      const errorDiagnostics = (result.diagnostics || []).filter(
+        d => d.severity === treeSitter.JsDiagnosticSeverity.Error,
+      );
+      if (errorDiagnostics.length > 0) {
+        errors.push(...errorDiagnostics.map(d => `Parse error: ${d.message}`));
+      }
     }
     
     // Extract code blocks for validation
@@ -89,7 +85,7 @@ export async function parseMarkdown(content: string): Promise<MarkdownParseResul
     // Validate each code block's internal structure
     for (const block of codeBlocks) {
       if (block.language && block.content) {
-        const validationResult = await validateCodeBlock(block);
+        const validationResult = await validateCodeBlock(block, treeSitter);
         if (!validationResult.valid) {
           errors.push(...validationResult.errors);
         }
@@ -171,7 +167,10 @@ function removeCodeBlocksFromContent(content: string, blockRanges: { start: numb
  * - Shell-like languages (bash, sh, zsh) get additional execution pattern checks
  * - Other languages only get generic dangerous pattern check in shell context
  */
-async function validateCodeBlock(block: CodeBlock): Promise<{ valid: boolean; errors: string[] }> {
+async function validateCodeBlock(
+  block: CodeBlock,
+  treeSitter: ReturnType<typeof getTreeSitterPack>,
+): Promise<{ valid: boolean; errors: string[] }> {
   const errors: string[] = [];
   
   if (!block.language || !block.content) {
@@ -185,8 +184,19 @@ async function validateCodeBlock(block: CodeBlock): Promise<{ valid: boolean; er
   const isShellContext = SHELL_LANGUAGES.includes(lang);
   
   try {
+    if (!treeSitter) {
+      if (isShellContext) {
+        for (const pattern of SHELL_EXECUTION_PATTERNS) {
+          if (pattern.test(block.content)) {
+            errors.push(`Shell block contains execution pattern: ${pattern.source}`);
+          }
+        }
+      }
+      return { valid: errors.length === 0, errors };
+    }
+
     // Check if language is available
-    if (!hasLanguage(lang)) {
+    if (!treeSitter.hasLanguage(lang)) {
       // If language is not available, we can't validate internal structure
       // Just do pattern checks
       if (isShellContext) {
@@ -201,11 +211,11 @@ async function validateCodeBlock(block: CodeBlock): Promise<{ valid: boolean; er
     
     // Try to parse the code block content with tree-sitter
     // This will detect obfuscated/malformed content
-    const result = await process(block.content, { language: lang, diagnostics: true });
+    const result = await treeSitter.process(block.content, { language: lang, diagnostics: true });
     
     // Check for parse errors in the code
     const errorDiagnostics = (result.diagnostics || []).filter(
-      d => d.severity === JsDiagnosticSeverity.Error,
+      d => d.severity === treeSitter.JsDiagnosticSeverity.Error,
     );
     if (errorDiagnostics.length > 0) {
       errors.push(`Code block '${block.language}' has structural issues: ${errorDiagnostics.map(d => d.message).join(', ')}`);

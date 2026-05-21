@@ -3,7 +3,6 @@ export const relations = [
   'Blocks',
   'Related to',
   'Duplicate of',
-  'Duplicated by',
 ]
 
 export const roles = ['Maintainer', 'Editor', 'Viewer']

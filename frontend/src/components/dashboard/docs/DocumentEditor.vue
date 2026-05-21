@@ -107,9 +107,20 @@
         />
       </div>
 
-      <!-- View mode: rendered markdown -->
+      <!-- View mode: same preview pipeline as edit (MdPreview + mermaid) -->
       <div v-else class="overflow-y-auto h-full p-4">
-        <MarkdownRenderer v-if="document?.content" :content="document.content" />
+        <div v-if="!previewReady" class="flex justify-center py-8">
+          <span class="loading loading-spinner loading-lg" />
+        </div>
+        <component
+          v-else-if="document?.content"
+          :is="MdPreview"
+          :key="document.id"
+          :model-value="document.content"
+          :editor-id="`doc-read-${document.id}`"
+          :theme="isDark ? 'dark' : 'light'"
+          class="doc-md-preview"
+        />
         <div v-else class="text-center py-8 text-base-content/50">
           Empty document — click Edit to add content
         </div>
@@ -121,22 +132,37 @@
 <script setup lang="ts">
 import { ref, watch, type Component } from 'vue'
 import { useDark } from '@vueuse/core'
-import MarkdownRenderer from '../../shared/MarkdownRenderer.vue'
 import type { ProjectDocument } from '../../../types/documentTypes'
 import { useLayoutStore } from '@/stores/layout'
+import { configureMdEditorMermaid } from '@/lib/md-editor-mermaid'
 
 // Lazy-load md-editor-v3
 let MdEditor: Component | null = null
+let MdPreview: Component | null = null
 const editorLoaded = ref(false)
+const previewReady = ref(false)
 const editorPreloadHover = ref(false)
+
+async function loadMdEditorStyles() {
+  await import('md-editor-v3/lib/style.css')
+}
 
 async function loadEditor() {
   if (MdEditor) return
+  await configureMdEditorMermaid()
   const mod = await import('md-editor-v3')
   MdEditor = mod.MdEditor
-  // Dynamically load CSS
-  await import('md-editor-v3/lib/style.css')
+  await loadMdEditorStyles()
   editorLoaded.value = true
+}
+
+async function loadPreview() {
+  if (previewReady.value && MdPreview) return
+  await configureMdEditorMermaid()
+  const mod = await import('md-editor-v3')
+  MdPreview = mod.MdPreview
+  await loadMdEditorStyles()
+  previewReady.value = true
 }
 
 function preloadEditorOnHover() {
@@ -215,8 +241,20 @@ const toolbars = ref([
 watch(isEditing, async (editing) => {
   if (editing) {
     await loadEditor()
+  } else if (props.document?.id) {
+    await loadPreview()
   }
 })
+
+watch(
+  () => props.document?.id,
+  async (docId) => {
+    if (docId && !isEditing.value) {
+      await loadPreview()
+    }
+  },
+  { immediate: true },
+)
 
 function toggleTheme() {
   isDark.value = !isDark.value
@@ -289,5 +327,9 @@ watch(() => props.document, (doc) => {
 
 .md-editor .md-editor-content {
   height: calc(100% - 56px) !important;
+}
+
+.doc-md-preview {
+  background: transparent;
 }
 </style>

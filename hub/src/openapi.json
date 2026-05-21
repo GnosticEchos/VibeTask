@@ -553,6 +553,51 @@
         "operationId": "createProjects"
       }
     },
+    "/api/projects/templates": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "List project templates",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Templates list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listProjectTemplates"
+      }
+    },
     "/api/projects/{id}": {
       "get": {
         "tags": [
@@ -978,6 +1023,84 @@
           }
         },
         "operationId": "listActiveWorkspaces"
+      }
+    },
+    "/api/projects/{id}/delegates": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "List agents delegated to this project",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delegated agents for assignee picker",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "apiKeyId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "permissionLevel": {
+                            "type": "string"
+                          },
+                          "delegatedAt": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a project member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listProjectDelegates"
       }
     },
     "/api/projects/{id}/settings": {
@@ -1784,6 +1907,19 @@
                       "duplicate-of"
                     ],
                     "description": "Relation type to related task"
+                  },
+                  "parentId": {
+                    "type": "integer",
+                    "description": "Parent container task for sub-board child tasks"
+                  },
+                  "isContainer": {
+                    "type": "boolean",
+                    "description": "Mark task as a workspace container (sub-board parent)"
+                  },
+                  "subBoardOutlineColor": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Hex color for sub-board outline, e.g. #6366f1"
                   }
                 }
               }
@@ -2095,7 +2231,8 @@
         "tags": [
           "Tasks"
         ],
-        "summary": "Move task to review column",
+        "summary": "Delete task",
+        "description": "Permanently deletes the task record.",
         "security": [
           {
             "bearerAuth": []
@@ -2113,7 +2250,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Task moved to review column",
+            "description": "Task deleted",
             "content": {
               "application/json": {
                 "schema": {

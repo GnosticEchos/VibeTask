@@ -91,17 +91,35 @@ const db = testPrisma;
  */
 export async function authenticateUser(
   email: string, 
-  password: string
+  password: string,
+  options: { retries?: number } = {},
 ): Promise<ApiLoginResponse> {
-  const response = await request(testApp)
-    .post('/api/login')
-    .send({ email, password });
+  const maxAttempts = options.retries ?? 1;
+  let lastError: Error | null = null;
 
-  if (response.status !== 200) {
-    throw new Error(`Authentication failed: ${response.body.error || response.status}`);
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const response = await request(testApp)
+      .post('/api/login')
+      .send({ email, password });
+
+    if (response.status === 200) {
+      return response.body as ApiLoginResponse;
+    }
+
+    const detail = String(response.body?.error ?? response.text ?? response.status);
+    lastError = new Error(`Authentication failed: ${detail}`);
+
+    const retryable =
+      detail.includes('Session_userId_fkey') ||
+      detail.includes('Foreign key constraint violated');
+    if (!retryable || attempt === maxAttempts - 1) {
+      throw lastError;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 75 * (attempt + 1)));
   }
 
-  return response.body as ApiLoginResponse;
+  throw lastError ?? new Error('Authentication failed');
 }
 
 /**
@@ -192,18 +210,28 @@ export async function createTestUser(
     .send(userData);
 
   if (response.status !== 200) {
-    // Fallback: create directly in database (for cases where API fails)
+    // Fallback: create user + credential account (login requires Account, not User.password)
+    const { hashPassword } = await import('better-auth/crypto');
     const user = await db.user.create({
       data: {
         email: userData.email,
         name: userData.name,
         surname: userData.surname,
-        password: userData.password, // Will be hashed by Better Auth
         emailVerified: true,
       },
     });
-    
+    const hashed = await hashPassword(userData.password);
+    const account = await db.account.create({
+      data: {
+        userId: user.id,
+        accountId: String(user.id),
+        providerId: 'credential',
+        password: hashed,
+      },
+    });
+
     trackEntity('users', user.id);
+    trackEntity('accounts', account.id);
     return user;
   }
 
@@ -231,8 +259,28 @@ export async function createTestUser(
   if (!dbUser) {
     throw new Error(`User ${responseUser.email} was not found in database after registration (retries: ${retries})`);
   }
-  
+
+  // Better Auth login requires a credential Account row tied to this user id.
+  let credentialAccount = null;
+  retries = 0;
+  while (!credentialAccount && retries < maxRetries) {
+    credentialAccount = await db.account.findFirst({
+      where: { userId: dbUser.id, providerId: 'credential' },
+    });
+    if (!credentialAccount) {
+      retries++;
+      await new Promise((resolve) => setTimeout(resolve, 50 * retries));
+    }
+  }
+
+  if (!credentialAccount) {
+    throw new Error(
+      `Credential account missing for ${dbUser.email} (user id ${dbUser.id}) after registration`,
+    );
+  }
+
   trackEntity('users', dbUser.id);
+  trackEntity('accounts', credentialAccount.id);
   
   return {
     id: dbUser.id,
