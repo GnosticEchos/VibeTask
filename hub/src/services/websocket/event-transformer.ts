@@ -82,6 +82,10 @@ export function transformTaskEvent(payload: DBPayload): TransformedMessage | nul
         createdById: data.createdById,
         relationMode: data.relationMode,
         relationId: data.relationId,
+        parentId: data.parentId ?? null,
+        isContainer: data.isContainer ?? false,
+        planAccepted: data.planAccepted ?? false,
+        subBoardOutlineColor: data.subBoardOutlineColor ?? null,
         createdAt: formatDate(data.createdAt),
         updatedAt: formatDate(data.updatedAt),
         // Note: assignee and createdBy are populated by the frontend stores

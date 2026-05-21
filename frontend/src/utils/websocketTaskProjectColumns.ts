@@ -22,6 +22,52 @@ function shouldApplyTaskUpdate(existingTask: iTask | undefined, incomingTask: iT
   return incomingMs >= existingMs
 }
 
+/** Fields the board API enriches but TasksIndexChannel WS payloads omit. */
+const BOARD_ENRICHED_KEYS = [
+  'relatedTask',
+  'isContainer',
+  'planAccepted',
+  'childCount',
+  'parentId',
+  'subBoardOutlineColor',
+  'assignee',
+] as const
+
+/**
+ * Merge a websocket task patch into the board column task.
+ * WS updates replace the whole task object; without merging, relation badges and
+ * sub-board flags flash then disappear when a board refetch is overwritten by WS.
+ */
+export function mergeBoardTaskFromWebsocket(existing: iTask | undefined, incoming: iTask): iTask {
+  if (!existing) return incoming
+
+  const merged = { ...existing, ...incoming } as iTask
+
+  for (const key of BOARD_ENRICHED_KEYS) {
+    if ((incoming as Record<string, unknown>)[key] === undefined && (existing as Record<string, unknown>)[key] !== undefined) {
+      ;(merged as Record<string, unknown>)[key] = (existing as Record<string, unknown>)[key]
+    }
+  }
+
+  if (incoming.relationMode === undefined && existing.relationMode != null) {
+    merged.relationMode = existing.relationMode
+  }
+  if (incoming.relationId === undefined && existing.relationId != null) {
+    merged.relationId = existing.relationId
+  }
+
+  if ((incoming as iTask).relatedTask === undefined && existing.relatedTask) {
+    const incomingRelId = incoming.relationId !== undefined ? incoming.relationId : existing.relationId
+    if (incomingRelId != null && existing.relationId === incomingRelId) {
+      merged.relatedTask = existing.relatedTask
+    } else if (incoming.relationId !== undefined && incoming.relationId !== existing.relationId) {
+      merged.relatedTask = null
+    }
+  }
+
+  return merged
+}
+
 function isReviewColumn(column: iColumn): boolean {
   const name = String((column as any).name || '').toLowerCase()
   const type = String((column as any).type || (column as any).roleType || '').toUpperCase()
@@ -67,12 +113,37 @@ export function applyUpsertTaskToColumns(columns: iColumn[], task: iTask): iColu
         : ((task as any).parentId ?? null) === scopeParentId)
     if (target && shouldInsertByScope) {
       const targetTasks = Array.isArray((target as any).tasks) ? ((target as any).tasks as iTask[]) : []
-      targetTasks.push(task)
+      targetTasks.push(mergeBoardTaskFromWebsocket(existingTask, task))
       targetTasks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
       ;(target as any).tasks = targetTasks
     }
   }
 
+  return cloneColumns(cloned)
+}
+
+export function applyRelationFieldsToProjectColumns(
+  columns: iColumn[],
+  taskId: number,
+  fields: {
+    relationMode: string | null
+    relationId: number | null
+    relatedTask?: iTask['relatedTask']
+  },
+): iColumn[] {
+  const cloned = cloneColumns(columns)
+  for (const col of cloned) {
+    const colTasks = Array.isArray((col as any).tasks) ? ((col as any).tasks as iTask[]) : []
+    const idx = colTasks.findIndex((t) => t.id === taskId)
+    if (idx === -1) continue
+    colTasks[idx] = {
+      ...colTasks[idx],
+      relationMode: fields.relationMode,
+      relationId: fields.relationId,
+      relatedTask: fields.relatedTask ?? null,
+    }
+    ;(col as any).tasks = colTasks
+  }
   return cloneColumns(cloned)
 }
 

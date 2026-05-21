@@ -1,7 +1,21 @@
 import { iProject } from '../types/projectTypes'
+import type { iColumn } from '../types/columnTypes'
+import type { iTask } from '../types/taskTypes'
+import { mergeBoardTaskFromWebsocket } from '@/utils/websocketTaskProjectColumns'
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
 import { storeLog } from '@/utils/logger'
+
+function indexColumnTasksById(columns: iColumn[]): Map<number, iTask> {
+  const byId = new Map<number, iTask>()
+  for (const col of columns) {
+    const tasks = Array.isArray(col.tasks) ? (col.tasks as iTask[]) : []
+    for (const task of tasks) {
+      if (typeof task?.id === 'number') byId.set(task.id, task)
+    }
+  }
+  return byId
+}
 
 const defaultProjectState = (): iProject => ({
   id: 0,
@@ -28,6 +42,10 @@ export const useProjectStore = defineStore('project', () => {
         storeLog.warn('newProject.columns is not an array', { columns: newProject.columns })
         newProject.columns = []
       }
+      const priorTasksById = indexColumnTasksById(
+        Array.isArray(project.columns) ? (project.columns as iColumn[]) : [],
+      )
+
       // Deep clone columns for robust reactivity
       project.columns = (newProject.columns || []).map((col, colIdx) => {
         if (typeof col !== 'object' || col === null) {
@@ -64,7 +82,9 @@ export const useProjectStore = defineStore('project', () => {
               createdAt: ''
             }
           }
-          return { ...task }
+          const incoming = task as iTask
+          const existing = priorTasksById.get(incoming.id)
+          return existing ? mergeBoardTaskFromWebsocket(existing, incoming) : { ...incoming }
         }) : [] }
         return newCol
       })

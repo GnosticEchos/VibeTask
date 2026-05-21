@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { applyDeleteTaskFromColumns, applyUpsertTaskToColumns } from '@/utils/websocketTaskProjectColumns'
+import {
+  applyDeleteTaskFromColumns,
+  applyRelationFieldsToProjectColumns,
+  applyUpsertTaskToColumns,
+} from '@/utils/websocketTaskProjectColumns'
 
 describe('websocket task/column sync helpers', () => {
   it('upserts into target column and keeps order', () => {
@@ -59,6 +63,60 @@ describe('websocket task/column sync helpers', () => {
     const moved = { id: 20, order: 0, projectColumnId: 2, parentId: null } as any
     const next = applyUpsertTaskToColumns(columns, moved)
     expect(next[1].tasks.find((t: any) => t.id === 20)).toBeTruthy()
+  })
+
+  it('patches relation fields on an existing column task', () => {
+    const columns: any = [
+      {
+        id: 1,
+        tasks: [{ id: 5, order: 1, projectColumnId: 1, relationMode: null, relationId: null, relatedTask: null }],
+      },
+    ]
+    const next = applyRelationFieldsToProjectColumns(columns, 5, {
+      relationMode: 'blocked-by',
+      relationId: 99,
+      relatedTask: { id: 99, identifier: 'VT-99', name: 'Blocker', relationMode: 'blocked-by' },
+    })
+    const task = next[0].tasks[0]
+    expect(task.relationMode).toBe('blocked-by')
+    expect(task.relatedTask?.identifier).toBe('VT-99')
+  })
+
+  it('preserves relation badge fields when websocket payload omits board enrichments', () => {
+    const columns: any = [
+      {
+        id: 1,
+        tasks: [
+          {
+            id: 5,
+            order: 1,
+            projectColumnId: 1,
+            updatedAt: '2026-03-26T14:00:00.000Z',
+            relationMode: 'blocked-by',
+            relationId: 99,
+            relatedTask: { id: 99, identifier: 'VT-99', name: 'Blocker', relationMode: 'blocked-by' },
+            isContainer: false,
+            planAccepted: false,
+            childCount: 0,
+          },
+        ],
+      },
+    ]
+    const wsPatch = {
+      id: 5,
+      order: 1,
+      projectColumnId: 1,
+      updatedAt: '2026-03-26T14:00:01.000Z',
+      relationMode: 'blocked-by',
+      relationId: 99,
+      name: 'Updated title',
+    } as any
+    const next = applyUpsertTaskToColumns(columns, wsPatch)
+    const task = next[0].tasks.find((t: any) => t.id === 5)
+    expect(task.name).toBe('Updated title')
+    expect(task.relationMode).toBe('blocked-by')
+    expect(task.relatedTask?.identifier).toBe('VT-99')
+    expect(task.isContainer).toBe(false)
   })
 
   it('accepts string projectColumnId from websocket payload', () => {

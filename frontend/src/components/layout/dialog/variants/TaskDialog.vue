@@ -11,6 +11,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { planAcceptanceApi } from '@/api/v1/planAcceptanceApi'
 import { useTaskDocLinkMutations, useTaskDocLinks } from '@/composables/useTaskDocLinks'
 import { uiLog } from '@/utils/logger'
+import { applyRelationFieldsToProjectColumns } from '@/utils/websocketTaskProjectColumns'
+import {
+  RELATION_UI_OPTIONS,
+  normalizeRelationModeForApi,
+  relationModeToUiLabel,
+  relationUiLabelToApiMode,
+} from '@/utils/taskRelationMode'
+import type { iColumn } from '@/types/columnTypes'
 import DialogTemplate from '../DialogTemplate.vue'
 import { getDisplayName } from '../../../../utils/functions'
 import api from '@/api/v1/indexApi'
@@ -149,6 +157,14 @@ const localAssigneeId = ref<string>('')
 // Add missing refs for relation type and related task
 const localRelationType = ref('')
 const localRelatedTaskId = ref('')
+/** Relation fields loaded with the task; PATCH only when user changes them (avoids clearing on unrelated saves). */
+const relationBaseline = ref<{ taskId: number | null; mode: string | null; id: number | null }>({
+  taskId: null,
+  mode: null,
+  id: null,
+})
+const isSaving = ref(false)
+const saveError = ref('')
 
 const saveTaskProjectId = computed(() => {
   const mergedProjectId = mergedTask.value && 'projectId' in mergedTask.value ? Number((mergedTask.value as TaskWithIds).projectId) : NaN
@@ -157,28 +173,7 @@ const saveTaskProjectId = computed(() => {
   return [mergedProjectId, storeProjectId, routeProjectId].find(Number.isFinite)
 })
 
-// 1. Related Task Key/Value dropdowns (display labels; API uses enum: relates-to, blocked-by, blocks)
-const relationOptions = [
-  { label: 'Related to', value: 'Related to' },
-  { label: 'Blocked by', value: 'Blocked by' },
-  { label: 'Blocks', value: 'Blocks' },
-  { label: 'Duplicate of', value: 'Duplicate of' },
-  { label: 'Duplicated by', value: 'Duplicated by' },
-]
-const RELATION_MODE_TO_LABEL: Record<string, string> = {
-  'relates-to': 'Related to',
-  'blocked-by': 'Blocked by',
-  blocks: 'Blocks',
-  'duplicate-of': 'Duplicate of',
-  'duplicated-by': 'Duplicated by',
-}
-const RELATION_LABEL_TO_MODE: Record<string, string> = {
-  'Related to': 'relates-to',
-  'Blocked by': 'blocked-by',
-  Blocks: 'blocks',
-  'Duplicate of': 'duplicate-of',
-  'Duplicated by': 'duplicated-by',
-}
+const relationOptions = [...RELATION_UI_OPTIONS]
 const relatedTasks = computed(() =>
   (tasksStore.items || []).filter(t => t.id !== mergedTask.value?.id).map(t => ({
     ...t,
@@ -198,24 +193,73 @@ watch(mergedTask, (task) => {
     } else {
       localAssigneeId.value = task.assignee && typeof task.assignee.id === 'number' ? `user:${task.assignee.id}` : ''
     }
-    const taskAny = task as { relationId?: number | string | null; relationMode?: string | null; relatedTask?: { id: number; relationMode?: string } | null }
-    const relationId = taskAny.relationId ?? taskAny.relatedTask?.id ?? null
-    const relationMode = taskAny.relationMode ?? taskAny.relatedTask?.relationMode ?? null
-    localRelatedTaskId.value = relationId != null ? String(relationId) : ''
-    localRelationType.value = relationMode ? (RELATION_MODE_TO_LABEL[relationMode] ?? relationMode) : ''
+    // While save is in flight, keep local relation picks and baseline — optimistic
+    // store updates must not wipe the PATCH payload or column badge patch.
+    if (!isSaving.value) {
+      const taskAny = task as { relationId?: number | string | null; relationMode?: string | null; relatedTask?: { id: number; relationMode?: string } | null }
+      const relationId = taskAny.relationId ?? taskAny.relatedTask?.id ?? null
+      const relationMode = taskAny.relationMode ?? taskAny.relatedTask?.relationMode ?? null
+      localRelatedTaskId.value = relationId != null ? String(relationId) : ''
+      localRelationType.value = relationModeToUiLabel(relationMode)
+      relationBaseline.value = {
+        taskId: task.id ?? null,
+        mode: normalizeRelationModeForApi(relationMode),
+        id: relationId != null ? Number(relationId) : null,
+      }
+    }
   }
 }, { immediate: true })
 
-const isSaving = ref(false)
-const saveError = ref('')
+function currentRelationValues(): { relationIdVal: number | null; relationModeVal: string | null } {
+  const relationIdVal =
+    localRelatedTaskId.value !== '' && localRelatedTaskId.value != null ? Number(localRelatedTaskId.value) : null
+  const relationModeVal = relationUiLabelToApiMode(localRelationType.value)
+  return { relationIdVal, relationModeVal }
+}
+
+function relationPatchIfChanged(): { relationMode?: string | null; relationId?: number | null } {
+  const { relationIdVal, relationModeVal } = currentRelationValues()
+  const taskId = mergedTask.value?.id ?? null
+  const base = relationBaseline.value
+  if (taskId == null) return {}
+  if (base.taskId !== taskId) {
+    return { relationMode: relationModeVal, relationId: relationIdVal }
+  }
+  if (relationModeVal === base.mode && relationIdVal === base.id) return {}
+  return { relationMode: relationModeVal, relationId: relationIdVal }
+}
+
+function buildRelatedTaskSummary(
+  relationIdVal: number | null,
+  relationModeVal: string | null,
+): iTask['relatedTask'] {
+  if (relationIdVal == null || !relationModeVal) return null
+  const related = (tasksStore.items || []).find((t) => t.id === relationIdVal)
+  if (!related) return null
+  return {
+    id: related.id,
+    identifier: related.identifier,
+    name: related.name,
+    relationMode: relationModeVal,
+  }
+}
 
 // Save task logic is used in template, so keep as function but ensure assignee is always ISimplifiedUser
 // @ts-ignore
 async function saveTask(): Promise<void> {
+  if (isSaving.value) return
   isSaving.value = true
   saveError.value = ''
   const prevTask = JSON.parse(JSON.stringify(tasksStore.item))
-  uiLog.debug('saveTask called', { localName: localName.value, localDescription: localDescription.value, localAssigneeId: localAssigneeId.value, localProjectColumnId: localProjectColumnId.value })
+  const { relationIdVal, relationModeVal } = currentRelationValues()
+  const relationPatch = relationPatchIfChanged()
+  uiLog.debug('saveTask called', {
+    localName: localName.value,
+    localDescription: localDescription.value,
+    localAssigneeId: localAssigneeId.value,
+    localProjectColumnId: localProjectColumnId.value,
+    relationPatch,
+  })
   try {
     const assigneeKind = localAssigneeId.value.startsWith('agent:') ? 'agent' : localAssigneeId.value.startsWith('user:') ? 'user' : 'none'
     const assigneeValue = localAssigneeId.value.includes(':') ? localAssigneeId.value.split(':')[1] : ''
@@ -230,22 +274,36 @@ async function saveTask(): Promise<void> {
       projectColumnId: localProjectColumnId.value === '' ? 0 : Number(localProjectColumnId.value),
     }
     tasksStore.item = optimisticTask
-    // relationId must be a number for create/update (Kanban-rewrite task schemas).
-    const relationIdVal = localRelatedTaskId.value !== '' && localRelatedTaskId.value != null ? Number(localRelatedTaskId.value) : null
-    const relationModeVal = localRelationType.value ? (RELATION_LABEL_TO_MODE[localRelationType.value] ?? localRelationType.value) : null
     const payload: Record<string, unknown> = {
       name: localName.value,
       description: localDescription.value,
       projectColumnId: localProjectColumnId.value === '' ? undefined : Number(localProjectColumnId.value),
       projectId: mergedTask.value && 'projectId' in mergedTask.value ? (mergedTask.value as TaskWithIds).projectId : undefined,
-      relationId: relationIdVal,
-      relationMode: relationModeVal,
+      ...relationPatch,
       ...(assigneeKind === 'user' && { assigneeId: Number(assigneeValue) }),
       ...(assigneeKind === 'agent' && { assigneeApiKeyId: assigneeValue, assigneeId: null }),
       ...(assigneeKind === 'none' && { assigneeId: null, assigneeApiKeyId: null }),
     }
     if (mergedTask.value && 'id' in mergedTask.value) {
-      await tasksStore.updateItem((mergedTask.value as TaskWithIds).id as number, payload)
+      const savedTaskId = (mergedTask.value as TaskWithIds).id as number
+      await tasksStore.updateItem(savedTaskId, payload)
+      if (Object.keys(relationPatch).length > 0 && saveTaskProjectId.value) {
+        const columns = Array.isArray(projectStore.project.columns)
+          ? (projectStore.project.columns as iColumn[])
+          : []
+        if (columns.length) {
+          projectStore.project.columns = applyRelationFieldsToProjectColumns(columns, savedTaskId, {
+            relationMode: relationModeVal,
+            relationId: relationIdVal,
+            relatedTask: buildRelatedTaskSummary(relationIdVal, relationModeVal),
+          })
+        }
+        relationBaseline.value = {
+          taskId: savedTaskId,
+          mode: relationModeVal,
+          id: relationIdVal,
+        }
+      }
       uiLog.debug('saveTask updateItem finished', { tasksStoreItem: tasksStore.item })
       if (typeof tasksStore.fetchItem === 'function') {
         const updatedTask = await tasksStore.fetchItem((mergedTask.value as TaskWithIds).id as number)
@@ -258,8 +316,11 @@ async function saveTask(): Promise<void> {
         }
       }
       if (saveTaskProjectId.value) {
-        await queryClient.invalidateQueries({ queryKey: ['board', saveTaskProjectId.value] })
-        uiLog.debug('saveTask invalidated board query', { projectId: saveTaskProjectId.value })
+        const pid = saveTaskProjectId.value
+        await queryClient.invalidateQueries({ queryKey: ['board', pid] })
+        await queryClient.invalidateQueries({ queryKey: ['project', pid] })
+        await queryClient.invalidateQueries({ queryKey: ['subboard', pid] })
+        uiLog.debug('saveTask invalidated board/project/subboard queries', { projectId: pid })
       }
     }
   } catch (err) {
@@ -267,8 +328,11 @@ async function saveTask(): Promise<void> {
     saveError.value = 'Failed to save task. Changes were rolled back.'
     uiLog.error('saveTask error', { error: err, projectId: saveTaskProjectId.value })
     if (saveTaskProjectId.value) {
-      await queryClient.invalidateQueries({ queryKey: ['board', saveTaskProjectId.value] })
-      uiLog.debug('saveTask error - invalidated board query', { projectId: saveTaskProjectId.value })
+      const pid = saveTaskProjectId.value
+      await queryClient.invalidateQueries({ queryKey: ['board', pid] })
+      await queryClient.invalidateQueries({ queryKey: ['project', pid] })
+      await queryClient.invalidateQueries({ queryKey: ['subboard', pid] })
+      uiLog.debug('saveTask error - invalidated board/project/subboard queries', { projectId: pid })
     }
   } finally {
     isSaving.value = false
@@ -431,7 +495,7 @@ function refreshTask() {
       const relationId = taskAny.relationId ?? taskAny.relatedTask?.id ?? null
       const relationMode = taskAny.relationMode ?? taskAny.relatedTask?.relationMode ?? null
       localRelatedTaskId.value = relationId != null ? String(relationId) : ''
-      localRelationType.value = relationMode ? (RELATION_MODE_TO_LABEL[relationMode] ?? relationMode) : ''
+      localRelationType.value = relationModeToUiLabel(relationMode)
     })
     .catch(err => {
       refreshError.value = 'Failed to refresh from server.'
@@ -446,12 +510,13 @@ function refreshTask() {
 const projectId = computed(() => Number(route.params.id) || (mergedTask.value as any)?.projectId)
 const taskId = computed(() => mergedTask.value?.id)
 
-const { data: docLinksData } = useTaskDocLinks(projectId.value, taskId.value ?? 0)
+const docLinksTaskId = computed(() => taskId.value ?? 0)
+const { data: docLinksData } = useTaskDocLinks(projectId, docLinksTaskId)
 const {
   createLink,
   deleteLink,
   createLoading: addingDocumentLink,
-} = useTaskDocLinkMutations(projectId.value, taskId.value ?? 0)
+} = useTaskDocLinkMutations(projectId, docLinksTaskId)
 
 const availableDocuments = ref<ProjectDocument[]>([])
 const selectedDocumentId = ref<number | ''>('')

@@ -3,7 +3,8 @@ import { useProjectStore } from './project'
 import { falseLoadingState } from '../utils/functions'
 import { isValidId } from '../utils/validation'
 import { computed, ref, Ref } from 'vue'
-import { Task } from '../types/taskTypes'
+import { Task, type iTask } from '../types/taskTypes'
+import { mergeBoardTaskFromWebsocket } from '../utils/websocketTaskProjectColumns'
 import { storeLog } from '@/utils/logger'
 
 interface Item {
@@ -122,6 +123,13 @@ export const storeConstructor = <T extends Item, Y extends Item>(
     const index = items.value.findIndex((i) => i.id === updatedItem.id)
     if (index === -1) {
       items.value.push(updatedItem as Y)
+      return
+    }
+    if (endpoint === 'tasks') {
+      items.value[index] = mergeBoardTaskFromWebsocket(
+        items.value[index] as unknown as iTask,
+        updatedItem as unknown as iTask,
+      ) as Y
       return
     }
     items.value[index] = updatedItem as Y

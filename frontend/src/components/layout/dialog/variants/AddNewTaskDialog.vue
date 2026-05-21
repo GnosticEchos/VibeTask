@@ -16,6 +16,7 @@ import BaseToast from '../../../base/BaseToast.vue'
 import { uiLog } from '@/utils/logger'
 import { onMounted, ref as vueRef } from 'vue'
 import { getDisplayName } from '../../../../utils/functions'
+import { relationUiLabelToApiMode } from '@/utils/taskRelationMode'
 
 
 const { t } = useI18n()
@@ -196,13 +197,8 @@ const addTask = async () => {
     const rid = Number(relationId.value)
     if (!Number.isNaN(rid)) {
       params.relationId = rid
-      const relationModeApiMap: Record<string, string> = {
-        'Related to': 'relates-to',
-        'Blocked by': 'blocked-by',
-        Blocks: 'blocks',
-        'Duplicate of': 'duplicate-of',
-      }
-      params.relationMode = relationModeApiMap[relationMode.value] ?? relationMode.value
+      const apiMode = relationUiLabelToApiMode(relationMode.value)
+      if (apiMode) params.relationMode = apiMode
     }
   }
   try {
