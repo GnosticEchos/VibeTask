@@ -50,7 +50,6 @@ const hasSubBoard = computed(() => {
   const isContainer = (props.task as any).isContainer
   const planAccepted = (props.task as any).planAccepted
   const count = childCount.value
-  uiLog.debug('hasSubBoard check', { taskId: props.task.id, isContainer, planAccepted, childCount: count })
   return isContainer && planAccepted && count > 0
 })
 

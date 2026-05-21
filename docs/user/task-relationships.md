@@ -17,9 +17,7 @@ When creating or editing a task, choose a **type** and a **related task**:
 | **Blocked by** | `blocked-by` | **This task** cannot proceed until the **other** task is finished |
 | **Duplicate of** | `duplicate-of` | This task tracks the same work as the other (dedupe / tracking) |
 
-### Types to avoid in the UI
-
-**Duplicated by** may appear in some create-task screens but is **not** accepted by the server. Use **Duplicate of** instead and pick the task you are duplicating.
+Use **Duplicate of** and pick the canonical task you are tracking — not a separate “duplicated by” type (the API does not accept `duplicated-by`).
 
 ## Where to set relationships
 
@@ -38,9 +36,9 @@ When creating or editing a task, choose a **type** and a **related task**:
 | Filter board by “blocked” | **No** |
 | List all tasks blocked by X | **No** |
 
-**Important:** Relationships are **metadata for people** right now. Moving a card to Done does **not** check whether the task is still blocked by an incomplete task.
+**Done-column rule:** If this task is **Blocked by** another task, you cannot drag it into a **Done** column until that blocker is in a Done column. The board shows an error toast when the server rejects the move.
 
-Column **protection** (who may move into/out of certain columns) is separate and is enforced on move when configured in project settings — that feature is not fully exposed in the UI yet.
+**Column protection** (minimum role to enter or leave a column) is separate from task relations. Configure it under **Settings → Project Settings → Columns & descriptions** → **Save move policies**. Drag-and-drop enforces those rules on the server.
 
 ## Practical usage tips
 
@@ -53,11 +51,11 @@ When moving into a **Done** column, the server blocks the move if a **Blocked by
 
 ## Planned improvements (product direction)
 
-These are not promises — common next steps discussed for the product:
+Possible follow-ups (not committed):
 
-1. Badges on board cards (e.g. “Blocked by VT-12”).
-2. Optional guard when moving into “done” columns if blockers are open.
-3. Clearer inverse links (“tasks blocked by this”).
+1. **Inverse links** — e.g. list tasks that are blocked by this task on the task dialog.
+2. **Board filters** — show only blocked tasks, or highlight dependency chains.
+3. **Broader move rules** — optional guards in columns other than Done (today only Done is relation-gated).
 
 ## Related guides
 
