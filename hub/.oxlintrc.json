@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "ignorePatterns": ["dist/**", "coverage/**", "node_modules/**"],
+  "ignorePatterns": ["dist/**", "coverage/**", "node_modules/**", "prisma/**", "scripts/**"],
   "categories": {
     "correctness": "error",
     "suspicious": "error"
@@ -10,6 +10,12 @@
     "unicorn/no-array-sort": "off",
     "unicorn/no-useless-fallback-in-spread": "off",
     "typescript/no-extraneous-class": "off",
-    "@typescript-eslint/no-extraneous-class": "off"
+    "@typescript-eslint/no-extraneous-class": "off",
+    "eslint/no-underscore-dangle": [
+      "error",
+      {
+        "allow": ["__dirname", "_count", "_max", "_all", "_general"]
+      }
+    ]
   }
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import { testApp } from './setup/test-server.js';
 import { testPrisma } from './setup/test-db.js';
@@ -9,8 +9,6 @@ import {
   createTestTask,
 } from '../helpers/integration-helpers.js';
 import { deleteAllAgentApiKeysForUser } from '../helpers/agent-api-key-cleanup.js';
-
-type DocType = 'CONSTITUTION' | 'SPECIFICATION' | 'BRAINSTORM' | 'POST_MORTEM' | 'IMPLEMENTATION_PLAN' | 'OTHER';
 
 describe('Agent docs/doc-links/summary endpoints', () => {
   let token: string;

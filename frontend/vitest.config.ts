@@ -9,6 +9,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'happy-dom',
+    env: {
+      VITE_API_BASE_URL: 'http://localhost:3000',
+      VITE_WS_BASE_URL: 'http://localhost:8080',
+    },
     setupFiles: ['./tests/setup.ts'],
     include: ['src/**/*.{test,spec}.{js,ts,vue}', 'tests/unit/**/*.spec.{js,ts}', 'tests/component/**/*.spec.{js,ts}', 'tests/integration/**/*.spec.{js,ts}'],
     exclude: ['tests/e2e/**', 'node_modules/**', 'dist/**'],

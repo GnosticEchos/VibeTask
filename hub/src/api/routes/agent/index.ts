@@ -6,12 +6,10 @@
  */
 
 import { Router } from 'express';
-import { z } from 'zod';
 import { unifiedAuthMiddleware } from '../../../infrastructure/auth/unified-auth.js';
 import { prisma } from '../../../infrastructure/auth/prisma.js';
 import { requireAgentProjectAccess, ProjectAction } from '../../../infrastructure/auth/agent-permissions.js';
 import { requirePlatformSession } from '../../../infrastructure/http/middleware/platform-session.js';
-import { validateBody, getValidatedBody } from '../../../infrastructure/http/validation.js';
 import projectsRouter from './projects.js';
 import tasksRouter from './tasks.js';
 import commentsRouter from './comments.js';

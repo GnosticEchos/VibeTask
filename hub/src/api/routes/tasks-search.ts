@@ -117,7 +117,7 @@ function parseSearchQuery(q: string): Record<string, string> {
   return filters;
 }
 
-async function buildSearchWhereClause(filters: Record<string, string>, userId: number): Promise<{ where: any; includeComments: boolean }> {
+async function buildSearchWhereClause(filters: Record<string, string>, _userId: number): Promise<{ where: any; includeComments: boolean }> {
   const where: any = {};
   let includeComments = false;
 

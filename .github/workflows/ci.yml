@@ -69,7 +69,11 @@ jobs:
       - name: OpenAPI matches hub
         run: npm run openapi:check-sync
       - run: npm run lint:style
-      - run: npm run test:unit
+      - name: Unit tests
+        env:
+          VITE_API_BASE_URL: http://localhost:3000
+          VITE_WS_BASE_URL: http://localhost:8080
+        run: npm run test:unit
       - name: Build
         env:
           VITE_API_BASE_URL: http://localhost:3000

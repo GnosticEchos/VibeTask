@@ -5,18 +5,12 @@
  */
 
 import { Router } from 'express';
-import { z } from 'zod';
 import {
   requireAgentProjectAccess,
   ProjectAction,
 } from '../../../infrastructure/auth/agent-permissions.js';
 import { prisma } from '../../../infrastructure/auth/prisma.js';
-import {
-  getValidatedParams,
-  getValidatedBody,
-  validateParams,
-  validateBody,
-} from '../../../infrastructure/http/validation.js';
+import { getValidatedParams, validateParams } from '../../../infrastructure/http/validation.js';
 import {
   projectIdRouteParamSchema,
 } from '../../../validation/schemas/common.schemas.js';

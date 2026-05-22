@@ -145,16 +145,13 @@ function extractCodeBlocks(content: string): CodeBlock[] {
   
   // Also match inline code spans for informational purposes (not validated as heavily)
   // but we count them
-  const inlineCodeRegex = /`[^`]+`/g;
-  const inlineCount = (content.match(inlineCodeRegex) || []).length;
-  
   return blocks;
 }
 
 /**
  * Remove code block content from markdown to avoid false positives on forbidden patterns
  */
-function removeCodeBlocksFromContent(content: string, blockRanges: { start: number; end: number }[]): string {
+function removeCodeBlocksFromContent(content: string, _blockRanges: { start: number; end: number }[]): string {
   // Simple approach: remove fenced code block content
   return content.replace(/```[\s\S]*?```/g, '<code_block>');
 }
