@@ -10,7 +10,8 @@ import api from '@/api/v1/indexApi'
 import projectsApi from '@/api/v1/projectApi'
 import { computed, reactive, ref, watch, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { iColumn } from '@/types/columnTypes'
+import type { iColumn, iUpdateColumn } from '@/types/columnTypes'
+import { UpdateColumn } from '@/types/columnTypes'
 import type { ColumnProtectionPolicy, ProjectSettings } from '@/types/documentTypes'
 import { roles } from '@/const'
 import { isValidId } from '@/utils/validation'
@@ -28,6 +29,14 @@ import {
   isDrawerUsingFallback,
   validateProjectPrefix,
 } from '@/utils/workspaceProjectDrawer'
+import {
+  normalizeHexColor,
+  resolveWorkspaceOutlineColor,
+} from '@/utils/workspaceOutlineColor'
+import { randomPastelColor } from '@/utils/functions'
+import ProjectColumnsTableInput from '@/components/dashboard/project/settings/inputs/ProjectColumnsTableInput.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
+import { Form } from 'vee-validate'
 
 const { workspaceMode, canInviteMembers, canDeleteProject } = useSettingsPermissions()
 const membersStore = useMembersStore()
@@ -37,8 +46,7 @@ const settingsLayoutStore = useSettingsLayoutStore()
 const authStore = useAuthStore()
 const queryClient = useQueryClient()
 const { t } = useI18n()
-const { createProject, updateProject, updateColumnDescription } = useProjectMutations()
-
+const { createProject, updateProject } = useProjectMutations()
 watchEffect(() => {
   settingsLayoutStore.setUserId(String(authStore.user?.id || 'anonymous'))
 })
@@ -121,13 +129,16 @@ const inviteEmail = ref('')
 const inviteRole = ref(roles[1] || 'Editor')
 const isSavingProject = ref(false)
 const isInvitingMember = ref(false)
-const isSavingColumns = ref(false)
+const isSavingColumnsStructure = ref(false)
 const isSavingPolicies = ref(false)
 
-const columnDrafts = reactive<Record<number, string>>({})
-const lastServerDescriptions = reactive<Record<number, string>>({})
+const columnsLocal = ref<iUpdateColumn[]>([])
+const aggregatedColumnErrors = ref<Record<string, string | undefined>>({})
 const columnExitRole = reactive<Record<number, string>>({})
 const columnEnterRole = reactive<Record<number, string>>({})
+
+const localWorkspaceOutlineColor = ref(resolveWorkspaceOutlineColor())
+const baselineWorkspaceOutlineColor = ref(resolveWorkspaceOutlineColor())
 
 const policyRoleOptions = ['', 'Editor', 'Maintainer', 'Owner'] as const
 
@@ -139,61 +150,140 @@ const sortedColumns = computed((): iColumn[] => {
   return [...rows].sort((a, b) => a.order - b.order)
 })
 
-const columnsDirty = computed(() =>
-  sortedColumns.value.some((col) => (columnDrafts[col.id] ?? '') !== (col.description ?? '')),
+const columnsStructureDirty = computed(() => {
+  const serverSnapshot = sortedColumns.value.map((col) => ({
+    id: col.id,
+    name: col.name,
+    description: col.description ?? '',
+    order: col.order,
+    color: col.color,
+    type: col.type ?? null,
+  }))
+  const localSnapshot = columnsLocal.value
+    .filter((col) => !col.toDelete)
+    .map((col) => ({
+      id: col.id,
+      name: col.name,
+      description: col.description ?? '',
+      order: col.order,
+      color: col.color,
+      type: col.type ?? null,
+      isNew: col.isNew,
+    }))
+  if (localSnapshot.some((col) => col.isNew)) return true
+  if (localSnapshot.length !== serverSnapshot.length) return true
+  return JSON.stringify(serverSnapshot) !== JSON.stringify(localSnapshot.map(({ isNew: _n, ...rest }) => rest))
+})
+
+const columnsSectionValid = computed(
+  () =>
+    Object.values(aggregatedColumnErrors.value).filter((value) => value !== undefined && value !== '').length ===
+    0,
 )
 
-function autosizeTextarea(el: HTMLTextAreaElement) {
-  el.style.height = 'auto'
-  el.style.height = `${el.scrollHeight}px`
+const policyColumns = computed(() => columnsLocal.value.filter((col) => col.id != null && !col.toDelete))
+
+const workspaceColorInvalid = computed(() => !normalizeHexColor(localWorkspaceOutlineColor.value))
+
+const DEFAULT_COLUMN_COLOR = '#6366f1'
+
+function ensureColumnHexColor(color: string | undefined): string {
+  const trimmed = color?.trim()
+  if (trimmed && /^#[0-9A-Fa-f]{6}$/.test(trimmed)) return trimmed
+  return DEFAULT_COLUMN_COLOR
 }
 
-function resizeTextarea(event: Event) {
-  autosizeTextarea(event.target as HTMLTextAreaElement)
+/** Assign 1..n order to visible columns so batch save and # column stay in sync. */
+function renumberVisibleColumnOrders() {
+  let next = 1
+  for (const col of columnsLocal.value) {
+    if (!col.toDelete) col.order = next++
+  }
 }
 
-const vAutosizeTextarea = {
-  mounted: autosizeTextarea,
-  updated: autosizeTextarea,
+function syncColumnsLocalFromServer(rows: iColumn[]) {
+  columnsLocal.value = [...rows]
+    .sort((a, b) => a.order - b.order)
+    .map(
+      (col) =>
+        new UpdateColumn({
+          id: col.id,
+          name: col.name ?? '',
+          color: ensureColumnHexColor(col.color),
+          order: col.order,
+          type: col.type ?? null,
+          description: col.description ?? '',
+        }),
+    )
+  renumberVisibleColumnOrders()
+}
+
+function buildBulkColumnsPayload() {
+  renumberVisibleColumnOrders()
+  return columnsLocal.value.map((col) => {
+    if (col.toDelete && col.id != null) {
+      return { id: col.id, toDelete: true as const }
+    }
+    const trimmedName = col.name?.trim() || 'New Column'
+    const base = {
+      name: trimmedName,
+      order: col.order,
+      color: ensureColumnHexColor(col.color),
+      type: col.type ?? null,
+      description: col.description ?? '',
+    }
+    if (col.isNew) return base
+    return { id: col.id as number, ...base }
+  })
+}
+
+function onColumnsLocalUpdate(next: iUpdateColumn[]) {
+  columnsLocal.value = next
+  renumberVisibleColumnOrders()
+}
+
+function addNewColumn() {
+  columnsLocal.value.push(
+    new UpdateColumn({
+      id: null,
+      color: randomPastelColor(),
+      order: columnsLocal.value.filter((c) => !c.toDelete).length + 1,
+      name: '',
+      type: null,
+      description: '',
+      isNew: true,
+    }),
+  )
+  renumberVisibleColumnOrders()
 }
 
 watch(projectId, () => {
-  for (const k of Object.keys(columnDrafts)) delete columnDrafts[Number(k)]
-  for (const k of Object.keys(lastServerDescriptions)) delete lastServerDescriptions[Number(k)]
+  columnsLocal.value = []
   for (const k of Object.keys(columnExitRole)) delete columnExitRole[Number(k)]
   for (const k of Object.keys(columnEnterRole)) delete columnEnterRole[Number(k)]
 })
 
 function applySettingsToPolicyDrafts(settings: ProjectSettings | undefined) {
   const protection = settings?.columnProtection ?? {}
-  for (const col of sortedColumns.value) {
-    const policy = protection[String(col.id)] as ColumnProtectionPolicy | undefined
-    columnExitRole[col.id] = policy?.exit ?? ''
-    columnEnterRole[col.id] = policy?.enter ?? ''
+  for (const col of policyColumns.value) {
+    const id = col.id as number
+    const policy = protection[String(id)] as ColumnProtectionPolicy | undefined
+    columnExitRole[id] = policy?.exit ?? ''
+    columnEnterRole[id] = policy?.enter ?? ''
   }
+  const color = resolveWorkspaceOutlineColor(settings)
+  localWorkspaceOutlineColor.value = color
+  baselineWorkspaceOutlineColor.value = color
 }
 
 watch(
   () => columnsQuery.data.value,
   (rows) => {
-    if (!hasProjectSelected.value) return
+    if (!hasProjectSelected.value || isSavingColumnsStructure.value) return
     if (!Array.isArray(rows)) return
-    const ids = new Set(rows.map((c) => c.id))
-    for (const key of Object.keys(columnDrafts)) {
-      const id = Number(key)
-      if (!ids.has(id)) {
-        delete columnDrafts[id]
-        delete lastServerDescriptions[id]
-      }
-    }
-    for (const col of rows) {
-      const id = col.id
-      const srv = col.description ?? ''
-      const prevSrv = lastServerDescriptions[id]
-      if (prevSrv === undefined || columnDrafts[id] === prevSrv) {
-        columnDrafts[id] = srv
-      }
-      lastServerDescriptions[id] = srv
+    syncColumnsLocalFromServer(rows)
+    if (projectQuery.data.value?.settings) {
+      applySettingsToPolicyDrafts(projectQuery.data.value.settings as ProjectSettings)
     }
   },
   { immediate: true },
@@ -212,15 +302,6 @@ watch(
     applySettingsToPolicyDrafts(project.settings)
   },
   { immediate: true },
-)
-
-watch(
-  () => sortedColumns.value,
-  () => {
-    if (projectQuery.data.value?.settings) {
-      applySettingsToPolicyDrafts(projectQuery.data.value.settings as ProjectSettings)
-    }
-  },
 )
 
 function selectWorkspaceProject(id: number) {
@@ -257,7 +338,7 @@ async function submitCreateProject() {
       layoutStore.openToast({ message: t('settingsHub.workspace.createProjectInvalidForm'), type: 'error' })
       return
     }
-    const created = await createProject(payload)
+    const created = await createProject({ ...payload, template: 'ADHOC_OPS' })
     const createdId = Number(created?.id ?? created?.project?.id ?? 0)
     if (isValidId(createdId)) {
       projectStore.setSelectedProjectId(createdId)
@@ -297,43 +378,61 @@ async function saveWorkspace() {
   }
 }
 
-async function saveColumnDescriptions() {
+async function saveColumnsStructure() {
   if (!hasProjectSelected.value || isReadOnlyWorkspace.value) return
-  const pid = projectId.value
-  const toSave = sortedColumns.value.filter(
-    (col) => (columnDrafts[col.id] ?? '') !== (col.description ?? ''),
+  const missingName = columnsLocal.value.some(
+    (col) => !col.toDelete && !(col.name?.trim()),
   )
-  if (toSave.length === 0) return
-  isSavingColumns.value = true
+  if (missingName) {
+    layoutStore.openToast({ message: t('settingsHub.workspace.columnNameRequired'), type: 'error' })
+    return
+  }
+  isSavingColumnsStructure.value = true
   try {
-    await Promise.all(
-      toSave.map((col) =>
-        updateColumnDescription({
-          projectId: pid,
-          columnId: col.id,
-          description: (columnDrafts[col.id] ?? '').trim(),
-        }),
-      ),
-    )
-    layoutStore.openToast({ message: t('settingsHub.workspace.columnsSaveSuccess'), type: 'success' })
-  } catch (_error) {
-    layoutStore.openToast({ message: t('settingsHub.workspace.columnsSaveError'), type: 'error' })
+    projectStore.setSelectedProjectId(projectId.value)
+    await api.updateItems('columns', {
+      projectId: projectId.value,
+      columns: buildBulkColumnsPayload(),
+    })
+    await queryClient.invalidateQueries({ queryKey: ['columns', projectId.value] })
+    await queryClient.invalidateQueries({ queryKey: ['project', projectId.value] })
+    await queryClient.invalidateQueries({ queryKey: ['board', projectId.value] })
+    const refreshed = await api.getItems<iColumn>('columns', { projectId: projectId.value })
+    syncColumnsLocalFromServer(refreshed)
+    applySettingsToPolicyDrafts(projectQuery.data.value?.settings as ProjectSettings | undefined)
+    layoutStore.openToast({ message: t('settings.columns.saveSuccess'), type: 'success' })
+  } catch (error: unknown) {
+    const err = error as { message?: string; errors?: Record<string, string> }
+    const detail =
+      err.errors && Object.keys(err.errors).length > 0
+        ? Object.values(err.errors).join(', ')
+        : err.message
+    layoutStore.openToast({
+      message: detail || t('settings.columns.saveError'),
+      type: 'error',
+    })
   } finally {
-    isSavingColumns.value = false
+    isSavingColumnsStructure.value = false
   }
 }
 
 async function saveColumnPolicies() {
   if (!hasProjectSelected.value || isReadOnlyWorkspace.value) return
+  const outlineHex = normalizeHexColor(localWorkspaceOutlineColor.value)
+  if (!outlineHex) {
+    layoutStore.openToast({ message: t('settingsHub.workspace.workspaceColorInvalid'), type: 'error' })
+    return
+  }
   isSavingPolicies.value = true
   try {
     const existing = (projectQuery.data.value?.settings ?? {}) as ProjectSettings
     const columnProtection: Record<string, ColumnProtectionPolicy> = {}
-    for (const col of sortedColumns.value) {
-      const exit = columnExitRole[col.id]
-      const enter = columnEnterRole[col.id]
+    for (const col of policyColumns.value) {
+      const id = col.id as number
+      const exit = columnExitRole[id]
+      const enter = columnEnterRole[id]
       if (exit || enter) {
-        columnProtection[String(col.id)] = {
+        columnProtection[String(id)] = {
           ...(exit ? { exit: exit as ColumnProtectionPolicy['exit'] } : {}),
           ...(enter ? { enter: enter as ColumnProtectionPolicy['enter'] } : {}),
         }
@@ -342,15 +441,24 @@ async function saveColumnPolicies() {
     const settings = await projectsApi.patchProjectSettings(projectId.value, {
       ...existing,
       columnProtection,
+      subBoardOutlineColor: outlineHex,
     })
     projectStore.setProject({ ...projectStore.project, settings })
+    baselineWorkspaceOutlineColor.value = outlineHex
+    localWorkspaceOutlineColor.value = outlineHex
     await queryClient.invalidateQueries({ queryKey: ['project', projectId.value] })
-    layoutStore.openToast({ message: 'Column move policies saved.', type: 'success' })
+    await queryClient.invalidateQueries({ queryKey: ['board', projectId.value] })
+    layoutStore.openToast({ message: t('settingsHub.workspace.workspaceSettingsSaveSuccess'), type: 'success' })
   } catch {
-    layoutStore.openToast({ message: 'Failed to save column policies.', type: 'error' })
+    layoutStore.openToast({ message: t('settingsHub.workspace.workspaceSettingsSaveError'), type: 'error' })
   } finally {
     isSavingPolicies.value = false
   }
+}
+
+function onWorkspaceColorPickerInput(event: Event) {
+  const value = (event.target as HTMLInputElement).value
+  if (value) localWorkspaceOutlineColor.value = value
 }
 
 async function inviteMember() {
@@ -503,11 +611,10 @@ function scrollToWorkspaceCard(cardId: string) {
             <label class="label" for="workspace-description">{{ $t('settingsHub.workspace.description') }}</label>
             <textarea
               id="workspace-description"
-              v-autosize-textarea
               v-model="localDescription"
-              class="textarea textarea-bordered min-h-24 w-full resize-none overflow-hidden"
+              class="textarea textarea-bordered min-h-24 w-full"
+              rows="3"
               :disabled="isReadOnlyWorkspace"
-              @input="resizeTextarea"
             />
           </div>
           </template>
@@ -578,85 +685,142 @@ function scrollToWorkspaceCard(cardId: string) {
           <div v-else-if="columnsQuery.isError.value" class="alert alert-error">
             <span>{{ $t('settingsHub.workspace.columnsLoadError') }}</span>
           </div>
-          <div v-else-if="sortedColumns.length === 0" class="text-sm text-base-content/70">
-            {{ $t('settingsHub.workspace.noColumns') }}
-          </div>
-          <div
-            v-else
-            class="flex flex-col gap-3"
-          >
-            <div
-              v-for="col in sortedColumns"
-              :key="col.id"
-              class="shrink-0 rounded-lg border border-base-300/60 bg-base-100/40 p-3"
-            >
-              <div class="mb-2 text-sm font-medium text-base-content">{{ col.name }}</div>
-              <div class="form-control">
-                <label class="label py-1" :for="`column-desc-${col.id}`">
-                  <span class="label-text text-xs text-base-content/70">{{ $t('settingsHub.workspace.columnDescriptionLabel') }}</span>
-                </label>
-                <textarea
-                  :id="`column-desc-${col.id}`"
-                  v-autosize-textarea
-                  v-model="columnDrafts[col.id]"
-                  class="textarea textarea-bordered min-h-16 w-full resize-none overflow-hidden text-sm"
-                  :disabled="isReadOnlyWorkspace"
-                  @input="resizeTextarea"
-                />
-              </div>
-              <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div class="form-control">
-                  <label class="label py-0" :for="`col-exit-${col.id}`">
-                    <span class="label-text text-xs">Min role to leave column</span>
-                  </label>
-                  <select
-                    :id="`col-exit-${col.id}`"
-                    v-model="columnExitRole[col.id]"
-                    class="select select-bordered select-sm w-full"
-                    :disabled="isReadOnlyWorkspace"
-                  >
-                    <option v-for="opt in policyRoleOptions" :key="`exit-${col.id}-${opt}`" :value="opt">
-                      {{ opt || 'No restriction' }}
-                    </option>
-                  </select>
-                </div>
-                <div class="form-control">
-                  <label class="label py-0" :for="`col-enter-${col.id}`">
-                    <span class="label-text text-xs">Min role to enter column</span>
-                  </label>
-                  <select
-                    :id="`col-enter-${col.id}`"
-                    v-model="columnEnterRole[col.id]"
-                    class="select select-bordered select-sm w-full"
-                    :disabled="isReadOnlyWorkspace"
-                  >
-                    <option v-for="opt in policyRoleOptions" :key="`enter-${col.id}-${opt}`" :value="opt">
-                      {{ opt || 'No restriction' }}
-                    </option>
-                  </select>
-                </div>
-              </div>
+          <template v-else>
+          <div class="mb-4 rounded-lg border border-base-300/60 bg-base-100/50 p-3">
+            <p class="text-sm font-medium text-base-content">{{ $t('settingsHub.workspace.workspaceColorTitle') }}</p>
+            <p class="mt-1 text-xs text-base-content/60">{{ $t('settingsHub.workspace.workspaceColorHint') }}</p>
+            <p class="mt-2 text-xs text-base-content/50">
+              {{ $t('settingsHub.workspace.workspaceColorWhere') }}
+            </p>
+            <div class="mt-3 flex flex-wrap items-center gap-3">
+              <input
+                id="workspace-outline-color"
+                type="color"
+                class="h-10 w-14 cursor-pointer rounded border border-base-300 bg-base-100"
+                :value="normalizeHexColor(localWorkspaceOutlineColor) || '#6366f1'"
+                :disabled="isReadOnlyWorkspace"
+                :aria-label="$t('settingsHub.workspace.workspaceColorPickerAria')"
+                @input="onWorkspaceColorPickerInput"
+              />
+              <input
+                id="workspace-outline-color-hex"
+                v-model="localWorkspaceOutlineColor"
+                type="text"
+                class="input input-bordered input-sm w-32 font-mono"
+                placeholder="#6366f1"
+                maxlength="7"
+                :disabled="isReadOnlyWorkspace"
+                :class="{ 'input-error': workspaceColorInvalid && localWorkspaceOutlineColor.trim() !== '' }"
+              />
+              <span
+                class="inline-flex h-8 w-8 shrink-0 rounded-full border border-base-300"
+                :style="{ backgroundColor: normalizeHexColor(localWorkspaceOutlineColor) || 'var(--color-primary)' }"
+                aria-hidden="true"
+              />
             </div>
           </div>
-          <p class="text-xs text-base-content/60 mt-2">
+          <div class="mb-4">
+            <p class="mb-2 text-sm font-medium text-base-content">{{ $t('settings.columns.title') }}</p>
+            <p v-if="columnsLocal.filter((c) => !c.toDelete).length === 0" class="mb-3 text-sm text-base-content/70">
+              {{ $t('settingsHub.workspace.noColumns') }}
+            </p>
+            <Form>
+              <ProjectColumnsTableInput
+                :columns="columnsLocal"
+                :aggregated-errors="aggregatedColumnErrors"
+                is-editing-columns
+                @update:columns="onColumnsLocalUpdate"
+                @update:aggregated-errors="aggregatedColumnErrors = $event"
+              />
+            </Form>
+            <div class="mt-3 flex justify-end">
+              <BaseButton
+                :label="$t('settings.columns.addColumn')"
+                icon="plus"
+                :disabled="isReadOnlyWorkspace || isSavingColumnsStructure"
+                @click="addNewColumn"
+              />
+            </div>
+          </div>
+          <div v-if="policyColumns.length > 0" class="space-y-2">
+            <p class="text-sm font-medium text-base-content">{{ $t('settingsHub.workspace.movePoliciesTitle') }}</p>
+            <div class="overflow-x-auto rounded-lg border border-base-300/60">
+              <table class="table table-sm">
+                <thead>
+                  <tr class="bg-base-200/60">
+                    <th>{{ $t('settings.columns.name') }}</th>
+                    <th>{{ $t('settingsHub.workspace.movePolicyExit') }}</th>
+                    <th>{{ $t('settingsHub.workspace.movePolicyEnter') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="col in policyColumns"
+                    :key="col.id ?? `policy-order-${col.order}`"
+                  >
+                    <td class="font-medium whitespace-nowrap align-middle">
+                      {{ col.name }}
+                    </td>
+                    <td class="align-middle">
+                      <select
+                        :id="`col-exit-${col.id}`"
+                        v-model="columnExitRole[col.id as number]"
+                        class="select select-bordered select-sm w-full min-w-[9rem]"
+                        :disabled="isReadOnlyWorkspace"
+                      >
+                        <option v-for="opt in policyRoleOptions" :key="`exit-${col.id}-${opt}`" :value="opt">
+                          {{ opt || $t('settingsHub.workspace.movePolicyNone') }}
+                        </option>
+                      </select>
+                    </td>
+                    <td class="align-middle">
+                      <select
+                        :id="`col-enter-${col.id}`"
+                        v-model="columnEnterRole[col.id as number]"
+                        class="select select-bordered select-sm w-full min-w-[9rem]"
+                        :disabled="isReadOnlyWorkspace"
+                      >
+                        <option v-for="opt in policyRoleOptions" :key="`enter-${col.id}-${opt}`" :value="opt">
+                          {{ opt || $t('settingsHub.workspace.movePolicyNone') }}
+                        </option>
+                      </select>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          </template>
+          <p v-if="hasProjectSelected && !columnsQuery.isError.value && !(columnsQuery.isLoading && !columnsQuery.isFetched)" class="text-xs text-base-content/60 mt-2">
             Move policies apply when dragging tasks. Tasks marked <strong>Blocked by</strong> another task cannot be moved into a Done column until the blocker is Done.
           </p>
           <template #actions>
             <button
               type="button"
               class="btn btn-primary btn-sm"
-              :disabled="isReadOnlyWorkspace || !hasProjectSelected || !columnsDirty || isSavingColumns || columnsQuery.isError.value"
-              @click="saveColumnDescriptions"
+              :disabled="
+                isReadOnlyWorkspace ||
+                !hasProjectSelected ||
+                !columnsStructureDirty ||
+                !columnsSectionValid ||
+                isSavingColumnsStructure ||
+                columnsQuery.isError.value
+              "
+              @click="saveColumnsStructure"
             >
-              {{ $t('settingsApp.account.saveChanges') }}
+              {{ isSavingColumnsStructure ? $t('settingsHub.workspace.columnsSaving') : $t('settings.columns.save') }}
             </button>
             <button
               type="button"
               class="btn btn-outline btn-sm"
-              :disabled="isReadOnlyWorkspace || !hasProjectSelected || isSavingPolicies"
+              :disabled="isReadOnlyWorkspace || !hasProjectSelected || isSavingPolicies || workspaceColorInvalid"
               @click="saveColumnPolicies"
             >
-              {{ isSavingPolicies ? 'Saving…' : 'Save move policies' }}
+              {{
+                isSavingPolicies
+                  ? $t('settingsHub.workspace.workspaceSettingsSaving')
+                  : $t('settingsHub.workspace.workspaceSettingsSave')
+              }}
             </button>
           </template>
         </SettingsCard>

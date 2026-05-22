@@ -4,8 +4,11 @@ import { useLayoutStore } from '@/stores/layout'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TopbarTemplate from '../TopbarTemplate.vue'
+import { useProjectStore } from '@/stores/project'
+import { resolveWorkspaceOutlineColor, resolveTaskWorkspaceOutlineColor } from '@/utils/workspaceOutlineColor'
 
 const layoutStore = useLayoutStore()
+const projectStore = useProjectStore()
 
 const route = useRoute()
 const router = useRouter()
@@ -74,7 +77,14 @@ function backToMainBoard() {
             </li>
             <li v-for="ws in activeWorkspaces" :key="ws.id">
               <button type="button" class="text-left" @click="selectWorkspace(ws.id)">
-                <span class="w-2 h-2 rounded-full inline-block mr-1" :style="{ backgroundColor: ws.subBoardOutlineColor || 'var(--color-primary)' }"></span>
+                <span
+                  class="w-2 h-2 rounded-full inline-block mr-1"
+                  :style="{
+                    backgroundColor:
+                      resolveTaskWorkspaceOutlineColor(ws, projectStore.project?.settings) ||
+                      resolveWorkspaceOutlineColor(projectStore.project?.settings),
+                  }"
+                ></span>
                 <span v-if="!ws.planAccepted" class="badge badge-xs badge-info mr-1">DRAFT</span>
                 {{ ws.identifier }}: {{ ws.name }}
               </button>

@@ -50,9 +50,9 @@ Hub create now persists `isContainer` and `subBoardOutlineColor`; `parentId` + `
 | View sub-board kanban | `GET .../board?parentId=` | **Covered** — `SubBoardView` |
 | Accept plan → create container + children | `POST .../accept-plan/{taskId}` | **Partial** — `TaskDialog` only; requires `IMPLEMENTATION_PLAN` doc-link and Maintainer+ |
 | “New sub-board” / mark task as container | `POST` with `isContainer` | **Partial** — Add New Task checkbox; accept-plan still primary for spawning children |
-| Add child task on sub-board | `POST /api/tasks` with `parentId` | **Gap** — `AddNewTaskDialog` never sends `parentId` |
-| Edit outline color | `subBoardOutlineColor` on task / project settings | **Gap** — display only |
-| Column protection on sub-board | `PATCH /api/projects/{id}/settings` | **Partial** — Workspace → Columns card: enter/exit role policies + Save move policies |
+| Add child task on workspace board | `POST /api/tasks` with `parentId` | **Partial** — `AddNewTaskDialog` sends `parentId` when `?workspace=` is set |
+| Edit outline color | `subBoardOutlineColor` on task / project settings | **Partial** — project default in Settings; per-task edit in Task dialog still missing |
+| Column protection on workspace | `PATCH /api/projects/{id}/settings` | **Covered** — Project Settings → Columns: policies + default workspace color |
 
 ```mermaid
 flowchart LR
@@ -76,7 +76,7 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 
 | Method | Path | Summary | Notes |
 |--------|------|---------|-------|
-| `PATCH` | `/api/projects/{id}/settings` | Update project settings | **Partial** — column enter/exit policies in Workspace settings; default `subBoardOutlineColor` still no editor |
+| `PATCH` | `/api/projects/{id}/settings` | Update project settings | **Covered** — column enter/exit policies + default `subBoardOutlineColor` in Project Settings → Columns card |
 | `GET` | `/api/projects/{id}/summary` | Project summary | No summary dashboard |
 | `DELETE` | `/api/tasks/{id}` | Delete task | OpenAPI summary fixed; still no delete control in UI |
 | `POST` | `/api/tasks/{id}/monitor-pass/{columnId}` | Record monitor pass | Types only |
@@ -160,8 +160,8 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 
 ## Suggested implementation priority (product)
 
-1. Sub-board: send `parentId` from Add New Task on sub-board views; dedicated “New sub-board” flow beyond checkbox + accept-plan
-2. Project settings: default `subBoardOutlineColor` editor; outline color on tasks
+1. Workspace: per-task `subBoardOutlineColor` in Task dialog; drag-into-workspace (v1 uses dropdown)
+2. Documents: wire delete + search overlay in Docs view (gap matrix)
 3. Documents: wire search overlay and delete in `DocsView`
 4. Monitor pass/reject and task delete if review-column workflow is required
 5. TaskDialog PATCH: expose `isContainer` / `subBoardOutlineColor` for edit-in-place

@@ -7,6 +7,8 @@ import { useTasksStore } from '@/stores/tasks'
 import { uiLog } from '@/utils/logger'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useProjectStore } from '@/stores/project'
+import { resolveTaskWorkspaceOutlineColor } from '@/utils/workspaceOutlineColor'
 
 const props = defineProps({
   task: {
@@ -25,6 +27,16 @@ const tasksStore = useTasksStore()
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
+const projectStore = useProjectStore()
+
+const workspaceOutlineColor = computed(() =>
+  resolveTaskWorkspaceOutlineColor(props.task as iTask, projectStore.project?.settings),
+)
+
+const showWorkspaceOutline = computed(() => {
+  const task = props.task as iTask & { isContainer?: boolean; planAccepted?: boolean }
+  return !!workspaceOutlineColor.value && !!(task.isContainer || task.planAccepted)
+})
 
 const relationBadge = computed(() => {
   const mode = (props.task as iTask).relationMode ?? (props.task as iTask).relatedTask?.relationMode
@@ -136,8 +148,8 @@ function onKeydown(e: KeyboardEvent) {
 <template>
   <div
     class="card w-full h-[138px] min-w-0 bg-base-100/60 shadow-xl cursor-pointer select-none transition-[width,opacity,transform] duration-200 ease-in-out hover:scale-105 hover:-rotate-1"
-    :class="{ 'opacity-50 pointer-events-none': disabled, 'border-2': (task as any).planAccepted }"
-    :style="(task as any).planAccepted && (task as any).subBoardOutlineColor ? { borderColor: (task as any).subBoardOutlineColor } : { borderColor: '' }"
+    :class="{ 'opacity-50 pointer-events-none': disabled, 'border-2': showWorkspaceOutline }"
+    :style="showWorkspaceOutline && workspaceOutlineColor ? { borderColor: workspaceOutlineColor } : undefined"
     @dblclick="openTaskDialog"
     tabindex="0"
     @keydown="onKeydown"

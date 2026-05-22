@@ -1,16 +1,14 @@
 <script setup lang="ts">
-import usePermittedUser from '@/composables/usePermittedUser'
-// import { columnTypes } from '@/const'
-import { iUpdateColumn } from '@/types/columnTypes'
-import rules from '@/utils/validators'
-import { ref, watch } from 'vue'
-// import { useI18n } from 'vue-i18n'
+import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { VueDraggable } from 'vue-draggable-plus'
+import usePermittedUser from '@/composables/usePermittedUser'
+import BaseInput from '@/components/base/BaseInput.vue'
+import type { iUpdateColumn } from '@/types/columnTypes'
+import rules from '@/utils/validators'
 
-// const { t } = useI18n()
+const { t } = useI18n()
 const { isAdmin } = usePermittedUser()
-
-const emit = defineEmits(['update:columns', 'update:aggregated-errors'])
 
 const props = defineProps({
   columns: {
@@ -18,7 +16,7 @@ const props = defineProps({
     default: () => [],
   },
   aggregatedErrors: {
-    type: Object,
+    type: Object as () => Record<string, string | undefined>,
     default: () => ({}),
   },
   isLoading: {
@@ -30,155 +28,168 @@ const props = defineProps({
     default: false,
   },
   errors: {
-    type: Object,
+    type: Object as () => Record<string, string | undefined>,
     default: () => ({}),
   },
 })
 
-console.log('[ProjectColumnsTableInput] props.columns:', props.columns)
+const emit = defineEmits<{
+  'update:columns': [columns: iUpdateColumn[]]
+  'update:aggregated-errors': [errors: Record<string, string | undefined>]
+}>()
 
-const aggregatedErrors = ref({})
+const localAggregatedErrors = ref<Record<string, string | undefined>>({})
 
-const markColumnToDelete = (index: number) => {
-  // Instead of removing the column, mark it for deletion
-  // This allows us to send the toDelete flag to the backend
-  props.columns[index].toDelete = true;
+const visibleColumns = computed(() => props.columns.filter((col) => !col.toDelete))
+
+function columnRowKey(col: iUpdateColumn, index: number): string {
+  if (col.id != null) return `col-${col.id}`
+  return `col-new-${col.order ?? index}`
 }
 
-const addNewColumnAfter = (index: number) => {
-  // Insert a new column after the given index
-  const newColumn = {
+function emitColumns(next: iUpdateColumn[]) {
+  emit('update:columns', next)
+}
+
+function resolveColumnIndex(col: iUpdateColumn): number {
+  return props.columns.findIndex(
+    (c) =>
+      c === col ||
+      (col.id != null && c.id === col.id) ||
+      (col.isNew && c.isNew && c.order === col.order),
+  )
+}
+
+function onVisibleColumnsReorder(nextVisible: iUpdateColumn[]) {
+  nextVisible.forEach((col, index) => {
+    col.order = index + 1
+  })
+  const deleted = props.columns.filter((col) => col.toDelete)
+  emitColumns([...nextVisible, ...deleted])
+}
+
+const markColumnToDelete = (col: iUpdateColumn) => {
+  col.toDelete = true
+  const updated = [...props.columns]
+  let nextOrder = 1
+  for (const c of updated) {
+    if (!c.toDelete) c.order = nextOrder++
+  }
+  emitColumns(updated)
+}
+
+const addNewColumnAfter = (col: iUpdateColumn) => {
+  const index = resolveColumnIndex(col)
+  const insertAt = index >= 0 ? index + 1 : props.columns.length
+  const newColumn: iUpdateColumn = {
     id: null,
     name: '',
-    color: '', // default empty string
-    type: null, // default null
+    color: '#6366f1',
+    type: null,
     description: '',
-    order: props.columns.length + 1,
+    order: insertAt + 1,
     isNew: true,
   }
-  props.columns.splice(index + 1, 0, newColumn)
-}
-
-function onColumnsOrderUpdate() {
-  // Update the order property of each column based on its position
-  props.columns.forEach((col, index) => {
-    col.order = index + 1;
-  });
-  emit('update:columns', [...props.columns])
+  const updated = [...props.columns]
+  updated.splice(insertAt, 0, newColumn)
+  let nextOrder = 1
+  for (const c of updated) {
+    if (!c.toDelete) c.order = nextOrder++
+  }
+  emitColumns(updated)
 }
 
 const aggregateError = ({ key, value }: { key: string; value: string }) => {
-  const errors = { ...props.aggregatedErrors }
-  errors[key] = value
-  emit('update:aggregated-errors', { ...errors })
+  const errors = { ...props.aggregatedErrors, [key]: value }
+  emit('update:aggregated-errors', errors)
 }
 
 watch(
   () => props.errors,
-  (newVal: any) => {
-    aggregatedErrors.value = { ...newVal }
-  }
+  (newVal) => {
+    localAggregatedErrors.value = { ...newVal }
+  },
+  { immediate: true },
 )
 </script>
 
 <template>
   <div class="overflow-x-auto">
-    <!-- Debug info -->
-    <div class="text-xs mb-2">
-      Debug: props.columns.length = {{ props.columns.length }}
-      Debug: filtered columns = {{ props.columns.filter(col => !col.toDelete).length }}
-    </div>
     <table class="table table-zebra w-full rounded-box bg-base-100 text-base-content">
       <thead>
         <tr>
           <th class="w-12">#</th>
-          <th class="w-[320px]">{{ $t('settings.columns.name') }}</th>
-          <th class="w-[400px]">{{ $t('settings.columns.description') }}</th>
-          <th class="w-24 text-center">{{ $t('settings.columns.actions') }}</th>
+          <th class="w-[min(320px,35%)]">{{ t('settings.columns.name') }}</th>
+          <th>{{ t('settings.columns.description') }}</th>
+          <th class="w-24 text-center">{{ t('settings.columns.actions') }}</th>
         </tr>
       </thead>
       <VueDraggable
-        v-model="props.columns"
+        :model-value="visibleColumns"
         tag="tbody"
         :animation="150"
-        item-key="id"
-        @update="onColumnsOrderUpdate"
+        handle=".drag-handle"
+        :item-key="(col: iUpdateColumn) => columnRowKey(col, col.order ?? 0)"
+        @update:model-value="onVisibleColumnsReorder"
       >
         <tr
-          v-for="(data, index) in props.columns.filter(col => !col.toDelete)"
-          :key="String(data.id ?? index)"
-          class="hover:bg-base-200 cursor-pointer"
+          v-for="(col, visibleIndex) in visibleColumns"
+          :key="columnRowKey(col, visibleIndex)"
+          class="hover:bg-base-200/50"
         >
-          <td class="px-6 py-4 text-center">{{ index + 1 }}</td>
-          <!-- Name input, longer -->
-          <td class="px-6 py-4">
-              <BaseInput
-              v-model="props.columns[index].name"
-                :name="`column-name#${data.id}`"
-                :disabled="isEditingColumns && !isAdmin"
-                hideDetails
-                emitErrors
-                validateOnCreate
-                @onErrorChange="aggregateError"
-                :rules="[(value:string) => rules.required(value,'Name')]"
+          <td class="align-top text-center">
+            <span class="drag-handle cursor-grab select-none text-base-content/50" title="Drag to reorder">⋮⋮</span>
+            <span class="ml-1 tabular-nums">{{ visibleIndex + 1 }}</span>
+          </td>
+          <td class="align-top">
+            <BaseInput
+              v-model="col.name"
+              :name="`column-name#${col.id ?? col.order}`"
+              :disabled="isEditingColumns && !isAdmin"
+              hide-details
+              emit-errors
+              validate-on-create
+              :rules="[(value: string) => rules.required(value, 'Name')]"
               class="w-full"
-              />
-              <!-- Debug info -->
-              <div class="text-xs mt-1">
-                Debug: data.name = {{ data.name }}
-                Debug: index = {{ index }}
-              </div>
+              @on-error-change="aggregateError"
+            />
           </td>
-          <!-- Description textarea -->
-          <td class="px-6 py-4">
+          <td class="align-top">
             <textarea
-              v-model="props.columns[index].description"
-              :name="`column-description#${data.id}`"
-              :placeholder="$t('settings.columns.noDescription')"
-              maxlength="1000"
-              class="textarea textarea-bordered w-full min-h-[120px] h-28"
-              :disabled="isLoading || !isAdmin"
-            ></textarea>
-            <!-- Debug info -->
-            <div class="text-xs mt-1">
-              Debug: data.description = {{ data.description }}
-            </div>
+              v-model="col.description"
+              :name="`column-description#${col.id ?? col.order}`"
+              :placeholder="t('settings.columns.noDescription')"
+              maxlength="200"
+              class="textarea textarea-bordered textarea-sm w-full min-h-[4.5rem]"
+              :disabled="isLoading || (isEditingColumns && !isAdmin)"
+            />
           </td>
-          <!-- Actions: Plus and Trash can with tooltips -->
-          <td class="px-6 py-4 text-center flex gap-2 justify-center items-center">
-            <!-- Add new column after this row -->
-            <div class="tooltip tooltip-left z-50" data-tip="Add new column">
+          <td class="align-top">
+            <div class="flex justify-center gap-1">
               <button
                 type="button"
-                class="btn btn-ghost btn-sm"
-                    :disabled="isLoading || !isAdmin"
-                @click="addNewColumnAfter(index)"
-                aria-label="Add new column"
+                class="btn btn-ghost btn-xs btn-square"
+                :disabled="isLoading || (isEditingColumns && !isAdmin)"
+                title="Add column below"
+                @click="addNewColumnAfter(col)"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
+                +
               </button>
-            </div>
-            <!-- Remove column -->
-            <div class="tooltip tooltip-left z-50" data-tip="Remove column (any data in column will be moved to the backlog)">
               <button
                 type="button"
-                class="btn btn-ghost btn-sm"
-                :disabled="isLoading || !isAdmin"
-                @click="markColumnToDelete(index)"
-                aria-label="Delete column"
+                class="btn btn-ghost btn-xs btn-square text-error"
+                :disabled="isLoading || (isEditingColumns && !isAdmin)"
+                title="Remove column"
+                @click="markColumnToDelete(col)"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                ×
               </button>
             </div>
           </td>
         </tr>
-        <tr v-if="!props.columns.filter(col => !col.toDelete).length">
-          <td :colspan="4" class="px-6 py-4 text-center text-gray-500">
-            {{ $t('settings.columns.noColumns') }}
+        <tr v-if="visibleColumns.length === 0">
+          <td colspan="4" class="py-4 text-center text-base-content/60">
+            {{ t('settings.columns.noColumns') }}
           </td>
         </tr>
       </VueDraggable>

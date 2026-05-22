@@ -658,7 +658,22 @@
       "columnsLoadError": "Failed to load columns.",
       "columnsSaveSuccess": "Column descriptions saved.",
       "columnsSaveError": "Failed to save column descriptions.",
-      "noColumns": "No columns in this project."
+      "noColumns": "No columns yet — use Add column below, name each column, then Save.",
+      "columnNameRequired": "Each column needs a name before saving.",
+      "movePoliciesTitle": "Column move policies",
+      "movePolicyExit": "Min role to leave column",
+      "movePolicyEnter": "Min role to enter column",
+      "movePolicyNone": "No restriction",
+      "columnsSaving": "Saving columns…",
+      "workspaceColorTitle": "Default workspace color",
+      "workspaceColorHint": "Shows on workspace cards (colored border), the Workspace menu dots, and the workspace board header. New workspaces copy this into the task; existing ones use it when they have no task color yet.",
+      "workspaceColorWhere": "Where to look: main board → workspace container cards (⧉) get a 2px border; board toolbar → Workspace dropdown dots; inside a workspace → colored bar under the title.",
+      "workspaceColorPickerAria": "Pick default workspace outline color",
+      "workspaceColorInvalid": "Enter a valid hex color (#RRGGBB).",
+      "workspaceSettingsSave": "Save move policies & workspace color",
+      "workspaceSettingsSaving": "Saving…",
+      "workspaceSettingsSaveSuccess": "Column policies and workspace color saved.",
+      "workspaceSettingsSaveError": "Failed to save column policies or workspace color."
     },
     "page": {
       "title": "Settings Hub",

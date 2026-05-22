@@ -18,6 +18,7 @@ import { uiLog } from '@/utils/logger'
 import { onMounted, ref as vueRef } from 'vue'
 import { getDisplayName } from '../../../../utils/functions'
 import { dependencyRelationTypeOptions, relationUiLabelToApiMode } from '@/utils/taskRelationMode'
+import { normalizeHexColor, resolveWorkspaceOutlineColor } from '@/utils/workspaceOutlineColor'
 import { useLayoutStore } from '@/stores/layout'
 
 const props = defineProps<{
@@ -221,6 +222,10 @@ const addTask = async () => {
     projectColumnId: projectColumnId.value,
     assigneeId: assigneeId.value,
     ...(isWorkspaceContainer.value ? { isContainer: true } : {}),
+  }
+  if (isWorkspaceContainer.value) {
+    const outline = normalizeHexColor(resolveWorkspaceOutlineColor(projectStore.project?.settings))
+    if (outline) params.subBoardOutlineColor = outline
   }
   if (workspaceParentId.value != null) {
     params.parentId = workspaceParentId.value

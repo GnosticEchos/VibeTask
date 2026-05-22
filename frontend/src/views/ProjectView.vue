@@ -9,6 +9,7 @@ import { useProjectStore } from '@/stores/project'
 import { useWebsocketStore } from '@/stores/websocket'
 import { useI18n } from 'vue-i18n'
 import { uiLog } from '@/utils/logger'
+import { resolveWorkspaceOutlineColor } from '@/utils/workspaceOutlineColor'
 import type { Ref } from 'vue'
 
 const projectStore = useProjectStore()
@@ -227,7 +228,7 @@ function getSubBoardsFromProject(projectLike: any) {
       id: Number(task.id),
       name: String(task.name ?? ''),
       identifier: String(task.identifier ?? `TASK-${task.id}`),
-      subBoardOutlineColor: task.subBoardOutlineColor ?? null,
+      subBoardOutlineColor: task.subBoardOutlineColor ?? resolveWorkspaceOutlineColor(projectStore.project?.settings),
       planAccepted: Boolean(task.planAccepted),
     }))
 }
@@ -242,7 +243,8 @@ function mergeSubBoards(
       id: Number(workspace.id),
       name: String(workspace.name ?? ''),
       identifier: String(workspace.identifier ?? `TASK-${workspace.id}`),
-      subBoardOutlineColor: workspace.subBoardOutlineColor ?? null,
+      subBoardOutlineColor:
+        workspace.subBoardOutlineColor ?? resolveWorkspaceOutlineColor(projectStore.project?.settings),
       planAccepted: Boolean(workspace.planAccepted),
     })
   }

@@ -1,4 +1,5 @@
 import { iProject } from '../types/projectTypes'
+import type { ProjectSettings } from '../types/documentTypes'
 import type { iColumn } from '../types/columnTypes'
 import type { iTask } from '../types/taskTypes'
 import { mergeBoardTaskFromWebsocket } from '@/utils/websocketTaskProjectColumns'
@@ -94,6 +95,9 @@ export const useProjectStore = defineStore('project', () => {
       project.prefix = newProject.prefix
       project.role = newProject.role
       project.members = [...(newProject.members || [])]
+      if (newProject.settings !== undefined) {
+        project.settings = { ...(newProject.settings as ProjectSettings) }
+      }
       project.tasks = [] // Always initialize as empty; tasks are only in columns or Pinia tasks store
       // Log full structure after update
       storeLog.debug('project.columns after update', { columns: project.columns })

@@ -18,6 +18,7 @@ import { validateId } from '@/utils/validation'
 import { uiLog } from '@/utils/logger'
 import type { Ref } from 'vue'
 import { applyBoardTaskScope } from '@/utils/boardTaskScope'
+import { resolveTaskWorkspaceOutlineColor } from '@/utils/workspaceOutlineColor'
 
 const props = withDefaults(defineProps<{
   reviewDrawerOpen?: boolean
@@ -144,7 +145,11 @@ const totalCount = computed(() => {
 })
 
 const headerStyle = computed(() => ({
-  borderColor: (parentTask.value as any)?.subBoardOutlineColor || '#6366f1',
+  borderColor:
+    resolveTaskWorkspaceOutlineColor(
+      (parentTask.value ?? {}) as { subBoardOutlineColor?: string | null; isContainer?: boolean; planAccepted?: boolean },
+      projectStore.project?.settings,
+    ) ?? '#6366f1',
 }))
 
 function goBackToMainBoard() {

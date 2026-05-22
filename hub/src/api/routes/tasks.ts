@@ -13,6 +13,7 @@
 
 import { Router } from 'express';
 import { prisma } from '../../infrastructure/auth/index.js';
+import { readDefaultWorkspaceOutlineColor } from '../../services/workspace-outline-color.js';
 import { requireAuth } from '../../infrastructure/http/middleware/auth.js';
 import { 
   validateBody, 
@@ -319,6 +320,15 @@ router.post('/', requireAuth, validateBody(createTaskSchema), sanitize(['name', 
 
   const identifier = await generateTaskIdentifier(projectId);
 
+  let resolvedOutlineColor = subBoardOutlineColor ?? null;
+  if (resolvedOutlineColor == null && isContainer === true) {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { settings: true },
+    });
+    resolvedOutlineColor = readDefaultWorkspaceOutlineColor(project?.settings) ?? null;
+  }
+
   const task = await prisma.task.create({
     data: {
       name,
@@ -333,7 +343,7 @@ router.post('/', requireAuth, validateBody(createTaskSchema), sanitize(['name', 
       relationId: relationId || null,
       parentId: parentId || null,
       isContainer: isContainer === true,
-      subBoardOutlineColor: subBoardOutlineColor ?? null,
+      subBoardOutlineColor: resolvedOutlineColor,
     },
         include: {
           createdBy: { select: { id: true, name: true, surname: true, avatarUrl: true } },

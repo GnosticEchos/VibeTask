@@ -19,6 +19,7 @@ import {
 } from '../../infrastructure/http/middleware/error-handler.js';
 import { checkProjectMembership } from '../../infrastructure/auth/project-role-check.js';
 import { projectIdTaskIdParamSchema } from '../../validation/schemas/common.schemas.js';
+import { readDefaultWorkspaceOutlineColor } from '../../services/workspace-outline-color.js';
 
 const router = Router({ mergeParams: true });
 
@@ -104,8 +105,10 @@ router.post('/', requireAuth, validateParams(projectIdTaskIdParamSchema), asyncH
   // Get project info for identifier generation
   const project = await prisma.project.findUnique({
     where: { id: projectId },
-    select: { prefix: true },
+    select: { prefix: true, settings: true },
   });
+
+  const defaultOutlineColor = readDefaultWorkspaceOutlineColor(project?.settings);
 
   // Get current max order for the target columns to compute new orders
   const maxOrderInFirst = await prisma.task.aggregate({
@@ -120,6 +123,9 @@ router.post('/', requireAuth, validateParams(projectIdTaskIdParamSchema), asyncH
       data: {
         planAccepted: true,
         isContainer: true,
+        ...(defaultOutlineColor && !task.subBoardOutlineColor
+          ? { subBoardOutlineColor: defaultOutlineColor }
+          : {}),
       },
     });
 

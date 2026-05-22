@@ -31,6 +31,7 @@ import { transformProject } from '../../shared/transformers/index.js';
 import { paginatedResponse } from '../../validation/schemas/common.schemas.js';
 import { checkProjectMembership } from '../../infrastructure/auth/project-role-check.js';
 import { getTemplateById, listTemplates } from '../../config/project-templates.js';
+import { readDefaultWorkspaceOutlineColor } from '../../services/workspace-outline-color.js';
 
 const router = Router();
 
@@ -139,6 +140,23 @@ router.post('/', requireAuth, validateBody(createProjectSchema), sanitize(['name
     }
     // Merge template settings with any provided settings (provided wins)
     resolvedSettings = { ...tmpl.settings, ...settings };
+  }
+
+  // Projects created without columns or template get a sensible default board
+  if (!resolvedColumns || resolvedColumns.length === 0) {
+    const defaultTmpl = getTemplateById('ADHOC_OPS');
+    if (defaultTmpl) {
+      resolvedColumns = defaultTmpl.columns.map((col: any) => ({
+        name: col.name,
+        order: col.order,
+        color: col.color,
+        type: col.type as string | undefined,
+        description: col.description,
+      }));
+      if (!resolvedSettings) {
+        resolvedSettings = { ...defaultTmpl.settings };
+      }
+    }
   }
 
   // Use the user's UUID directly (Better Auth compatible)
@@ -592,6 +610,14 @@ router.patch('/:id/settings', requireAuth, validateParams(projectIdParamSchema),
     where: { id: projectId },
     data: { settings },
   });
+
+  const outlineColor = readDefaultWorkspaceOutlineColor(settings);
+  if (outlineColor) {
+    await prisma.task.updateMany({
+      where: { projectId, isContainer: true },
+      data: { subBoardOutlineColor: outlineColor },
+    });
+  }
 
   res.json({ settings: updated.settings });
 }));

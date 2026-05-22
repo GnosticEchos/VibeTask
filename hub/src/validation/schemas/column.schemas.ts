@@ -93,21 +93,33 @@ export const columnIdParamSchema = idParamSchema;
 
 export type ColumnIdParamInput = z.infer<typeof columnIdParamSchema>;
 
+const batchColumnDeleteSchema = z.object({
+  id: z.number().int().positive(),
+  toDelete: z.literal(true),
+});
+
+const batchColumnUpsertSchema = z.object({
+  id: z.number().int().positive().optional(),
+  name: z
+    .string()
+    .min(1, 'Column name is required')
+    .max(50, 'Column name must be at most 50 characters')
+    .transform((val) => val.trim()),
+  order: z.number().int(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, 'Color must be a valid hex color (e.g., #6366f1)')
+    .optional(),
+  type: z.string().optional().nullable(),
+  roleType: columnRoleTypeEnum.optional(),
+  description: z.string().max(200, 'Description must be at most 200 characters').optional().nullable(),
+  toDelete: z.boolean().optional(),
+});
+
 // Batch update columns schema
 export const batchUpdateColumnsSchema = z.object({
   projectId: z.number().int().positive('Project ID must be a positive integer'),
-  columns: z.array(
-    z.object({
-      id: z.number().int().positive().optional(),
-      name: z.string().min(1).max(50),
-      order: z.number().int(),
-      color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-      type: z.string().optional().nullable(),
-      roleType: columnRoleTypeEnum.optional(),
-      description: z.string().max(200).optional().nullable(),
-      toDelete: z.boolean().optional(),
-    })
-  ),
+  columns: z.array(z.union([batchColumnDeleteSchema, batchColumnUpsertSchema])),
 });
 
 export type BatchUpdateColumnsInput = z.infer<typeof batchUpdateColumnsSchema>;
