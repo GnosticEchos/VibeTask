@@ -21,8 +21,11 @@ Use **Duplicate of** and pick the canonical task you are tracking — not a sepa
 
 ## Where to set relationships
 
-- **Add New Task** — optional **Relation** section (both type and related task required if you start either field).
-- **Task dialog** — **Relationships** section: type dropdown + related task, then save the task.
+- **Add New Task** — **Task link** (optional) and **Workspace** membership (optional).
+- **Task dialog** — **Relationships** section:
+  - **Task link** — type (`— None —`, Related to, Blocked by, …) + related task. Choose **— None —** to clear a blocker or other link.
+  - **Workspace** — pick a workspace root or **— None (main board) —** to move the task back to the main board (or switch to another workspace).
+- **Make this a workspace** (Editor+) — checkbox on the task dialog for container roots (separate from membership).
 
 ## What the app does today
 

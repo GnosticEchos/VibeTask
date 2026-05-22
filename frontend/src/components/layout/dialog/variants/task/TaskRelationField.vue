@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BaseSelect from '@/components/base/BaseSelect.vue'
+import { dependencyRelationTypeOptions } from '@/utils/taskRelationMode'
 
 type RelationOption = {
   label: string
@@ -14,14 +15,25 @@ type RelatedTaskOption = {
 defineProps<{
   relationType: string
   relatedTaskId: string
-  relationOptions: RelationOption[]
   relatedTasks: RelatedTaskOption[]
+  workspaceParentId: string
+  workspaceOptions: RelatedTaskOption[]
 }>()
 
-defineEmits<{
+const dependencyTypeOptions = dependencyRelationTypeOptions()
+
+const emit = defineEmits<{
   'update:relationType': [value: string]
   'update:relatedTaskId': [value: string]
+  'update:workspaceParentId': [value: string]
 }>()
+
+function onRelationTypeChange(value: string) {
+  emit('update:relationType', value)
+  if (!value) {
+    emit('update:relatedTaskId', '')
+  }
+}
 </script>
 
 <template>
@@ -31,26 +43,45 @@ defineEmits<{
       <p class="text-xs text-base-content/60">{{ $t('taskDialog.relationshipsHint') }}</p>
     </div>
 
-    <div class="grid gap-2 md:grid-cols-2">
-      <BaseSelect
-        :model-value="relationType"
-        name="relationType"
-        :items="relationOptions"
-        optionsLabel="label"
-        optionsValue="value"
-        :placeholder="$t('tasks.relationType')"
-        @update:model-value="$emit('update:relationType', String($event || ''))"
-      />
-      <BaseSelect
-        :model-value="relatedTaskId"
-        name="relatedTaskId"
-        :items="relatedTasks"
-        optionsLabel="displayLabel"
-        optionsValue="id"
-        :placeholder="$t('tasks.relatedTask')"
-        :disabled="!relatedTasks.length"
-        @update:model-value="$emit('update:relatedTaskId', String($event || ''))"
-      />
+    <div class="space-y-4">
+      <div>
+        <p class="mb-2 text-xs font-medium text-base-content/70">{{ $t('taskDialog.taskLink') }}</p>
+        <div class="grid gap-2 md:grid-cols-2">
+          <BaseSelect
+            :model-value="relationType"
+            name="relationType"
+            :items="dependencyTypeOptions"
+            optionsLabel="label"
+            optionsValue="value"
+            :placeholder="$t('tasks.relationType')"
+            @update:model-value="onRelationTypeChange(String($event || ''))"
+          />
+          <BaseSelect
+            :model-value="relatedTaskId"
+            name="relatedTaskId"
+            :items="relatedTasks"
+            optionsLabel="displayLabel"
+            optionsValue="id"
+            :placeholder="$t('tasks.relatedTask')"
+            :disabled="!relationType || !relatedTasks.length"
+            @update:model-value="$emit('update:relatedTaskId', String($event || ''))"
+          />
+        </div>
+      </div>
+
+      <div>
+        <p class="mb-2 text-xs font-medium text-base-content/70">{{ $t('taskDialog.workspaceMembership') }}</p>
+        <BaseSelect
+          :model-value="workspaceParentId"
+          name="workspaceParentId"
+          :items="workspaceOptions"
+          optionsLabel="displayLabel"
+          optionsValue="id"
+          :placeholder="$t('taskDialog.workspaceNone')"
+          @update:model-value="$emit('update:workspaceParentId', String($event || ''))"
+        />
+        <p class="mt-1 text-xs text-base-content/50">{{ $t('taskDialog.workspaceMembershipHint') }}</p>
+      </div>
     </div>
   </section>
 </template>

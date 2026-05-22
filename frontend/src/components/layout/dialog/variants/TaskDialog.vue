@@ -13,10 +13,9 @@ import { useTaskDocLinkMutations, useTaskDocLinks } from '@/composables/useTaskD
 import { uiLog } from '@/utils/logger'
 import { applyRelationFieldsToProjectColumns } from '@/utils/websocketTaskProjectColumns'
 import {
-  RELATION_UI_OPTIONS,
   normalizeRelationModeForApi,
+  relationFieldsForApiPatch,
   relationModeToUiLabel,
-  relationUiLabelToApiMode,
 } from '@/utils/taskRelationMode'
 import type { iColumn } from '@/types/columnTypes'
 import DialogTemplate from '../DialogTemplate.vue'
@@ -157,11 +156,21 @@ const localAssigneeId = ref<string>('')
 // Add missing refs for relation type and related task
 const localRelationType = ref('')
 const localRelatedTaskId = ref('')
+const localWorkspaceParentId = ref('')
 /** Relation fields loaded with the task; PATCH only when user changes them (avoids clearing on unrelated saves). */
 const relationBaseline = ref<{ taskId: number | null; mode: string | null; id: number | null }>({
   taskId: null,
   mode: null,
   id: null,
+})
+const parentBaseline = ref<{ taskId: number | null; parentId: number | null }>({
+  taskId: null,
+  parentId: null,
+})
+const localIsWorkspace = ref(false)
+const workspaceContainerBaseline = ref<{ taskId: number | null; isContainer: boolean }>({
+  taskId: null,
+  isContainer: false,
 })
 const isSaving = ref(false)
 const saveError = ref('')
@@ -173,12 +182,20 @@ const saveTaskProjectId = computed(() => {
   return [mergedProjectId, storeProjectId, routeProjectId].find(Number.isFinite)
 })
 
-const relationOptions = [...RELATION_UI_OPTIONS]
 const relatedTasks = computed(() =>
   (tasksStore.items || []).filter(t => t.id !== mergedTask.value?.id).map(t => ({
     ...t,
-    displayLabel: `${t.identifier}: ${t.name}`
-  }))
+    displayLabel: `${t.identifier}: ${t.name}`,
+  })),
+)
+
+const workspaceTaskOptions = computed(() =>
+  (tasksStore.items || [])
+    .filter((t) => (t as { isContainer?: boolean }).isContainer && t.id !== mergedTask.value?.id)
+    .map((t) => ({
+      id: t.id,
+      displayLabel: `${t.identifier}: ${t.name}`,
+    })),
 )
 
 // Watch mergedTask and update local refs when it changes
@@ -196,7 +213,13 @@ watch(mergedTask, (task) => {
     // While save is in flight, keep local relation picks and baseline — optimistic
     // store updates must not wipe the PATCH payload or column badge patch.
     if (!isSaving.value) {
-      const taskAny = task as { relationId?: number | string | null; relationMode?: string | null; relatedTask?: { id: number; relationMode?: string } | null }
+      const taskAny = task as {
+        relationId?: number | string | null
+        relationMode?: string | null
+        relatedTask?: { id: number; relationMode?: string } | null
+        parentId?: number | null
+        isContainer?: boolean
+      }
       const relationId = taskAny.relationId ?? taskAny.relatedTask?.id ?? null
       const relationMode = taskAny.relationMode ?? taskAny.relatedTask?.relationMode ?? null
       localRelatedTaskId.value = relationId != null ? String(relationId) : ''
@@ -206,15 +229,33 @@ watch(mergedTask, (task) => {
         mode: normalizeRelationModeForApi(relationMode),
         id: relationId != null ? Number(relationId) : null,
       }
+      const parentId = taskAny.parentId ?? null
+      localWorkspaceParentId.value = parentId != null ? String(parentId) : ''
+      parentBaseline.value = {
+        taskId: task.id ?? null,
+        parentId: parentId != null ? Number(parentId) : null,
+      }
+      localIsWorkspace.value = !!taskAny.isContainer
+      workspaceContainerBaseline.value = {
+        taskId: task.id ?? null,
+        isContainer: !!taskAny.isContainer,
+      }
     }
   }
 }, { immediate: true })
 
+watch(localRelationType, (type) => {
+  if (!type) {
+    localRelatedTaskId.value = ''
+  }
+})
+
 function currentRelationValues(): { relationIdVal: number | null; relationModeVal: string | null } {
-  const relationIdVal =
-    localRelatedTaskId.value !== '' && localRelatedTaskId.value != null ? Number(localRelatedTaskId.value) : null
-  const relationModeVal = relationUiLabelToApiMode(localRelationType.value)
-  return { relationIdVal, relationModeVal }
+  const { relationId, relationMode } = relationFieldsForApiPatch(
+    localRelationType.value,
+    localRelatedTaskId.value,
+  )
+  return { relationIdVal: relationId, relationModeVal: relationMode }
 }
 
 function relationPatchIfChanged(): { relationMode?: string | null; relationId?: number | null } {
@@ -227,6 +268,32 @@ function relationPatchIfChanged(): { relationMode?: string | null; relationId?: 
   }
   if (relationModeVal === base.mode && relationIdVal === base.id) return {}
   return { relationMode: relationModeVal, relationId: relationIdVal }
+}
+
+function parentPatchIfChanged(): { parentId?: number | null } {
+  const parentIdVal =
+    localWorkspaceParentId.value !== '' && localWorkspaceParentId.value != null
+      ? Number(localWorkspaceParentId.value)
+      : null
+  const taskId = mergedTask.value?.id ?? null
+  const base = parentBaseline.value
+  if (taskId == null) return {}
+  if (base.taskId !== taskId) {
+    return { parentId: parentIdVal }
+  }
+  if (parentIdVal === base.parentId) return {}
+  return { parentId: parentIdVal }
+}
+
+function workspaceContainerPatchIfChanged(): { isContainer?: boolean } {
+  const taskId = mergedTask.value?.id ?? null
+  const base = workspaceContainerBaseline.value
+  if (taskId == null) return {}
+  if (base.taskId !== taskId) {
+    return { isContainer: localIsWorkspace.value }
+  }
+  if (localIsWorkspace.value === base.isContainer) return {}
+  return { isContainer: localIsWorkspace.value }
 }
 
 function buildRelatedTaskSummary(
@@ -253,12 +320,16 @@ async function saveTask(): Promise<void> {
   const prevTask = JSON.parse(JSON.stringify(tasksStore.item))
   const { relationIdVal, relationModeVal } = currentRelationValues()
   const relationPatch = relationPatchIfChanged()
+  const parentPatch = parentPatchIfChanged()
+  const containerPatch = workspaceContainerPatchIfChanged()
   uiLog.debug('saveTask called', {
     localName: localName.value,
     localDescription: localDescription.value,
     localAssigneeId: localAssigneeId.value,
     localProjectColumnId: localProjectColumnId.value,
     relationPatch,
+    parentPatch,
+    containerPatch,
   })
   try {
     const assigneeKind = localAssigneeId.value.startsWith('agent:') ? 'agent' : localAssigneeId.value.startsWith('user:') ? 'user' : 'none'
@@ -280,6 +351,8 @@ async function saveTask(): Promise<void> {
       projectColumnId: localProjectColumnId.value === '' ? undefined : Number(localProjectColumnId.value),
       projectId: mergedTask.value && 'projectId' in mergedTask.value ? (mergedTask.value as TaskWithIds).projectId : undefined,
       ...relationPatch,
+      ...parentPatch,
+      ...containerPatch,
       ...(assigneeKind === 'user' && { assigneeId: Number(assigneeValue) }),
       ...(assigneeKind === 'agent' && { assigneeApiKeyId: assigneeValue, assigneeId: null }),
       ...(assigneeKind === 'none' && { assigneeId: null, assigneeApiKeyId: null }),
@@ -304,6 +377,19 @@ async function saveTask(): Promise<void> {
           id: relationIdVal,
         }
       }
+      if (Object.keys(parentPatch).length > 0) {
+        parentBaseline.value = {
+          taskId: savedTaskId,
+          parentId:
+            localWorkspaceParentId.value !== '' ? Number(localWorkspaceParentId.value) : null,
+        }
+      }
+      if (Object.keys(containerPatch).length > 0) {
+        workspaceContainerBaseline.value = {
+          taskId: savedTaskId,
+          isContainer: localIsWorkspace.value,
+        }
+      }
       uiLog.debug('saveTask updateItem finished', { tasksStoreItem: tasksStore.item })
       if (typeof tasksStore.fetchItem === 'function') {
         const updatedTask = await tasksStore.fetchItem((mergedTask.value as TaskWithIds).id as number)
@@ -323,9 +409,14 @@ async function saveTask(): Promise<void> {
         uiLog.debug('saveTask invalidated board/project/subboard queries', { projectId: pid })
       }
     }
-  } catch (err) {
+  } catch (err: unknown) {
     tasksStore.item = prevTask
-    saveError.value = 'Failed to save task. Changes were rolled back.'
+    const apiMessage =
+      (err as { response?: { data?: { message?: string; details?: Array<{ message?: string }> } } })?.response
+        ?.data?.message ||
+      (err as { response?: { data?: { details?: Array<{ message?: string }> } } })?.response?.data?.details?.[0]
+        ?.message
+    saveError.value = apiMessage || 'Failed to save task. Changes were rolled back.'
     uiLog.error('saveTask error', { error: err, projectId: saveTaskProjectId.value })
     if (saveTaskProjectId.value) {
       const pid = saveTaskProjectId.value
@@ -585,7 +676,12 @@ const acceptingPlan = ref(false)
 const acceptPlanError = ref('')
 
 const userRole = computed(() => projectStore.project?.role || 'Viewer')
+const isEditorOrAbove = computed(() => ['Owner', 'Maintainer', 'Editor'].includes(userRole.value))
 const isMaintainerOrAbove = computed(() => ['Owner', 'Maintainer'].includes(userRole.value))
+const taskHasWorkspaceParent = computed(() => {
+  const task = mergedTask.value as { parentId?: number | null } | null
+  return task?.parentId != null
+})
 
 const showAcceptPlanButton = computed(() => {
   if (!mergedTask.value || !isMaintainerOrAbove.value) return false
@@ -675,13 +771,36 @@ async function handleAcceptPlan() {
           @update:assignee-id="localAssigneeId = $event"
         />
 
+        <div
+          v-if="isEditorOrAbove && mergedTask && 'id' in mergedTask"
+          class="rounded-box border border-base-300 bg-base-100 p-4"
+        >
+          <label class="label cursor-pointer justify-start gap-2">
+            <input
+              v-model="localIsWorkspace"
+              type="checkbox"
+              class="checkbox checkbox-primary checkbox-sm"
+              :disabled="taskHasWorkspaceParent"
+            />
+            <span class="label-text font-medium">{{ $t('taskDialog.makeWorkspace') }}</span>
+          </label>
+          <p v-if="taskHasWorkspaceParent" class="mt-1 text-xs text-base-content/60">
+            {{ $t('taskDialog.makeWorkspaceDisabledHint') }}
+          </p>
+          <p v-else class="mt-1 text-xs text-base-content/60">
+            {{ $t('taskDialog.makeWorkspaceHint') }}
+          </p>
+        </div>
+
         <TaskRelationField
           :relation-type="localRelationType"
           :related-task-id="localRelatedTaskId"
-          :relation-options="relationOptions"
           :related-tasks="relatedTasks"
+          :workspace-parent-id="localWorkspaceParentId"
+          :workspace-options="workspaceTaskOptions"
           @update:relation-type="localRelationType = $event"
           @update:related-task-id="localRelatedTaskId = $event"
+          @update:workspace-parent-id="localWorkspaceParentId = $event"
         />
 
         <TaskLinkedDocumentsPanel

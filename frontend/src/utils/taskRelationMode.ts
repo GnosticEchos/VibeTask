@@ -14,12 +14,26 @@ const RELATION_MODE_ALIASES: Record<string, ApiTaskRelationMode> = {
   'duplicated-by': 'duplicate-of',
 }
 
+/** Clears dependency link (relationId / relationMode) when selected. */
+export const RELATION_NONE_OPTION = { label: '— None —', value: '' } as const
+
+export const WORKSPACE_MEMBERSHIP_UI_LABEL = 'In workspace'
+
 export const RELATION_UI_OPTIONS = [
   { label: 'Related to', value: 'Related to' },
   { label: 'Blocked by', value: 'Blocked by' },
   { label: 'Blocks', value: 'Blocks' },
   { label: 'Duplicate of', value: 'Duplicate of' },
 ] as const
+
+/** Dependency type dropdown: None + standard link types. */
+export function dependencyRelationTypeOptions(): Array<{ label: string; value: string }> {
+  return [RELATION_NONE_OPTION, ...RELATION_UI_OPTIONS]
+}
+
+export function isWorkspaceMembershipLabel(label: string): boolean {
+  return label === WORKSPACE_MEMBERSHIP_UI_LABEL
+}
 
 const RELATION_MODE_TO_LABEL: Record<string, string> = {
   'relates-to': 'Related to',
@@ -56,4 +70,19 @@ export function relationModeToUiLabel(mode: string | null | undefined): string {
 export function relationUiLabelToApiMode(label: string): ApiTaskRelationMode | null {
   if (!label) return null
   return normalizeRelationModeForApi(RELATION_LABEL_TO_MODE[label] ?? label)
+}
+
+/** Pair relation mode + id for PATCH; clearing type always clears id (hub requires both or neither). */
+export function relationFieldsForApiPatch(
+  relationTypeUi: string,
+  relatedTaskId: string,
+): { relationId: number | null; relationMode: ApiTaskRelationMode | null } {
+  const relationMode = relationUiLabelToApiMode(relationTypeUi)
+  const relationId =
+    relationMode == null
+      ? null
+      : relatedTaskId !== '' && relatedTaskId != null
+        ? Number(relatedTaskId)
+        : null
+  return { relationId, relationMode }
 }

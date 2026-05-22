@@ -56,7 +56,7 @@ function backToMainBoard() {
             class="btn btn-ghost btn-xs gap-1"
             @click="workspacesDropdownOpen = !workspacesDropdownOpen"
           >
-            <span>Sub-board</span>
+            <span>{{ $t('project.workspaceMenu') }}</span>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
             </svg>
@@ -65,12 +65,12 @@ function backToMainBoard() {
             <li v-if="$route.query.workspace">
               <button type="button" @click="backToMainBoard">Back to Main Board</button>
             </li>
-            <li class="menu-title"><span>Active sub-boards</span></li>
+            <li class="menu-title"><span>{{ $t('project.activeWorkspaces') }}</span></li>
             <li v-if="isLoadingWorkspaces">
               <span class="text-base-content/50 text-xs">Loading...</span>
             </li>
             <li v-else-if="activeWorkspaces.length === 0">
-              <span class="text-base-content/50 text-xs">No active sub-boards</span>
+              <span class="text-base-content/50 text-xs">{{ $t('project.noActiveWorkspaces') }}</span>
             </li>
             <li v-for="ws in activeWorkspaces" :key="ws.id">
               <button type="button" class="text-left" @click="selectWorkspace(ws.id)">

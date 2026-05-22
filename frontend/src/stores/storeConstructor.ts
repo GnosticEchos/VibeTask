@@ -74,12 +74,13 @@ export const storeConstructor = <T extends Item, Y extends Item>(
   const createItem = async (params: any) => {
     storeLog.debug('createItem called', { params })
     loadingItem.value = true
-    await api.createItem(endpoint, {
+    const response = await api.createItem(endpoint, {
       projectId: selectedProjectId.value,
       ...params,
     })
     loadingItem.value = await falseLoadingState()
     storeLog.debug('createItem finished')
+    return endpoint === 'tasks' ? (new Task(response) as unknown as T) : (response as T)
   }
 
   const updateItem = async (id: number, params: any) => {

@@ -66,6 +66,12 @@
   },
   "project": {
     "addNewTask": "",
+    "newWorkspace": "",
+    "workspaceMenu": "",
+    "activeWorkspaces": "",
+    "noActiveWorkspaces": "",
+    "createAsWorkspace": "",
+    "workspaceCreated": "",
     "backlog": "",
     "settings": "",
     "createNewProject": "",

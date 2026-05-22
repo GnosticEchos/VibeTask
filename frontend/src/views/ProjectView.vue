@@ -178,6 +178,15 @@ function openAddTaskDialog() {
   })
 }
 
+function openNewWorkspaceDialog() {
+  layoutStore.openDialog({
+    title: t('project.newWorkspace'),
+    component: 'AddNewTaskDialog',
+    item: { createWorkspace: true, openWorkspaceAfter: true },
+    size: '2xl',
+  })
+}
+
 async function loadSubBoards() {
   if (!projectId.value) return
   const boardDerived = getSubBoardsFromProject(projectStore.project as any)
@@ -326,6 +335,18 @@ onUnmounted(() => {
           Docs
         </router-link>
         <button
+          v-if="isBoardRoute"
+          ref="newWorkspaceTabRef"
+          type="button"
+          role="tab"
+          class="tab"
+          tabindex="-1"
+          aria-selected="false"
+          @click="openNewWorkspaceDialog"
+        >
+          {{ $t('project.newWorkspace') }}
+        </button>
+        <button
           ref="addTaskTabRef"
           type="button"
           role="tab"
@@ -343,7 +364,7 @@ onUnmounted(() => {
       <div v-if="isBoardRoute" class="flex items-center gap-3 ml-3 whitespace-nowrap">
         <details ref="subBoardMenuRef" class="dropdown" @toggle="onSubBoardMenuToggle">
           <summary class="btn btn-ghost btn-xs gap-1">
-            <span>Sub-board</span>
+            <span>{{ $t('project.workspaceMenu') }}</span>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
             </svg>
@@ -352,7 +373,7 @@ onUnmounted(() => {
             <li v-if="!isMainBoard">
               <button type="button" @click="backToMainBoard">Main board</button>
             </li>
-            <li class="menu-title"><span class="text-left">Active sub-boards</span></li>
+            <li class="menu-title"><span class="text-left">{{ $t('project.activeWorkspaces') }}</span></li>
             <li v-if="isLoadingWorkspaces">
               <span class="text-base-content/50 text-xs">Loading...</span>
             </li>

@@ -12,14 +12,22 @@ import rules from '../../../../utils/validators'
 import { Form, useForm } from 'vee-validate'
 import { computed, ref, Ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import BaseToast from '../../../base/BaseToast.vue'
 import { uiLog } from '@/utils/logger'
 import { onMounted, ref as vueRef } from 'vue'
 import { getDisplayName } from '../../../../utils/functions'
-import { relationUiLabelToApiMode } from '@/utils/taskRelationMode'
+import { dependencyRelationTypeOptions, relationUiLabelToApiMode } from '@/utils/taskRelationMode'
+import { useLayoutStore } from '@/stores/layout'
 
+const props = defineProps<{
+  task?: { createWorkspace?: boolean; openWorkspaceAfter?: boolean }
+}>()
 
 const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
+const layoutStore = useLayoutStore()
 const { errors } = useForm()
 
 const name: Ref<string> = ref('')
@@ -28,6 +36,7 @@ const projectColumnId: Ref<number | null> = ref(null)
 const assigneeId: Ref<number | null> = ref(null)
 const relationMode: Ref<string> = ref('')
 const relationId: Ref<number | null> = ref(null)
+const workspaceParentId: Ref<number | null> = ref(null)
 
 const columnsStore = useColumnsStore()
 const membersStore = useMembersStore()
@@ -43,15 +52,30 @@ const columnsSorted = computed(() => {
   return columns.value?.sort((a, b) => a.order - b.order)
 })
 
-// 1. Relation type dropdown options (display labels; API uses enum: relates-to, blocked-by, blocks)
-const relationOptions = computed(() => [
-  { label: 'Related to', value: 'Related to' },
-  { label: 'Blocked by', value: 'Blocked by' },
-  { label: 'Blocks', value: 'Blocks' },
-  { label: 'Duplicate of', value: 'Duplicate of' },
-])
+const relationOptions = computed(() => dependencyRelationTypeOptions())
 
 const isWorkspaceContainer: Ref<boolean> = ref(false)
+
+const activeWorkspaceParentId = computed(() => {
+  const fromRoute = route.query?.workspace
+  if (fromRoute) return Number(fromRoute)
+  return null
+})
+
+const workspaceOptions = computed(() =>
+  (tasksRaw.value || [])
+    .filter((task) => (task as { isContainer?: boolean }).isContainer)
+    .map((task) => ({
+      id: task.id,
+      label: `${task.identifier}: ${trimText(task.name, 40)}`,
+    })),
+)
+
+const showWorkspaceMembership = computed(() => !isWorkspaceContainer.value && activeWorkspaceParentId.value == null)
+
+const dialogTitle = computed(() =>
+  props.task?.createWorkspace || isWorkspaceContainer.value ? t('project.newWorkspace') : t('project.addNewTask'),
+)
 
 // 2. Assignee dropdown: ensure fullName fallback
 const members = computed(() => {
@@ -104,11 +128,11 @@ const formIsValid = computed(() => {
   const nameIsValid = name.value && name.value.length >= 5 && name.value.length <= 60
   
   // Relation validation - if either relationId or relationMode is set, both must be set
-  const relationIsValid = 
-    (!relationId.value && !relationMode.value) || // neither set - valid
-    (relationId.value && relationMode.value);     // both set - valid
-  
-  return nameIsValid && relationIsValid && Object.keys(errors.value).length === 0;
+  const relationIsValid =
+    (!relationId.value && !relationMode.value) ||
+    (relationId.value && relationMode.value)
+
+  return nameIsValid && relationIsValid && Object.keys(errors.value).length === 0
 })
 
 /** After a successful create, block another POST until the user edits the form (avoids duplicate tasks). */
@@ -180,6 +204,12 @@ async function ensureDropdownData() {
 
 onMounted(() => {
   ensureDropdownData()
+  if (props.task?.createWorkspace) {
+    isWorkspaceContainer.value = true
+  }
+  if (activeWorkspaceParentId.value != null) {
+    workspaceParentId.value = activeWorkspaceParentId.value
+  }
 })
 
 const addTask = async () => {
@@ -192,7 +222,11 @@ const addTask = async () => {
     assigneeId: assigneeId.value,
     ...(isWorkspaceContainer.value ? { isContainer: true } : {}),
   }
-  // Omit relation fields when not set. API (Kanban-rewrite): relationId is number, relationMode is kebab-case string.
+  if (workspaceParentId.value != null) {
+    params.parentId = workspaceParentId.value
+  } else if (activeWorkspaceParentId.value != null) {
+    params.parentId = activeWorkspaceParentId.value
+  }
   if (relationId.value != null && relationMode.value) {
     const rid = Number(relationId.value)
     if (!Number.isNaN(rid)) {
@@ -202,12 +236,25 @@ const addTask = async () => {
     }
   }
   try {
-    await tasksStore.createItem(params)
+    const created = await tasksStore.createItem(params)
     const projectId = projectStore.selectedProjectId ?? projectStore.project?.id
     if (projectId != null) {
       await queryClient.invalidateQueries({ queryKey: ['board', projectId] })
+      await queryClient.invalidateQueries({ queryKey: ['project', projectId] })
     }
-    showToast('Task created successfully!', 'success')
+    const createdId = (created as { id?: number })?.id
+    if (props.task?.openWorkspaceAfter && createdId && projectId != null) {
+      layoutStore.closeDialog()
+      await router.push({
+        name: 'Board',
+        params: { id: String(projectId) },
+        query: { workspace: String(createdId) },
+      })
+    }
+    showToast(
+      isWorkspaceContainer.value ? t('project.workspaceCreated') : 'Task created successfully!',
+      'success',
+    )
     submitBlockedUntilEdits.value = true
     formSnapshotAfterSubmit.value = captureAddTaskFormSnapshot()
   } catch (error: unknown) {
@@ -243,7 +290,7 @@ const handleFieldCleared = (fieldName: string) => {
         :aria-labelledby="'add-task-dialog-title'"
       >
         <template #header>
-          <span id="add-task-dialog-title" class="text-lg font-bold">Create New Task</span>
+          <span id="add-task-dialog-title" class="text-lg font-bold">{{ dialogTitle }}</span>
         </template>
         <div class="flex flex-col gap-6 px-4 pt-4">
           <!-- Title row -->
@@ -307,18 +354,34 @@ const handleFieldCleared = (fieldName: string) => {
                 />
               </div>
             </div>
-          <label class="label cursor-pointer justify-start gap-2 mt-2">
+          <label
+            v-if="!activeWorkspaceParentId"
+            class="label cursor-pointer justify-start gap-2 mt-2"
+          >
             <input
               v-model="isWorkspaceContainer"
               type="checkbox"
               class="checkbox checkbox-primary checkbox-sm"
-              :disabled="loading"
+              :disabled="loading || !!props.task?.createWorkspace"
             />
-            <span class="label-text">Workspace container (sub-board parent — expand later via implementation plan)</span>
+            <span class="label-text">{{ $t('project.createAsWorkspace') }}</span>
           </label>
+          <div v-if="showWorkspaceMembership" class="flex flex-col gap-2 mt-2">
+            <label class="text-base font-semibold">{{ $t('taskDialog.workspaceMembership') }}</label>
+            <BaseSelect
+              v-model="workspaceParentId"
+              name="workspaceParentId"
+              :items="workspaceOptions"
+              optionsValue="id"
+              optionsLabel="label"
+              :disabled="loading || loadingDropdowns || !workspaceOptions.length"
+              :placeholder="$t('taskDialog.workspaceNone')"
+              class="w-full"
+            />
+          </div>
           <!-- Relation row -->
           <div class="flex flex-col gap-2 mt-2">
-            <label class="text-base font-semibold">Relation (optional)</label>
+            <label class="text-base font-semibold">{{ $t('taskDialog.taskLink') }} ({{ $t('tasks.optionalRelation') }})</label>
               <div class="flex gap-2">
               <div class="flex flex-col w-1/3">
                   <BaseSelect

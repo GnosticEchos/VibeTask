@@ -65,11 +65,15 @@ The **Backlog** view (sidebar) lists tasks for your projects that are not assign
 
 A **sub-board** is not a separate project. It is a **container task** on the main board with its own child tasks shown on a filtered board view.
 
-### How sub-boards are created today
+### How workspaces are created today
 
-You can mark a new task as a **workspace container** when adding a task (checkbox in Add New Task). That creates an empty container you can expand later.
+- **New workspace** tab on the project board (creates a container and can open its workspace board).
+- **Make this a workspace** in the task dialog (Editor+) on an existing card.
+- **Create as workspace** when adding a task (checkbox).
 
-The main human workflow to spawn child tasks is still:
+To place an existing task inside a workspace, use **Relationships → Workspace** in the task dialog (not drag-and-drop yet).
+
+The main workflow to spawn many child tasks from a plan is still:
 
 1. Create or open a **parent task** on the main board.
 2. In the task dialog, **link a document** with role **Implementation plan** (`IMPLEMENTATION_PLAN`).
