@@ -1,4 +1,4 @@
-import { PrismaClient, Task, Prisma } from '@prisma/client';
+import type { PrismaClient, Task, Prisma } from '../../../../prisma/generated/prisma/client.js';
 import { ITaskRepository } from '../../../domain/repositories/task.repository.js';
 
 export class PrismaTaskRepository implements ITaskRepository {

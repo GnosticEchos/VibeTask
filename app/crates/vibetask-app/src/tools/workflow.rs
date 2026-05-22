@@ -131,7 +131,10 @@ impl ReflectOnWorkTool {
             return Err(tool_error("runtime", error_message));
         }
 
-        debug_assert!(integrity_check.all_checks_pass(), "All integrity checks must pass at this point");
+        debug_assert!(
+            integrity_check.all_checks_pass(),
+            "All integrity checks must pass at this point"
+        );
 
         // STEP 4: Create work log with TLDR generation
         let mut work_log = crate::domain::WorkLog::new(

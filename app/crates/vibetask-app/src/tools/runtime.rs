@@ -67,7 +67,10 @@ impl ToolContext {
                 )
             })?;
 
-        debug_assert!(!entry.name.is_empty(), "Active agent name must not be empty");
+        debug_assert!(
+            !entry.name.is_empty(),
+            "Active agent name must not be empty"
+        );
         debug_assert!(!api_key.is_empty(), "Retrieved API key must not be empty");
 
         Ok(ActiveAgent {

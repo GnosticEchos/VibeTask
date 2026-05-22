@@ -638,21 +638,24 @@ impl CreateTaskTool {
         match create_project_task_via_api(ctx, api_key, &request).await {
             Ok(created) => {
                 debug_assert!(created.id > 0, "Created task must have valid ID");
-                debug_assert!(!created.identifier.is_empty(), "Created task must have identifier");
+                debug_assert!(
+                    !created.identifier.is_empty(),
+                    "Created task must have identifier"
+                );
                 Ok(ResponseBuilder::text(format!(
-                "✅ Task created\n\n\
+                    "✅ Task created\n\n\
                     Project: {}\n\
                     Task: {} ({})\n\
                     ID: {}\n\
                     Column ID: {}\n\
                     Parent: {:?}\n",
-                created.project_id,
-                created.name,
-                created.identifier,
-                created.id,
-                created.column_id,
-                created.parent_id
-            )))
+                    created.project_id,
+                    created.name,
+                    created.identifier,
+                    created.id,
+                    created.column_id,
+                    created.parent_id
+                )))
             }
             Err(e) => Err(tool_error(
                 "runtime",

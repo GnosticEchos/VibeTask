@@ -1,4 +1,4 @@
-import { PrismaClient, ProjectColumn, Prisma } from '@prisma/client';
+import type { PrismaClient, ProjectColumn, Prisma } from '../../../../prisma/generated/prisma/client.js';
 import { IColumnRepository } from '../../../domain/repositories/column.repository.js';
 
 export class PrismaColumnRepository implements IColumnRepository {

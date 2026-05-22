@@ -6,7 +6,7 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
-const require = createRequire(import.meta.url);
+const nodeRequire = createRequire(__filename);
 
 export type TreeSitterPackBinding = {
   process: (
@@ -24,13 +24,16 @@ function isMuslLinux(): boolean {
     return false;
   }
 
-  const header = process.report?.getReport?.()?.header as
-    | {
-        glibcVersion?: string;
-        glibcVersionRuntime?: string;
-        glibcVersionCompiler?: string;
-      }
-    | undefined;
+  type NodeReportHeader = {
+    glibcVersion?: string;
+    glibcVersionRuntime?: string;
+    glibcVersionCompiler?: string;
+  };
+  const report = process.report?.getReport?.();
+  const header =
+    report && typeof report === 'object' && 'header' in report
+      ? (report as { header?: NodeReportHeader }).header
+      : undefined;
 
   if (header) {
     const glibc =
@@ -43,7 +46,7 @@ function isMuslLinux(): boolean {
   }
 
   try {
-    require('node:fs').statSync('/lib64/ld-musl-x86_64.so.1');
+    nodeRequire('node:fs').statSync('/lib64/ld-musl-x86_64.so.1');
     return true;
   } catch {
     return false;
@@ -97,9 +100,9 @@ export function getTreeSitterPack(): TreeSitterPackBinding | null {
 
   try {
     const packRoot = path.dirname(
-      require.resolve('@kreuzberg/tree-sitter-language-pack/package.json'),
+      nodeRequire.resolve('@kreuzberg/tree-sitter-language-pack/package.json'),
     );
-    const native = require(path.join(packRoot, bindingFile)) as TreeSitterPackBinding;
+    const native = nodeRequire(path.join(packRoot, bindingFile)) as TreeSitterPackBinding;
     cached = {
       process: native.process.bind(native),
       hasLanguage: native.hasLanguage.bind(native),

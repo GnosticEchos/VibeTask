@@ -130,7 +130,7 @@ export const storeConstructor = <T extends Item, Y extends Item>(
       items.value[index] = mergeBoardTaskFromWebsocket(
         items.value[index] as unknown as iTask,
         updatedItem as unknown as iTask,
-      ) as Y
+      ) as unknown as Y
       return
     }
     items.value[index] = updatedItem as Y

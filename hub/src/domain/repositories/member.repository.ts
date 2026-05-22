@@ -1,4 +1,4 @@
-import { ProjectUser, Prisma, PrismaClient } from '@prisma/client';
+import type { ProjectUser, Prisma, PrismaClient } from '../../../prisma/generated/prisma/client.js';
 
 export interface IMemberRepository {
   findById(id: number): Promise<ProjectUser | null>;

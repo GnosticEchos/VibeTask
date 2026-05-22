@@ -2,11 +2,6 @@
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import { dependencyRelationTypeOptions } from '@/utils/taskRelationMode'
 
-type RelationOption = {
-  label: string
-  value: string
-}
-
 type RelatedTaskOption = {
   id: number
   displayLabel: string

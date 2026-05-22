@@ -307,6 +307,11 @@ function buildRelatedTaskSummary(
     id: related.id,
     identifier: related.identifier,
     name: related.name,
+    description: related.description ?? '',
+    assignee: related.assignee ?? null,
+    projectColumnId: related.projectColumnId ?? null,
+    order: related.order ?? 0,
+    projectId: (related as iTask & { projectId?: number }).projectId ?? 0,
     relationMode: relationModeVal,
   }
 }

@@ -1,4 +1,4 @@
-import { ProjectColumn, Prisma, PrismaClient } from '@prisma/client';
+import type { ProjectColumn, Prisma, PrismaClient } from '../../../prisma/generated/prisma/client.js';
 
 export interface IColumnRepository {
   findById(id: number): Promise<ProjectColumn | null>;

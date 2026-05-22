@@ -1,4 +1,4 @@
-import { Task, Prisma, PrismaClient } from '@prisma/client';
+import type { Task, Prisma, PrismaClient } from '../../../prisma/generated/prisma/client.js';
 
 export interface ITaskRepository {
   findById(id: number): Promise<Task | null>;

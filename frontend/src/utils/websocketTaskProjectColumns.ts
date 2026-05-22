@@ -44,8 +44,11 @@ export function mergeBoardTaskFromWebsocket(existing: iTask | undefined, incomin
   const merged = { ...existing, ...incoming } as iTask
 
   for (const key of BOARD_ENRICHED_KEYS) {
-    if ((incoming as Record<string, unknown>)[key] === undefined && (existing as Record<string, unknown>)[key] !== undefined) {
-      ;(merged as Record<string, unknown>)[key] = (existing as Record<string, unknown>)[key]
+    const incomingRecord = incoming as unknown as Record<string, unknown>
+    const existingRecord = existing as unknown as Record<string, unknown>
+    const mergedRecord = merged as unknown as Record<string, unknown>
+    if (incomingRecord[key] === undefined && existingRecord[key] !== undefined) {
+      mergedRecord[key] = existingRecord[key]
     }
   }
 
