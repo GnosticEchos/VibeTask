@@ -1416,11 +1416,7 @@ impl VibeTaskClient {
             rows.retain(|row| row.rank >= similarity_threshold);
         }
 
-        rows.sort_by(|a, b| {
-            b.rank
-                .partial_cmp(&a.rank)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        rows.sort_by(|a, b| b.rank.total_cmp(&a.rank));
 
         Ok(rows)
     }
@@ -1555,6 +1551,7 @@ mod tests {
                     is_agent: true,
                     created_by: Some(1),
                     description: Some("Test agent".to_string()),
+                    avatar_slug: None,
                     is_platform_agent: Some(true),
                     allowed_read_endpoints: Some(vec!["/api/agent/projects".to_string()]),
                 },

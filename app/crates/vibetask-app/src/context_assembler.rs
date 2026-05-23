@@ -648,7 +648,7 @@ impl RecursiveSummarizer {
             .collect();
 
         // Sort by score (descending) and take top sentences
-        scored_sentences.sort_by(|a, b| b.0.cmp(&a.0));
+        scored_sentences.sort_by_key(|a| std::cmp::Reverse(a.0));
 
         for (_, sentence) in scored_sentences.iter().take(target_sentences) {
             let sentence_tokens = self.counter.count_tokens(sentence);
@@ -1447,11 +1447,7 @@ impl ContextAssembler {
         }
 
         // Sort by similarity score (highest first)
-        similar_docs.sort_by(|a, b| {
-            b.similarity_score
-                .partial_cmp(&a.similarity_score)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        similar_docs.sort_by(|a, b| b.similarity_score.total_cmp(&a.similarity_score));
 
         // Limit results
         similar_docs.truncate(max_results);
