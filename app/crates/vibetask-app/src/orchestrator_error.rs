@@ -3,6 +3,9 @@ use crate::{
     domain::{SpecificationError, TaskAtomicityError, WorkLogError},
     error::{AgentError, ApiError, ConfigError, InitError},
 };
+use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult, ContentBlock, TextContent};
+use serde_json::json;
+use std::fmt;
 use thiserror::Error;
 
 /// Comprehensive orchestrator error with MCP compatibility
@@ -347,13 +350,134 @@ impl OrchestratorError {
             _ => Some(5),                                       // Default 5 second delay
         }
     }
+
+    /// Telemetry bucket aligned with [`crate::telemetry::classify_error`].
+    pub fn telemetry_class(&self) -> &'static str {
+        match self {
+            Self::Authentication { .. } | Self::Agent(AgentError::AuthenticationFailed(_)) => {
+                "auth_error"
+            }
+            Self::PermissionDenied { .. } | Self::Agent(AgentError::PermissionDenied(_)) => {
+                "permission_denied"
+            }
+            Self::HubConnectivity { .. }
+            | Self::NetworkTimeout { .. }
+            | Self::Api(ApiError::HubOffline)
+            | Self::Api(ApiError::RequestFailed(_)) => "network_error",
+            Self::OperationTimeout { .. } => "timeout",
+            Self::Api(ApiError::HttpError { status, .. }) if *status == 408 => "timeout",
+            Self::InvalidToolParameters { .. }
+            | Self::ValidationFailed { .. }
+            | Self::InvalidDataFormat { .. } => "validation_error",
+            Self::ParsingError { .. } => "contract_error",
+            Self::Api(ApiError::InvalidResponse(_)) => "contract_error",
+            _ => "runtime_error",
+        }
+    }
+
+    /// Build an MCP tool error carrying a JSON-RPC-style application code.
+    pub fn to_call_tool_error(&self) -> CallToolError {
+        CallToolError::new(self.to_mcp_coded_error())
+    }
+
+    /// Successful MCP response envelope with `is_error: true` and `meta.mcp_error_code`.
+    pub fn to_call_tool_result(&self) -> CallToolResult {
+        call_tool_result_from_mcp_coded(self.to_mcp_coded_error())
+    }
+
+    fn to_mcp_coded_error(&self) -> McpCodedToolError {
+        McpCodedToolError {
+            code: self.mcp_error_code(),
+            message: self.user_message(),
+            telemetry_class: Some(self.telemetry_class().to_string()),
+        }
+    }
+}
+
+/// MCP tool error with an application-specific JSON-RPC code (MCP -32000 range).
+#[derive(Debug)]
+pub struct McpCodedToolError {
+    pub code: i32,
+    pub message: String,
+    pub telemetry_class: Option<String>,
+}
+
+impl fmt::Display for McpCodedToolError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(class) = &self.telemetry_class {
+            write!(f, "[{class}] ")?;
+        }
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for McpCodedToolError {}
+
+/// Read `mcp_error_code` from a [`CallToolError`] when it wraps coded errors.
+pub fn mcp_error_code_from_call_tool_error(err: &CallToolError) -> Option<i32> {
+    err.0
+        .downcast_ref::<McpCodedToolError>()
+        .map(|e| e.code)
+        .or_else(|| {
+            err.0
+                .downcast_ref::<OrchestratorError>()
+                .map(OrchestratorError::mcp_error_code)
+        })
+}
+
+/// Convert tool failures into MCP results that preserve error codes in `meta`.
+pub fn call_tool_result_from_call_tool_error(err: CallToolError) -> CallToolResult {
+    if let Some(coded) = err.0.downcast_ref::<McpCodedToolError>() {
+        return call_tool_result_from_mcp_coded(McpCodedToolError {
+            code: coded.code,
+            message: coded.message.clone(),
+            telemetry_class: coded.telemetry_class.clone(),
+        });
+    }
+    if let Some(orch) = err.0.downcast_ref::<OrchestratorError>() {
+        return orch.to_call_tool_result();
+    }
+    CallToolResult::with_error(err)
+}
+
+pub fn mcp_error_code_from_call_tool_result(result: &CallToolResult) -> Option<i32> {
+    result.meta.as_ref().and_then(|meta| {
+        meta.get("mcp_error_code")
+            .and_then(|v| v.as_i64())
+            .map(|c| c as i32)
+    })
+}
+
+/// First text line from a tool result (for logging / telemetry).
+pub fn call_tool_result_message(result: &CallToolResult) -> String {
+    for item in &result.content {
+        if let ContentBlock::TextContent(text) = item {
+            return text.text.clone();
+        }
+    }
+    String::new()
+}
+
+fn call_tool_result_from_mcp_coded(coded: McpCodedToolError) -> CallToolResult {
+    let mut meta = serde_json::Map::new();
+    meta.insert("mcp_error_code".to_string(), json!(coded.code));
+    if let Some(class) = &coded.telemetry_class {
+        meta.insert("error_class".to_string(), json!(class));
+    }
+    let mut result = CallToolResult::text_content(vec![TextContent::new(
+        coded.message,
+        None,
+        None,
+    )]);
+    result.is_error = Some(true);
+    result.meta = Some(meta);
+    result
 }
 
 // Implement From traits for CallToolError conversion (MCP compatibility)
-impl From<OrchestratorError> for rust_mcp_sdk::schema::CallToolError {
+impl From<OrchestratorError> for CallToolError {
     fn from(err: OrchestratorError) -> Self {
-        // CallToolError is a tuple struct wrapping Box<dyn std::error::Error>
-        rust_mcp_sdk::schema::CallToolError(Box::new(err))
+        err.to_call_tool_error()
     }
 }
 
@@ -456,10 +580,43 @@ mod tests {
     #[test]
     fn test_call_tool_error_conversion() {
         let orch_error = OrchestratorError::permission_denied("write_file", "USER");
-        let call_tool_error: rust_mcp_sdk::schema::CallToolError = orch_error.into();
+        let call_tool_error: CallToolError = orch_error.into();
 
-        // CallToolError is a tuple struct, so we check the wrapped error
-        let wrapped_error = &call_tool_error.0;
-        assert!(wrapped_error.to_string().contains("Permission denied"));
+        assert_eq!(
+            mcp_error_code_from_call_tool_error(&call_tool_error),
+            Some(-32002)
+        );
+        assert!(call_tool_error.to_string().contains("Permission denied"));
+    }
+
+    #[test]
+    fn test_call_tool_result_carries_mcp_error_code() {
+        let err = OrchestratorError::hub_offline();
+        let result = err.to_call_tool_result();
+
+        assert_eq!(result.is_error, Some(true));
+        assert_eq!(mcp_error_code_from_call_tool_result(&result), Some(-32020));
+        assert_eq!(
+            result
+                .meta
+                .as_ref()
+                .and_then(|m| m.get("error_class"))
+                .and_then(|v| v.as_str()),
+            Some("network_error")
+        );
+        assert!(call_tool_result_message(&result).contains("Hub"));
+    }
+
+    #[test]
+    fn test_call_tool_result_from_call_tool_error_preserves_code() {
+        let err = CallToolError::new(McpCodedToolError {
+            code: -32602,
+            message: "[validation] bad field".to_string(),
+            telemetry_class: Some("validation".to_string()),
+        });
+        let result = call_tool_result_from_call_tool_error(err);
+
+        assert_eq!(result.is_error, Some(true));
+        assert_eq!(mcp_error_code_from_call_tool_result(&result), Some(-32602));
     }
 }

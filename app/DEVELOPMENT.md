@@ -239,7 +239,16 @@ key_hash = "sha256:..."
 VIBETASK_API_KEY=your-api-key-here
 ```
 
-**Production**: Keys stored securely in system keyring.
+**Production (intended)**: Keys stored in the OS secret service via the Rust `keyring` crate (`service=vibetask`, account = agent name).
+
+### Known issues
+
+| Issue | Symptoms | Workaround |
+|-------|----------|------------|
+| **OS keyring unreliable (Linux / Cursor)** | `agent enlist` succeeds but `agent status` reports **Key: Missing from secure storage**; `retrieve_key` finds no `vibetask` / agent entry even after enlist. Release builds do **not** write `.env` when keyring store fails (debug builds do). | Create `app/.env.<agent>` (lowercase agent name, e.g. `.env.gatekeeper3`) with `VIBETASK_API_KEY=<key>`, chmod `600`. Ensure CLI/MCP register env search roots from your config path (see `SecureKeyManager::register_env_search_roots`). |
+| **`/api/agent/me` null metadata** | `agent enlist` fails with `error decoding response body` when hub returns `"description": null` on agent metadata. | Fixed in `vibetask-hub-client` (`AgentMetadata.description` is optional). Rebuild `vibetask-cli` after pulling. |
+
+Track keyring fixes in app issue backlog; prefer env fallback documentation until store/retrieve is verified on target desktops (KWallet, Secret Service, etc.).
 
 ## Architecture
 

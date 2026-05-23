@@ -24,7 +24,10 @@ pub mod vibetask_client {
     pub use vibetask_hub_client::vibetask_client::*;
 }
 
-pub use agent_detector::{AgentType, AgentTypeDetector, DetectionError};
+pub use agent_detector::{
+    ensure_platform_session, ensure_platform_session_for_delegated_agent, refresh_platform_session,
+    AgentType, AgentTypeDetector, DetectionError, PlatformSessionInfo,
+};
 pub use atomic_writer::{AtomicConfigWriter, ExpirationNotification, SecureKeyManager};
 pub use config::{AgentConfig, AgentEntry, ServerConfig};
 pub use context_assembler::{
@@ -34,7 +37,11 @@ pub use context_assembler::{
 };
 pub use error::{AgentError, ApiError, ConfigError, InitError, McpError};
 pub use generated_types::{Delegation, DelegationMode, PermissionLevel};
-pub use orchestrator_error::OrchestratorError;
+pub use orchestrator_error::{
+    call_tool_result_from_call_tool_error, call_tool_result_message,
+    mcp_error_code_from_call_tool_error, mcp_error_code_from_call_tool_result, McpCodedToolError,
+    OrchestratorError,
+};
 pub use telemetry::{classify_error, TelemetryEvent, TelemetryMetricsSnapshot, TelemetryRecorder};
 pub use tool_registry::{ToolRegistry, ToolValidationError};
 pub use tools::ToolContext;

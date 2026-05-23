@@ -398,6 +398,7 @@
       "moveRange": "Move range",
       "moveRangeNone": "None (no moves)",
       "columnBoundHint": "Column-bound agents can only see their assigned column. Tasks can be moved ±N columns or handed off to Agent Review.",
+      "saveDelegationAccess": "Save access settings",
       "listTruncatedHint": "Showing the {shown} most recent agents (newest first) out of {total} total. Delete unused or test agents to shorten the list, or raise the limit in API if you manage many keys."
     },
     "admin": {

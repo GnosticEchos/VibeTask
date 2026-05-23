@@ -3,6 +3,7 @@ use crate::error::ConfigError;
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use tempfile::NamedTempFile;
 use tokio::fs;
 use tracing::{info, warn};
@@ -74,8 +75,45 @@ impl AtomicConfigWriter {
 /// Secure key management utilities with rotation and validation
 pub struct SecureKeyManager;
 
+static EXTRA_ENV_SEARCH_ROOTS: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
+
 impl SecureKeyManager {
     const KEYRING_SERVICE: &'static str = "vibetask";
+
+    /// Register directories to search for `.env.<agent>` files (e.g. from MCP config path).
+    pub fn register_env_search_roots(roots: impl IntoIterator<Item = PathBuf>) {
+        let Ok(mut guard) = EXTRA_ENV_SEARCH_ROOTS.lock() else {
+            return;
+        };
+        for root in roots {
+            if !guard.iter().any(|existing| existing == &root) {
+                guard.push(root);
+            }
+        }
+    }
+
+    /// Derive agent env file directories from `app/config/vibe-mcp.toml` (or similar).
+    pub fn env_search_roots_from_config(config_path: &str) -> Vec<PathBuf> {
+        let config = PathBuf::from(config_path);
+        let mut roots = Vec::new();
+        if let Some(config_dir) = config.parent() {
+            roots.push(config_dir.to_path_buf());
+            if let Some(app_dir) = config_dir.parent() {
+                roots.push(app_dir.to_path_buf());
+                if let Some(project_root) = app_dir.parent() {
+                    roots.push(project_root.to_path_buf());
+                }
+            }
+        }
+        roots
+    }
+
+    fn extra_env_search_roots() -> Vec<PathBuf> {
+        EXTRA_ENV_SEARCH_ROOTS
+            .lock()
+            .map(|guard| guard.clone())
+            .unwrap_or_default()
+    }
 
     fn candidate_env_key_paths(agent_name: &str) -> Vec<PathBuf> {
         let file_name = format!(".env.{}", agent_name.to_lowercase());
@@ -83,11 +121,19 @@ impl SecureKeyManager {
         let mut seen = HashSet::new();
 
         let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-        let mut dirs_to_probe = vec![cwd.clone()];
+        let mut dirs_to_probe = Vec::new();
+
+        if let Ok(dir) = std::env::var("VIBETASK_AGENT_ENV_DIR") {
+            dirs_to_probe.push(PathBuf::from(dir));
+        }
+        dirs_to_probe.extend(Self::extra_env_search_roots());
+        dirs_to_probe.push(cwd.clone());
 
         // Probe likely workspace locations for existing development key files.
-        for ancestor in cwd.ancestors().take(5) {
+        for ancestor in cwd.ancestors().take(8) {
             dirs_to_probe.push(ancestor.to_path_buf());
+            dirs_to_probe.push(ancestor.join("app"));
+            dirs_to_probe.push(ancestor.join("app/crates/vibetask-app"));
             dirs_to_probe.push(ancestor.join("crates/vibetask-mcp"));
             dirs_to_probe.push(ancestor.join("crates/vibetask-mcp/examples"));
             dirs_to_probe.push(ancestor.join("crates/vibetask-app"));
@@ -590,6 +636,41 @@ mod tests {
         // Verify modified config was written
         let loaded_config = AgentConfig::load(&config_path).await.unwrap();
         assert_eq!(loaded_config.server.name, "Modified Server");
+    }
+
+    #[test]
+    fn env_search_roots_from_config_includes_app_dir() {
+        let roots = SecureKeyManager::env_search_roots_from_config(
+            "/tmp/VibeTask/app/config/vibe-mcp.toml",
+        );
+        assert!(roots.iter().any(|p| p.ends_with("app")));
+        assert!(roots.iter().any(|p| p.ends_with("config")));
+    }
+
+    #[tokio::test]
+    async fn retrieve_key_uses_registered_config_app_dir() {
+        let temp = tempfile::tempdir().unwrap();
+        let app_dir = temp.path().join("app");
+        let config_dir = app_dir.join("config");
+        tokio::fs::create_dir_all(&config_dir).await.unwrap();
+        let config_path = config_dir.join("vibe-mcp.toml");
+        tokio::fs::write(&config_path, "[server]\nname=\"t\"\n").await.unwrap();
+
+        let env_file = app_dir.join(".env.probeagent");
+        tokio::fs::write(&env_file, "VIBETASK_API_KEY=probe-key\n")
+            .await
+            .unwrap();
+
+        let previous_cwd = std::env::current_dir().unwrap();
+        std::env::set_current_dir(temp.path()).unwrap();
+        SecureKeyManager::register_env_search_roots(
+            SecureKeyManager::env_search_roots_from_config(config_path.to_str().unwrap()),
+        );
+
+        let key = SecureKeyManager::retrieve_key("ProbeAgent").await.unwrap();
+        assert_eq!(key, "probe-key");
+
+        std::env::set_current_dir(previous_cwd).unwrap();
     }
 
     #[test]

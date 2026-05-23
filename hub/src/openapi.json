@@ -4370,6 +4370,19 @@
                   },
                   "permissionLevel": {
                     "$ref": "#/components/schemas/AgentPermissionLevel"
+                  },
+                  "delegationMode": {
+                    "type": "string",
+                    "enum": ["FULL", "COLUMN_BOUND"]
+                  },
+                  "restrictedColumnId": {
+                    "type": "integer",
+                    "description": "Required when delegationMode is COLUMN_BOUND"
+                  },
+                  "allowedMoveRange": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2
                   }
                 }
               }
@@ -4457,8 +4470,8 @@
         "tags": [
           "Agent Delegations"
         ],
-        "summary": "Update delegation permission level",
-        "description": "Update the permission level for an existing agent delegation. Requires USER or ADMIN role and project membership.",
+        "summary": "Update agent delegation",
+        "description": "Update permission level and/or column-bound access settings for an existing delegation. Requires USER or ADMIN role and project membership.",
         "security": [
           {
             "bearerAuth": []
@@ -4490,12 +4503,22 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "permissionLevel"
-                ],
                 "properties": {
                   "permissionLevel": {
                     "$ref": "#/components/schemas/AgentPermissionLevel"
+                  },
+                  "delegationMode": {
+                    "type": "string",
+                    "enum": ["FULL", "COLUMN_BOUND"]
+                  },
+                  "restrictedColumnId": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "allowedMoveRange": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2
                   }
                 }
               }
@@ -7824,6 +7847,23 @@
           },
           "permissionLevel": {
             "$ref": "#/components/schemas/AgentPermissionLevel"
+          },
+          "delegationMode": {
+            "type": "string",
+            "enum": ["FULL", "COLUMN_BOUND"]
+          },
+          "restrictedColumnId": {
+            "type": "integer",
+            "nullable": true
+          },
+          "restrictedColumnName": {
+            "type": "string"
+          },
+          "allowedMoveRange": {
+            "type": "integer"
+          },
+          "columnAllowance": {
+            "$ref": "#/components/schemas/ColumnAllowance"
           },
           "isActive": {
             "type": "boolean"

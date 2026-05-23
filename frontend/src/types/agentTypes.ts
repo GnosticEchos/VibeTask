@@ -64,6 +64,7 @@ export interface AgentDelegation {
   // Column-bound agent fields
   delegationMode?: DelegationMode
   restrictedColumnId?: number | null
+  restrictedColumnName?: string
   allowedMoveRange?: number
   columnAllowance?: ColumnAllowance
 }

@@ -35,7 +35,10 @@ pub struct AgentMetadata {
     pub is_agent: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_by: Option<i32>,
-    pub description: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar_slug: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_platform_agent: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]

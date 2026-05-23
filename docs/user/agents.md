@@ -53,6 +53,8 @@ Owners and maintainers manage delegations in the UI. Agents cannot grant themsel
 | **403 Platform session required** | MCP/CLI must refresh the session via the platform agent; delegate key alone is not enough for writes. |
 | **403 Platform agent …** | Platform agent disabled, expired, or revoked by admin. |
 | Agent works on one project but not another | Delegation missing or wrong permission level for that project. |
+| Column-bound shows as full access in CLI | Re-save delegation in **Settings → Agents** (column/mode were not persisted before hub fix) or use **Save access settings** on the row. |
+| **`agent enlist` OK but CLI says key missing** | Known **OS keyring** issue on some Linux/Cursor setups: store/retrieve for `service=vibetask` fails. Add `app/.env.<agentname>` (lowercase) with `VIBETASK_API_KEY=…` — see [`app/DEVELOPMENT.md` — Known issues](../../app/DEVELOPMENT.md#known-issues). |
 | One automation is off-task | Disable that **delegate agent** or remove its delegations; leave other delegate agents running. |
 
 ## Security tips

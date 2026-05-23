@@ -59,7 +59,7 @@ impl AgentTypeDetector {
         let active_name = active_agent_entry.name.clone();
 
         if active_agent_entry.agent_type == "ProjectDelegated" {
-            self.ensure_and_set_platform_jwt(&config).await?;
+            ensure_platform_session(&self.config_path, &config, &self.api_client).await?;
         }
 
         let key = self.get_agent_key(&active_name).await?;
@@ -82,79 +82,6 @@ impl AgentTypeDetector {
         Ok(agent_type)
     }
 
-    /// Ensure platform session JWT is valid, refreshing if expired.
-    /// Sets the JWT on the api_client so all subsequent requests include x-platform-session.
-    async fn ensure_and_set_platform_jwt(
-        &self,
-        config: &AgentConfig,
-    ) -> Result<(), DetectionError> {
-        let existing_valid = config.platform.as_ref().and_then(|p| {
-            let jwt = p.jwt.as_ref()?;
-            let expires_at = p.expires_at.as_ref()?;
-            let expires = chrono::DateTime::parse_from_rfc3339(expires_at).ok()?;
-            if chrono::Utc::now() < expires.with_timezone(&chrono::Utc) {
-                Some(jwt.clone())
-            } else {
-                None
-            }
-        });
-
-        if let Some(jwt) = existing_valid {
-            debug!("Platform session JWT is still valid, setting on client");
-            self.api_client.set_platform_session(Some(jwt));
-            return Ok(());
-        }
-
-        let platform_agent = config.agents.iter().find(|a| a.agent_type == "Platform");
-        let platform_entry = match platform_agent {
-            Some(entry) => entry,
-            None => {
-                info!("No platform agent configured — proceeding without platform session");
-                return Ok(());
-            }
-        };
-
-        debug!("Platform session expired or missing, refreshing...");
-        let platform_key = self.get_agent_key(&platform_entry.name).await?;
-
-        let session = self
-            .api_client
-            .post_agent_session(&platform_key)
-            .await
-            .map_err(crate::error::ApiError::from)?;
-
-        self.api_client
-            .set_platform_session(Some(session.token.clone()));
-        self.save_platform_session(&session.token, &session.expires_at, &session.agents)
-            .await?;
-        info!("Platform session refreshed successfully");
-
-        Ok(())
-    }
-
-    /// Save platform session JWT to config (does NOT push agents — user manages those)
-    async fn save_platform_session(
-        &self,
-        token: &str,
-        expires_at: &str,
-        _agents: &[crate::generated_types::SessionAgent],
-    ) -> Result<(), DetectionError> {
-        let mut config = AgentConfig::load(&self.config_path)
-            .await
-            .map_err(|e| DetectionError::ConfigLoad(e.to_string()))?;
-
-        config.platform = Some(PlatformConfig {
-            jwt: Some(token.to_string()),
-            expires_at: Some(expires_at.to_string()),
-        });
-
-        config
-            .save(&self.config_path)
-            .await
-            .map_err(|e| DetectionError::ConfigLoad(e.to_string()))?;
-
-        Ok(())
-    }
 
     async fn load_config(&self) -> Result<AgentConfig, DetectionError> {
         AgentConfig::load(&self.config_path)
@@ -163,24 +90,7 @@ impl AgentTypeDetector {
     }
 
     async fn get_agent_key(&self, agent_name: &str) -> Result<String, DetectionError> {
-        use crate::atomic_writer::SecureKeyManager;
-
-        let config = AgentConfig::load(&self.config_path)
-            .await
-            .map_err(|e| DetectionError::ConfigLoad(e.to_string()))?;
-
-        if let Some(agent) = config.agents.iter().find(|a| a.name == agent_name) {
-            if let Some(ref api_key) = agent.api_key {
-                if !api_key.is_empty() {
-                    debug!("Using api_key from TOML config for agent: {}", agent_name);
-                    return Ok(api_key.clone());
-                }
-            }
-        }
-
-        SecureKeyManager::retrieve_key(agent_name)
-            .await
-            .map_err(|e| DetectionError::KeyNotFound(format!("{}: {}", agent_name, e)))
+        retrieve_agent_key(&self.config_path, agent_name).await
     }
 
     fn validate_key_expiration(
@@ -227,6 +137,226 @@ impl AgentTypeDetector {
             })
         }
     }
+}
+
+/// Load config and, when the active agent is project-delegated, ensure a platform session
+/// JWT is attached on `api_client` for Hub write routes.
+pub async fn ensure_platform_session_for_delegated_agent(
+    config_path: &str,
+    api_client: &Arc<crate::vibetask_client::VibeTaskClient>,
+) -> Result<(), DetectionError> {
+    let config = AgentConfig::load(config_path)
+        .await
+        .map_err(|e| DetectionError::ConfigLoad(e.to_string()))?;
+
+    let active_agent_entry = config
+        .agents
+        .iter()
+        .find(|a| a.name == config.server.active_agent)
+        .ok_or_else(|| DetectionError::AgentNotFound(config.server.active_agent.clone()))?;
+
+    if active_agent_entry.agent_type == "ProjectDelegated" {
+        ensure_platform_session(config_path, &config, api_client).await?;
+    }
+
+    Ok(())
+}
+
+/// Result of creating or reusing a platform session JWT.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct PlatformSessionInfo {
+    pub platform_agent: String,
+    pub expires_at: String,
+    pub refreshed: bool,
+    pub agent_roster_count: usize,
+}
+
+/// Mint or reuse a platform session JWT and persist it under `[platform]` in config.
+///
+/// Uses `platform_agent_name` when set; otherwise the active agent if it is Platform, else the
+/// first Platform agent in config. When `force` is false, returns the cached JWT if still valid.
+pub async fn refresh_platform_session(
+    config_path: &str,
+    api_client: &Arc<crate::vibetask_client::VibeTaskClient>,
+    platform_agent_name: Option<&str>,
+    force: bool,
+) -> Result<PlatformSessionInfo, DetectionError> {
+    let config = AgentConfig::load(config_path)
+        .await
+        .map_err(|e| DetectionError::ConfigLoad(e.to_string()))?;
+
+    let platform_name = resolve_platform_agent_name(&config, platform_agent_name)?;
+
+    if !force {
+        if let Some(jwt) = config.platform.as_ref().and_then(|p| {
+            let jwt = p.jwt.as_ref()?;
+            let expires_at = p.expires_at.as_ref()?;
+            let expires = chrono::DateTime::parse_from_rfc3339(expires_at).ok()?;
+            if chrono::Utc::now() < expires.with_timezone(&chrono::Utc) {
+                Some(jwt.clone())
+            } else {
+                None
+            }
+        }) {
+            api_client.set_platform_session(Some(jwt.clone()));
+            let expires_at = config
+                .platform
+                .as_ref()
+                .and_then(|p| p.expires_at.clone())
+                .unwrap_or_default();
+            return Ok(PlatformSessionInfo {
+                platform_agent: platform_name,
+                expires_at,
+                refreshed: false,
+                agent_roster_count: 0,
+            });
+        }
+    }
+
+    let platform_key = retrieve_agent_key(config_path, &platform_name).await?;
+    let session = api_client
+        .post_agent_session(&platform_key)
+        .await
+        .map_err(crate::error::ApiError::from)?;
+
+    api_client.set_platform_session(Some(session.token.clone()));
+    save_platform_session_to_config(config_path, &session.token, &session.expires_at).await?;
+
+    Ok(PlatformSessionInfo {
+        platform_agent: platform_name,
+        expires_at: session.expires_at,
+        refreshed: true,
+        agent_roster_count: session.agents.len(),
+    })
+}
+
+fn resolve_platform_agent_name(
+    config: &AgentConfig,
+    platform_agent_name: Option<&str>,
+) -> Result<String, DetectionError> {
+    if let Some(name) = platform_agent_name {
+        let entry = config.get_agent(name).ok_or_else(|| {
+            DetectionError::AgentNotFound(name.to_string())
+        })?;
+        if entry.agent_type != "Platform" {
+            return Err(DetectionError::AgentError(AgentError::InvalidType(format!(
+                "Agent '{name}' is not a Platform agent"
+            ))));
+        }
+        return Ok(name.to_string());
+    }
+
+    if let Some(active) = config.get_agent(&config.server.active_agent) {
+        if active.agent_type == "Platform" {
+            return Ok(active.name.clone());
+        }
+    }
+
+    config
+        .agents
+        .iter()
+        .find(|a| a.agent_type == "Platform")
+        .map(|a| a.name.clone())
+        .ok_or_else(|| {
+            DetectionError::AgentError(AgentError::InvalidType(
+                "No Platform agent configured".to_string(),
+            ))
+        })
+}
+
+/// Ensure platform session JWT is valid, refreshing if expired.
+/// Sets the JWT on `api_client` so subsequent requests include `x-platform-session`.
+pub async fn ensure_platform_session(
+    config_path: &str,
+    config: &AgentConfig,
+    api_client: &Arc<crate::vibetask_client::VibeTaskClient>,
+) -> Result<(), DetectionError> {
+    let existing_valid = config.platform.as_ref().and_then(|p| {
+        let jwt = p.jwt.as_ref()?;
+        let expires_at = p.expires_at.as_ref()?;
+        let expires = chrono::DateTime::parse_from_rfc3339(expires_at).ok()?;
+        if chrono::Utc::now() < expires.with_timezone(&chrono::Utc) {
+            Some(jwt.clone())
+        } else {
+            None
+        }
+    });
+
+    if let Some(jwt) = existing_valid {
+        debug!("Platform session JWT is still valid, setting on client");
+        api_client.set_platform_session(Some(jwt));
+        return Ok(());
+    }
+
+    let platform_agent = config.agents.iter().find(|a| a.agent_type == "Platform");
+    let platform_entry = match platform_agent {
+        Some(entry) => entry,
+        None => {
+            info!("No platform agent configured — proceeding without platform session");
+            return Ok(());
+        }
+    };
+
+    debug!("Platform session expired or missing, refreshing...");
+    let platform_key = retrieve_agent_key(config_path, &platform_entry.name).await?;
+
+    let session = api_client
+        .post_agent_session(&platform_key)
+        .await
+        .map_err(crate::error::ApiError::from)?;
+
+    api_client.set_platform_session(Some(session.token.clone()));
+    save_platform_session_to_config(config_path, &session.token, &session.expires_at).await?;
+    info!("Platform session refreshed successfully");
+
+    Ok(())
+}
+
+async fn retrieve_agent_key(
+    config_path: &str,
+    agent_name: &str,
+) -> Result<String, DetectionError> {
+    use crate::atomic_writer::SecureKeyManager;
+
+    let config = AgentConfig::load(config_path)
+        .await
+        .map_err(|e| DetectionError::ConfigLoad(e.to_string()))?;
+
+    if let Some(agent) = config.agents.iter().find(|a| a.name == agent_name) {
+        if let Some(ref api_key) = agent.api_key {
+            if !api_key.is_empty() {
+                debug!("Using api_key from TOML config for agent: {}", agent_name);
+                return Ok(api_key.clone());
+            }
+        }
+    }
+
+    SecureKeyManager::retrieve_key(agent_name)
+        .await
+        .map_err(|e| DetectionError::KeyNotFound(e.to_string()))
+}
+
+/// Save platform session JWT to config (does not push agents — user manages those).
+async fn save_platform_session_to_config(
+    config_path: &str,
+    token: &str,
+    expires_at: &str,
+) -> Result<(), DetectionError> {
+    let mut config = AgentConfig::load(config_path)
+        .await
+        .map_err(|e| DetectionError::ConfigLoad(e.to_string()))?;
+
+    config.platform = Some(PlatformConfig {
+        jwt: Some(token.to_string()),
+        expires_at: Some(expires_at.to_string()),
+    });
+
+    config
+        .save(config_path)
+        .await
+        .map_err(|e| DetectionError::ConfigLoad(e.to_string()))?;
+
+    Ok(())
 }
 
 /// Detection error types

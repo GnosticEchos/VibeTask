@@ -1,6 +1,9 @@
 node_modules/
 /target/
 dist/
+.cursor/
+*.profraw
+**/lcov.info
 .env
 .env.*
 !.env.example

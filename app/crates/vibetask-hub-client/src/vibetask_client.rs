@@ -1554,7 +1554,7 @@ mod tests {
                 metadata: AgentMetadata {
                     is_agent: true,
                     created_by: Some(1),
-                    description: "Test agent".to_string(),
+                    description: Some("Test agent".to_string()),
                     is_platform_agent: Some(true),
                     allowed_read_endpoints: Some(vec!["/api/agent/projects".to_string()]),
                 },

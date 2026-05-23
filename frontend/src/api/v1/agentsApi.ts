@@ -49,6 +49,8 @@ function normalizeDelegation(raw: Record<string, unknown>): AgentDelegation {
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : undefined,
     delegationMode: normalizeDelegationMode(raw.delegationMode),
     restrictedColumnId: typeof raw.restrictedColumnId === 'number' ? raw.restrictedColumnId : null,
+    restrictedColumnName:
+      typeof raw.restrictedColumnName === 'string' ? raw.restrictedColumnName : undefined,
     allowedMoveRange: typeof raw.allowedMoveRange === 'number' ? raw.allowedMoveRange : 1,
     columnAllowance: normalizeColumnAllowance(raw.columnAllowance),
   }
@@ -161,9 +163,31 @@ export async function createDelegation(
   return normalizeDelegation(raw)
 }
 
-export async function updateDelegation(agentId: string, delegationId: string, payload: { permissionLevel: AgentPermissionLevel }): Promise<AgentDelegation> {
+export async function updateDelegation(
+  agentId: string,
+  delegationId: string,
+  payload: {
+    permissionLevel?: AgentPermissionLevel
+    delegationMode?: DelegationMode
+    restrictedColumnId?: number | null
+    allowedMoveRange?: number
+  },
+): Promise<AgentDelegation> {
   if (!agentId || !delegationId) return Promise.reject(new Error('Invalid delegation identifiers'))
-  const response = await axiosApi.patch(`/agents/${agentId}/delegations/${delegationId}`, payload)
+  const body: Record<string, unknown> = {}
+  if (payload.permissionLevel != null) {
+    body.permissionLevel = payload.permissionLevel
+  }
+  if (payload.delegationMode) {
+    body.delegationMode = payload.delegationMode
+  }
+  if (payload.restrictedColumnId !== undefined) {
+    body.restrictedColumnId = payload.restrictedColumnId
+  }
+  if (payload.allowedMoveRange != null) {
+    body.allowedMoveRange = payload.allowedMoveRange
+  }
+  const response = await axiosApi.patch(`/agents/${agentId}/delegations/${delegationId}`, body)
   const raw = (response.data as { delegation: Record<string, unknown> }).delegation
   return normalizeDelegation(raw)
 }

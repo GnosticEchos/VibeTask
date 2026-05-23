@@ -19,6 +19,7 @@ import {
   deleteDelegation,
   updateDelegation,
 } from '@/api/v1/agentsApi'
+import AgentDelegationLatticeFields from '@/components/settings/sections/AgentDelegationLatticeFields.vue'
 import { resolveAgentAvatarUrl } from '@/utils/agentAvatars'
 import { parseAgentMetadata } from '@/utils/agentMetadata'
 
@@ -91,8 +92,48 @@ const delegatedProjectIds = computed(
 )
 const availableProjects = computed(() => projects.value.filter((p) => !delegatedProjectIds.value.has(p.id)))
 
+type DelegationLatticeUi = {
+  mode: 'FULL' | 'COLUMN_BOUND'
+  restrictedColumnId: number | ''
+  allowedMoveRange: number
+}
+
 /** Keeps selects in sync with server data without Vue clobbering the user's choice during PATCH. */
 const delegationPermUi = reactive<Record<string, AgentPermissionLevel>>({})
+const delegationLatticeUi = reactive<Record<string, DelegationLatticeUi>>({})
+
+function latticeFromDelegation(d: AgentDelegation): DelegationLatticeUi {
+  return {
+    mode: d.delegationMode === 'COLUMN_BOUND' ? 'COLUMN_BOUND' : 'FULL',
+    restrictedColumnId:
+      d.delegationMode === 'COLUMN_BOUND' && d.restrictedColumnId != null ? d.restrictedColumnId : '',
+    allowedMoveRange: d.allowedMoveRange ?? 1,
+  }
+}
+
+function latticePayloadFromUi(ui: DelegationLatticeUi) {
+  if (ui.mode === 'COLUMN_BOUND') {
+    return {
+      delegationMode: 'COLUMN_BOUND' as const,
+      restrictedColumnId: ui.restrictedColumnId === '' ? null : Number(ui.restrictedColumnId),
+      allowedMoveRange: ui.allowedMoveRange,
+    }
+  }
+  return {
+    delegationMode: 'FULL' as const,
+    restrictedColumnId: null,
+    allowedMoveRange: ui.allowedMoveRange,
+  }
+}
+
+function latticeDirty(d: AgentDelegation, ui: DelegationLatticeUi): boolean {
+  const server = latticeFromDelegation(d)
+  return (
+    server.mode !== ui.mode ||
+    server.restrictedColumnId !== ui.restrictedColumnId ||
+    server.allowedMoveRange !== ui.allowedMoveRange
+  )
+}
 
 watch(
   () => delegations.value,
@@ -101,8 +142,12 @@ watch(
     for (const id of Object.keys(delegationPermUi)) {
       if (!nextIds.has(id)) delete delegationPermUi[id]
     }
+    for (const id of Object.keys(delegationLatticeUi)) {
+      if (!nextIds.has(id)) delete delegationLatticeUi[id]
+    }
     for (const d of list) {
       delegationPermUi[d.id] = d.permissionLevel
+      delegationLatticeUi[d.id] = latticeFromDelegation(d)
     }
   },
   { immediate: true },
@@ -214,6 +259,31 @@ async function onDelegationPermissionChange(d: AgentDelegation) {
     delegationPermUi[d.id] = d.permissionLevel
     layoutStore.openToast({ message: apiErr(e, t('settingsApp.agents.delegationUpdateError')), type: 'error' })
   }
+}
+
+async function onDelegationLatticeSave(d: AgentDelegation) {
+  const aid = selectedAgentId.value
+  const ui = delegationLatticeUi[d.id]
+  if (!aid || d.isActive === false || !ui || !latticeDirty(d, ui)) return
+  if (ui.mode === 'COLUMN_BOUND' && ui.restrictedColumnId === '') {
+    layoutStore.openToast({ message: t('settingsApp.agents.selectColumn'), type: 'error' })
+    return
+  }
+  try {
+    await updateDelegation(aid, d.id, latticePayloadFromUi(ui))
+    await delegationsQuery.refetch()
+    layoutStore.openToast({ message: t('settingsApp.agents.delegationUpdated'), type: 'success' })
+  } catch (e: unknown) {
+    delegationLatticeUi[d.id] = latticeFromDelegation(d)
+    layoutStore.openToast({ message: apiErr(e, t('settingsApp.agents.delegationUpdateError')), type: 'error' })
+  }
+}
+
+function columnBoundSummary(d: AgentDelegation): string | null {
+  if (d.delegationMode !== 'COLUMN_BOUND') return null
+  const name = d.restrictedColumnName ?? (d.restrictedColumnId != null ? String(d.restrictedColumnId) : '')
+  const range = d.allowedMoveRange ?? 1
+  return name ? `${name} (±${range})` : null
 }
 
 async function onRevokeDelegation(d: AgentDelegation) {
@@ -510,38 +580,60 @@ function agentDescription(agent: Agent): string {
                 <li
                   v-for="d in sortedDelegations"
                   :key="d.id"
-                  class="py-3 px-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                  class="py-3 px-3 flex flex-col gap-3"
                 >
-                  <div class="min-w-0">
-                    <p class="font-medium truncate">
-                      {{ d.projectName || $t('settingsApp.agents.selectProject') }}
-                      <span v-if="d.projectPrefix" class="text-xs font-mono text-base-content/50 ml-1">{{ d.projectPrefix }}</span>
-                    </p>
-                    <div class="flex flex-wrap gap-2 mt-1">
-                      <span v-if="d.isActive === false" class="badge badge-sm badge-ghost">{{ $t('settingsApp.agents.delegationRevokedBadge') }}</span>
-                      <span v-if="d.delegationMode === 'COLUMN_BOUND'" class="badge badge-sm badge-info" :title="$t('settingsApp.agents.columnBoundHint')">
-                        {{ $t('settingsApp.agents.modeColumnBound') }}
-                      </span>
+                  <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="min-w-0">
+                      <p class="font-medium truncate">
+                        {{ d.projectName || $t('settingsApp.agents.selectProject') }}
+                        <span v-if="d.projectPrefix" class="text-xs font-mono text-base-content/50 ml-1">{{ d.projectPrefix }}</span>
+                      </p>
+                      <div class="flex flex-wrap gap-2 mt-1">
+                        <span v-if="d.isActive === false" class="badge badge-sm badge-ghost">{{ $t('settingsApp.agents.delegationRevokedBadge') }}</span>
+                        <span v-if="d.delegationMode === 'COLUMN_BOUND'" class="badge badge-sm badge-info" :title="$t('settingsApp.agents.columnBoundHint')">
+                          {{ $t('settingsApp.agents.modeColumnBound') }}
+                          <template v-if="columnBoundSummary(d)"> · {{ columnBoundSummary(d) }}</template>
+                        </span>
+                        <span v-else class="badge badge-sm badge-outline">{{ $t('settingsApp.agents.modeFull') }}</span>
+                      </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2 items-center shrink-0">
+                      <select
+                        v-model="delegationPermUi[d.id]"
+                        class="select select-bordered select-xs w-full sm:w-36"
+                        :disabled="d.isActive === false"
+                        @change="onDelegationPermissionChange(d)"
+                      >
+                        <option value="VIEWER">{{ $t('settingsApp.agents.permissionViewer') }}</option>
+                        <option value="USER">{{ $t('settingsApp.agents.permissionUser') }}</option>
+                      </select>
+                      <button
+                        type="button"
+                        class="btn btn-ghost btn-xs text-error"
+                        :disabled="d.isActive === false"
+                        @click="onRevokeDelegation(d)"
+                      >
+                        {{ $t('settingsApp.agents.delegationRevoke') }}
+                      </button>
                     </div>
                   </div>
-                  <div class="flex flex-wrap gap-2 items-center">
-                    <select
-                      v-model="delegationPermUi[d.id]"
-                      class="select select-bordered select-xs w-full sm:w-36"
-                      :disabled="d.isActive === false"
-                      @change="onDelegationPermissionChange(d)"
-                    >
-                      <option value="VIEWER">{{ $t('settingsApp.agents.permissionViewer') }}</option>
-                      <option value="USER">{{ $t('settingsApp.agents.permissionUser') }}</option>
-                    </select>
-                    <button
-                      type="button"
-                      class="btn btn-ghost btn-xs text-error"
-                      :disabled="d.isActive === false"
-                      @click="onRevokeDelegation(d)"
-                    >
-                      {{ $t('settingsApp.agents.delegationRevoke') }}
-                    </button>
+                  <div v-if="d.isActive !== false && delegationLatticeUi[d.id]" class="flex flex-col gap-2 border-t border-base-300/40 pt-2">
+                    <AgentDelegationLatticeFields
+                      v-model:mode="delegationLatticeUi[d.id].mode"
+                      v-model:restricted-column-id="delegationLatticeUi[d.id].restrictedColumnId"
+                      v-model:allowed-move-range="delegationLatticeUi[d.id].allowedMoveRange"
+                      :project-id="d.projectId"
+                    />
+                    <div class="flex justify-end">
+                      <button
+                        type="button"
+                        class="btn btn-primary btn-xs"
+                        :disabled="!latticeDirty(d, delegationLatticeUi[d.id])"
+                        @click="onDelegationLatticeSave(d)"
+                      >
+                        {{ $t('settingsApp.agents.saveDelegationAccess') }}
+                      </button>
+                    </div>
                   </div>
                 </li>
               </ul>

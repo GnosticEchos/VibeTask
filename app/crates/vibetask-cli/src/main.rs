@@ -6,6 +6,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::io::IsTerminal;
 use std::time::Instant;
 use termimad::MadSkin;
+use vibetask_app::agent_detector::{
+    ensure_platform_session_for_delegated_agent, refresh_platform_session,
+};
 use vibetask_app::atomic_writer::SecureKeyManager;
 use vibetask_app::config::AgentConfig;
 use vibetask_app::telemetry::{classify_error, TelemetryEvent, TelemetryRecorder};
@@ -147,6 +150,15 @@ enum AgentCommands {
     Refresh {
         #[arg(long)]
         name: Option<String>,
+    },
+    /// Mint or refresh platform session JWT (`POST /api/agent/session`) for delegated writes.
+    Session {
+        /// Platform agent to authenticate (default: active if Platform, else first Platform in config).
+        #[arg(long)]
+        name: Option<String>,
+        /// Always call Hub even when a cached JWT is still valid.
+        #[arg(long)]
+        force: bool,
     },
 }
 
@@ -421,6 +433,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cfg = AgentConfig::load(&config_path)
         .await
         .map_err(|e| format!("failed to load config: {e}"))?;
+    SecureKeyManager::register_env_search_roots(
+        SecureKeyManager::env_search_roots_from_config(&config_path),
+    );
     let bypass_safety = cli.no_fences;
     if bypass_safety && !cfg.server.allow_no_fences {
         return Err(
@@ -434,13 +449,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .or_else(|| std::env::var("VIBETASK_HUB_URL").ok())
         .unwrap_or_else(|| "https://api.vibetask.com".to_string());
     let ctx = ToolContext {
-        config_path,
+        config_path: config_path.clone(),
         api_client: std::sync::Arc::new(VibeTaskClient::new(hub_url)?),
         bypass_safety,
         workflow_context: std::sync::Arc::new(tokio::sync::RwLock::new(
             vibetask_app::tools::WorkflowContext::default(),
         )),
     };
+
+    ensure_platform_session_for_delegated_agent(&ctx.config_path, &ctx.api_client)
+        .await
+        .map_err(|e| format!("failed to ensure platform session: {e}"))?;
 
     let Some(command) = cli.command else {
         return Err(
@@ -482,6 +501,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             AgentCommands::Refresh { name } => refresh_agent_roster_cli(&ctx, name)
                 .await
                 .map_err(|e| Box::new(e) as Box<dyn std::error::Error>),
+            AgentCommands::Session { name, force } => {
+                platform_session_cli(&ctx, name.as_deref(), force)
+                    .await
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+            }
         },
         Commands::Project { command } => match command {
             ProjectCommands::List => QueryProjectsTool {}
@@ -1020,6 +1044,34 @@ async fn enlist_agent_cli(
     }))
 }
 
+async fn platform_session_cli(
+    ctx: &ToolContext,
+    platform_agent_name: Option<&str>,
+    force: bool,
+) -> Result<serde_json::Value, std::io::Error> {
+    let info = refresh_platform_session(
+        &ctx.config_path,
+        &ctx.api_client,
+        platform_agent_name,
+        force,
+    )
+    .await
+    .map_err(|e| std::io::Error::other(format!("platform session failed: {e}")))?;
+
+    Ok(json!({
+        "status": if info.refreshed { "created" } else { "cached" },
+        "platform_agent": info.platform_agent,
+        "expires_at": info.expires_at,
+        "refreshed": info.refreshed,
+        "agent_roster_count": info.agent_roster_count,
+        "detail": if info.refreshed {
+            "New JWT from POST /api/agent/session; saved to [platform] in config"
+        } else {
+            "Reused valid JWT from [platform] in config"
+        }
+    }))
+}
+
 async fn refresh_agent_roster_cli(
     ctx: &ToolContext,
     name: Option<String>,
@@ -1185,6 +1237,7 @@ fn help_tree_path_from_command(command: &Commands) -> Vec<String> {
                 AgentCommands::Switch { .. } => "switch",
                 AgentCommands::Enlist { .. } => "enlist",
                 AgentCommands::Refresh { .. } => "refresh",
+                AgentCommands::Session { .. } => "session",
             }
             .to_string(),
         ],
@@ -1965,6 +2018,12 @@ fn extract_cli_dimensions(
             AgentCommands::Refresh { .. } => (
                 "agent.refresh".to_string(),
                 Some("agent_refresh".to_string()),
+                None,
+                None,
+            ),
+            AgentCommands::Session { .. } => (
+                "agent.session".to_string(),
+                None,
                 None,
                 None,
             ),

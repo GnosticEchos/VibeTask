@@ -1,5 +1,6 @@
 use crate::atomic_writer::SecureKeyManager;
 use crate::config::AgentConfig;
+use crate::orchestrator_error::McpCodedToolError;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult},
@@ -9,10 +10,32 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use tracing::info;
 
-/// Create a structured CallToolError with an error class prefix for telemetry classification.
+/// Create a structured CallToolError with telemetry class and MCP application error code.
 /// Usage: tool_error("validation", "Invalid project ID")
 pub fn tool_error(class: &str, message: impl Into<String>) -> CallToolError {
-    CallToolError::from_message(format!("[{}] {}", class, message.into()))
+    let message = message.into();
+    CallToolError::new(McpCodedToolError {
+        code: mcp_code_for_telemetry_class(class),
+        message: format!("[{class}] {message}"),
+        telemetry_class: Some(class.to_string()),
+    })
+}
+
+/// Map [`OrchestratorError`] to MCP tool errors (preserves `mcp_error_code`).
+pub fn tool_error_orchestrator(err: crate::OrchestratorError) -> CallToolError {
+    err.to_call_tool_error()
+}
+
+fn mcp_code_for_telemetry_class(class: &str) -> i32 {
+    match class {
+        "auth_error" => -32001,
+        "permission_denied" => -32002,
+        "network_error" => -32020,
+        "timeout" => -32031,
+        "validation" | "validation_error" => -32602,
+        "contract_error" => -32070,
+        _ => -32000,
+    }
 }
 
 /// Truncate after at most `max_chars` Unicode scalar values; append `...` when truncated.

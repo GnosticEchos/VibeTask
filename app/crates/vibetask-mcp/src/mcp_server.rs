@@ -17,6 +17,10 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
+use vibetask_app::orchestrator_error::{
+    call_tool_result_from_call_tool_error, call_tool_result_message,
+    mcp_error_code_from_call_tool_result, OrchestratorError,
+};
 use vibetask_app::telemetry::{classify_error, TelemetryEvent, TelemetryRecorder};
 
 /// MCP Server Handler with dual-agent architecture support
@@ -35,6 +39,10 @@ impl VibeTaskHandler {
     /// Create new handler with agent type detection
     pub async fn new(config_path: String) -> Result<Self, InitError> {
         info!("Initializing VibeTask MCP Handler");
+
+        crate::atomic_writer::SecureKeyManager::register_env_search_roots(
+            crate::atomic_writer::SecureKeyManager::env_search_roots_from_config(&config_path),
+        );
 
         // Resolve hub URL from config first, then env, then default.
         let cfg = crate::config::AgentConfig::load(&config_path)
@@ -271,9 +279,15 @@ impl ServerHandler for VibeTaskHandler {
         let started_at = Instant::now();
         info!("Handling call tool request: {}", tool_name);
 
-        let current_agent_type = self.current_agent_type().await.map_err(|e| {
-            CallToolError::from_message(format!("Failed to refresh active agent identity: {}", e))
-        })?;
+        let current_agent_type = match self.current_agent_type().await {
+            Ok(agent_type) => agent_type,
+            Err(e) => {
+                return Ok(OrchestratorError::internal_error(&format!(
+                    "Failed to refresh active agent identity: {e}"
+                ))
+                .to_call_tool_result());
+            }
+        };
         let current_tool_registry = ToolRegistry::new(current_agent_type.clone());
         let workflow_context = self.tool_context.workflow_context.read().await;
 
@@ -294,19 +308,33 @@ impl ServerHandler for VibeTaskHandler {
             if let Err(e) = self.telemetry.record_event(event) {
                 warn!("Failed to write telemetry event: {}", e);
             }
-            return Err(CallToolError::from_message(format!(
-                "Access Denied: {}",
-                validation_error
-            )));
+            return Ok(OrchestratorError::permission_denied(
+                &tool_name,
+                "tool/column access",
+            )
+            .to_call_tool_result());
         }
         drop(workflow_context);
 
         // Convert params to our tool enum and execute
-        let tool_params: VibeTaskMcpTools = VibeTaskMcpTools::try_from(params)
-            .map_err(|e| CallToolError::from_message(format!("Invalid tool parameters: {}", e)))?;
+        let tool_params = match VibeTaskMcpTools::try_from(params) {
+            Ok(tool_params) => tool_params,
+            Err(e) => {
+                return Ok(
+                    OrchestratorError::InvalidToolParameters {
+                        tool_name: tool_name.clone(),
+                        validation_error: e.to_string(),
+                    }
+                    .to_call_tool_result(),
+                );
+            }
+        };
 
         // Execute the appropriate tool via auto-dispatch
-        let call_result = tool_params.execute(&self.tool_context).await;
+        let call_result = match tool_params.execute(&self.tool_context).await {
+            Ok(result) => result,
+            Err(err) => call_tool_result_from_call_tool_error(err),
+        };
 
         let mut event = TelemetryEvent::new("mcp", "mcp.call_tool");
         event.tool_name = Some(tool_name);
@@ -315,15 +343,26 @@ impl ServerHandler for VibeTaskHandler {
             AgentType::ProjectDelegated { .. } => "ProjectDelegated".to_string(),
         });
         event.duration_ms = started_at.elapsed().as_millis().min(u128::from(u64::MAX)) as u64;
-        event.success = call_result.is_ok();
-        if let Err(e) = &call_result {
-            event.error_class = Some(classify_error(&e.to_string()));
+        let tool_failed = call_result.is_error == Some(true);
+        event.success = !tool_failed;
+        if tool_failed {
+            event.error_class = call_result
+                .meta
+                .as_ref()
+                .and_then(|meta| meta.get("error_class"))
+                .and_then(|v| v.as_str())
+                .map(str::to_string)
+                .or_else(|| {
+                    mcp_error_code_from_call_tool_result(&call_result)
+                        .map(|code| format!("mcp_code_{code}"))
+                })
+                .or_else(|| Some(classify_error(&call_tool_result_message(&call_result))));
         }
         if let Err(e) = self.telemetry.record_event(event) {
             warn!("Failed to write telemetry event: {}", e);
         }
 
-        call_result
+        Ok(call_result)
     }
 
     /// Handle ListResourcesRequest - Query operation for Project Agents
@@ -488,6 +527,10 @@ pub async fn create_and_run_server(
     };
 
     info!("Creating MCP server with config: {}", config_path);
+
+    vibetask_app::atomic_writer::SecureKeyManager::register_env_search_roots(
+        vibetask_app::atomic_writer::SecureKeyManager::env_search_roots_from_config(&config_path),
+    );
 
     // STEP 1: Create handler with agent type detection and comprehensive error handling
     let handler = match VibeTaskHandler::new(config_path.clone()).await {

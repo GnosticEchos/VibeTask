@@ -398,6 +398,7 @@
       "moveRange": "Zakres przenoszenia",
       "moveRangeNone": "Brak (bez przenoszenia)",
       "columnBoundHint": "Agenci powiązani z kolumną widzą tylko przypisaną kolumnę. Zadania mogą być przenoszone o ±N kolumn lub przekazywane do przeglądu agenta.",
+      "saveDelegationAccess": "Zapisz ustawienia dostępu",
       "listTruncatedHint": "Wyświetlane jest {shown} najnowszych agentów spośród {total} łącznie. Usuń nieużywanych lub testowych agentów, by skrócić listę."
     },
     "admin": {

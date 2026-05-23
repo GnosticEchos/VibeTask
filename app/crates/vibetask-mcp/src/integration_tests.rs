@@ -29,7 +29,7 @@ mod tests {
                 metadata: AgentMetadata {
                     is_agent: true,
                     created_by: Some(1),
-                    description: "Platform integration agent".to_string(),
+                    description: Some("Platform integration agent".to_string()),
                     is_platform_agent: Some(true),
                     allowed_read_endpoints: Some(vec![
                         "/api/agent/projects".to_string(),
@@ -161,7 +161,7 @@ mod tests {
                 metadata: AgentMetadata {
                     is_agent: true,
                     created_by: Some(2),
-                    description: "Project workflow agent".to_string(),
+                    description: Some("Project workflow agent".to_string()),
                     is_platform_agent: Some(false),
                     allowed_read_endpoints: None,
                 },
@@ -442,7 +442,7 @@ mod tests {
                 metadata: AgentMetadata {
                     is_agent: true,
                     created_by: Some(1),
-                    description: "System monitoring agent".to_string(),
+                    description: Some("System monitoring agent".to_string()),
                     is_platform_agent: Some(true),
                     allowed_read_endpoints: Some(vec!["/api/agent/projects".to_string()]),
                 },
@@ -482,7 +482,7 @@ mod tests {
                 metadata: AgentMetadata {
                     is_agent: true,
                     created_by: Some(2),
-                    description: "Workflow execution agent".to_string(),
+                    description: Some("Workflow execution agent".to_string()),
                     is_platform_agent: Some(false),
                     allowed_read_endpoints: None,
                 },

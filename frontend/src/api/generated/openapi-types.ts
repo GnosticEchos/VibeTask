@@ -906,8 +906,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Update delegation permission level
-         * @description Update the permission level for an existing agent delegation. Requires USER or ADMIN role and project membership.
+         * Update agent delegation
+         * @description Update permission level and/or column-bound access settings for an existing delegation. Requires USER or ADMIN role and project membership.
          */
         patch: operations["updateAgentsDelegations"];
         trace?: never;
@@ -1885,6 +1885,12 @@ export interface components {
             projectName?: string;
             projectPrefix?: string;
             permissionLevel?: components["schemas"]["AgentPermissionLevel"];
+            /** @enum {string} */
+            delegationMode?: "FULL" | "COLUMN_BOUND";
+            restrictedColumnId?: number | null;
+            restrictedColumnName?: string;
+            allowedMoveRange?: number;
+            columnAllowance?: components["schemas"]["ColumnAllowance"];
             isActive?: boolean;
             /** Format: date-time */
             revokedAt?: string | null;
@@ -5261,6 +5267,11 @@ export interface operations {
                     /** @description The project ID to delegate access to */
                     projectId: number;
                     permissionLevel: components["schemas"]["AgentPermissionLevel"];
+                    /** @enum {string} */
+                    delegationMode?: "FULL" | "COLUMN_BOUND";
+                    /** @description Required when delegationMode is COLUMN_BOUND */
+                    restrictedColumnId?: number;
+                    allowedMoveRange?: number;
                 };
             };
         };
@@ -5362,7 +5373,11 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    permissionLevel: components["schemas"]["AgentPermissionLevel"];
+                    permissionLevel?: components["schemas"]["AgentPermissionLevel"];
+                    /** @enum {string} */
+                    delegationMode?: "FULL" | "COLUMN_BOUND";
+                    restrictedColumnId?: number | null;
+                    allowedMoveRange?: number;
                 };
             };
         };

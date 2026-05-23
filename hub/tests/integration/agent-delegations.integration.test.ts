@@ -55,4 +55,52 @@ describe('Agent delegations POST', () => {
     expect(res.body.delegation).toBeDefined();
     expect(res.body.delegation.projectId).toBe(projectId);
   });
+
+  it('persists COLUMN_BOUND lattice fields on create and returns them on list', async () => {
+    const createAgent = await request(testApp)
+      .post('/api/agents')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'ColumnBoundSmoke', description: 'd' });
+
+    expect(createAgent.status).toBe(201);
+    const agentId = createAgent.body.agent.id as string;
+
+    const project = await createTestProject(userId, {
+      name: 'Column Bound Project',
+      prefix: 'CBP',
+    });
+    const projectId = project.id;
+
+    const column = await request(testApp)
+      .get(`/api/projects/${projectId}/columns`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(column.status).toBe(200);
+    const verifyColumn = (column.body as { columns?: { id: number; name: string }[] }).columns?.[0];
+    expect(verifyColumn?.id).toBeTruthy();
+
+    const create = await request(testApp)
+      .post(`/api/agents/${agentId}/delegations`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        projectId,
+        permissionLevel: 'USER',
+        delegationMode: 'COLUMN_BOUND',
+        restrictedColumnId: verifyColumn!.id,
+        allowedMoveRange: 1,
+      });
+
+    expect(create.status).toBe(201);
+    expect(create.body.delegation.delegationMode).toBe('COLUMN_BOUND');
+    expect(create.body.delegation.restrictedColumnId).toBe(verifyColumn!.id);
+    expect(create.body.delegation.allowedMoveRange).toBe(1);
+
+    const list = await request(testApp)
+      .get(`/api/agents/${agentId}/delegations`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(list.status).toBe(200);
+    expect(list.body.delegations).toHaveLength(1);
+    expect(list.body.delegations[0].delegationMode).toBe('COLUMN_BOUND');
+    expect(list.body.delegations[0].restrictedColumnId).toBe(verifyColumn!.id);
+  });
 });
