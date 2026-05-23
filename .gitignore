@@ -24,4 +24,4 @@ tsconfig.tsbuildinfo
 hub/dist/
 hub/prisma/generated/
 frontend/dist/
-app/target/
+app/target/GitActionLog.txt
