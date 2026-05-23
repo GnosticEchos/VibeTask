@@ -82,7 +82,6 @@ impl AgentTypeDetector {
         Ok(agent_type)
     }
 
-
     async fn load_config(&self) -> Result<AgentConfig, DetectionError> {
         AgentConfig::load(&self.config_path)
             .await
@@ -235,13 +234,13 @@ fn resolve_platform_agent_name(
     platform_agent_name: Option<&str>,
 ) -> Result<String, DetectionError> {
     if let Some(name) = platform_agent_name {
-        let entry = config.get_agent(name).ok_or_else(|| {
-            DetectionError::AgentNotFound(name.to_string())
-        })?;
+        let entry = config
+            .get_agent(name)
+            .ok_or_else(|| DetectionError::AgentNotFound(name.to_string()))?;
         if entry.agent_type != "Platform" {
-            return Err(DetectionError::AgentError(AgentError::InvalidType(format!(
-                "Agent '{name}' is not a Platform agent"
-            ))));
+            return Err(DetectionError::AgentError(AgentError::InvalidType(
+                format!("Agent '{name}' is not a Platform agent"),
+            )));
         }
         return Ok(name.to_string());
     }
@@ -312,10 +311,7 @@ pub async fn ensure_platform_session(
     Ok(())
 }
 
-async fn retrieve_agent_key(
-    config_path: &str,
-    agent_name: &str,
-) -> Result<String, DetectionError> {
+async fn retrieve_agent_key(config_path: &str, agent_name: &str) -> Result<String, DetectionError> {
     use crate::atomic_writer::SecureKeyManager;
 
     let config = AgentConfig::load(config_path)

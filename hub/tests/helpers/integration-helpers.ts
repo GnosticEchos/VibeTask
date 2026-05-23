@@ -132,6 +132,45 @@ export async function authenticateExistingUser(): Promise<ApiLoginResponse> {
 }
 
 /**
+ * CI runs `prisma migrate deploy` only (no DATADUMP seed). Integration suites that
+ * call `authenticateExistingUser()` need a credential user + Better Auth Account row.
+ */
+export async function ensureCiBootstrapExistingUser(): Promise<void> {
+  if (process.env.CI !== 'true') {
+    return;
+  }
+
+  try {
+    await authenticateUser(EXISTING_USER.email, EXISTING_USER.password);
+    return;
+  } catch {
+    // User missing or Account row missing — register below.
+  }
+
+  try {
+    await registerUser({
+      email: EXISTING_USER.email,
+      password: EXISTING_USER.password,
+      name: EXISTING_USER.name,
+      surname: EXISTING_USER.surname,
+    });
+  } catch {
+    // Already registered without a working login — createTestUser fallback handles Account.
+    await createTestUser({
+      email: EXISTING_USER.email,
+      password: EXISTING_USER.password,
+      name: EXISTING_USER.name,
+      surname: EXISTING_USER.surname,
+    });
+  }
+
+  await db.user.updateMany({
+    where: { email: EXISTING_USER.email },
+    data: { role: 'ADMIN' },
+  });
+}
+
+/**
  * Validate a session token
  * 
  * @param token - Auth token to validate

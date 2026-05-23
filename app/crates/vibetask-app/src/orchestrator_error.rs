@@ -3,7 +3,9 @@ use crate::{
     domain::{SpecificationError, TaskAtomicityError, WorkLogError},
     error::{AgentError, ApiError, ConfigError, InitError},
 };
-use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult, ContentBlock, TextContent};
+use rust_mcp_sdk::schema::{
+    schema_utils::CallToolError, CallToolResult, ContentBlock, TextContent,
+};
 use serde_json::json;
 use std::fmt;
 use thiserror::Error;
@@ -464,11 +466,8 @@ fn call_tool_result_from_mcp_coded(coded: McpCodedToolError) -> CallToolResult {
     if let Some(class) = &coded.telemetry_class {
         meta.insert("error_class".to_string(), json!(class));
     }
-    let mut result = CallToolResult::text_content(vec![TextContent::new(
-        coded.message,
-        None,
-        None,
-    )]);
+    let mut result =
+        CallToolResult::text_content(vec![TextContent::new(coded.message, None, None)]);
     result.is_error = Some(true);
     result.meta = Some(meta);
     result

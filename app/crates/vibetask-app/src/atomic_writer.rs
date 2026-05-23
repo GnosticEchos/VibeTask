@@ -654,7 +654,9 @@ mod tests {
         let config_dir = app_dir.join("config");
         tokio::fs::create_dir_all(&config_dir).await.unwrap();
         let config_path = config_dir.join("vibe-mcp.toml");
-        tokio::fs::write(&config_path, "[server]\nname=\"t\"\n").await.unwrap();
+        tokio::fs::write(&config_path, "[server]\nname=\"t\"\n")
+            .await
+            .unwrap();
 
         let env_file = app_dir.join(".env.probeagent");
         tokio::fs::write(&env_file, "VIBETASK_API_KEY=probe-key\n")

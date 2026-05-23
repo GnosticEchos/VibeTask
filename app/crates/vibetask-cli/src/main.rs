@@ -433,9 +433,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cfg = AgentConfig::load(&config_path)
         .await
         .map_err(|e| format!("failed to load config: {e}"))?;
-    SecureKeyManager::register_env_search_roots(
-        SecureKeyManager::env_search_roots_from_config(&config_path),
-    );
+    SecureKeyManager::register_env_search_roots(SecureKeyManager::env_search_roots_from_config(
+        &config_path,
+    ));
     let bypass_safety = cli.no_fences;
     if bypass_safety && !cfg.server.allow_no_fences {
         return Err(
@@ -2021,12 +2021,7 @@ fn extract_cli_dimensions(
                 None,
                 None,
             ),
-            AgentCommands::Session { .. } => (
-                "agent.session".to_string(),
-                None,
-                None,
-                None,
-            ),
+            AgentCommands::Session { .. } => ("agent.session".to_string(), None, None, None),
         },
         Commands::Project { command } => match command {
             ProjectCommands::List => ("project.list".to_string(), None, None, None),

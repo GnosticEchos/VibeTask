@@ -17,6 +17,7 @@ import {
   disconnectTestDatabase,
   cleanupTrackedEntities,
 } from './setup/test-db.js';
+import { ensureCiBootstrapExistingUser } from '../helpers/integration-helpers.js';
 
 // Load test environment variables
 dotenv.config({ path: path.resolve(process.cwd(), '.env.test'), quiet: true });
@@ -55,6 +56,7 @@ beforeAll(async () => {
     console.log('[Integration Tests] Connecting to test database...');
   }
   await connectTestDatabase();
+  await ensureCiBootstrapExistingUser();
   if (isIntegrationVerbose) {
     console.log('[Integration Tests] Database connected');
   }

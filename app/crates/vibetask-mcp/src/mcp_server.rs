@@ -308,11 +308,10 @@ impl ServerHandler for VibeTaskHandler {
             if let Err(e) = self.telemetry.record_event(event) {
                 warn!("Failed to write telemetry event: {}", e);
             }
-            return Ok(OrchestratorError::permission_denied(
-                &tool_name,
-                "tool/column access",
-            )
-            .to_call_tool_result());
+            return Ok(
+                OrchestratorError::permission_denied(&tool_name, "tool/column access")
+                    .to_call_tool_result(),
+            );
         }
         drop(workflow_context);
 
@@ -320,13 +319,11 @@ impl ServerHandler for VibeTaskHandler {
         let tool_params = match VibeTaskMcpTools::try_from(params) {
             Ok(tool_params) => tool_params,
             Err(e) => {
-                return Ok(
-                    OrchestratorError::InvalidToolParameters {
-                        tool_name: tool_name.clone(),
-                        validation_error: e.to_string(),
-                    }
-                    .to_call_tool_result(),
-                );
+                return Ok(OrchestratorError::InvalidToolParameters {
+                    tool_name: tool_name.clone(),
+                    validation_error: e.to_string(),
+                }
+                .to_call_tool_result());
             }
         };
 
