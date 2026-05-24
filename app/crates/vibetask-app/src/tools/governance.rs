@@ -642,11 +642,8 @@ impl CreateTaskTool {
                     !created.identifier.is_empty(),
                     "Created task must have identifier"
                 );
-                let label = crate::format_task_label(
-                    &created.identifier,
-                    created.id,
-                    created.project_id,
-                );
+                let label =
+                    crate::format_task_label(&created.identifier, created.id, created.project_id);
                 Ok(ResponseBuilder::text(format!(
                     "✅ Task created\n\n\
                     Project: {}\n\

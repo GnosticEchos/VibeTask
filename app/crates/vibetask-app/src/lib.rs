@@ -4,8 +4,8 @@ pub mod config;
 pub mod context_assembler;
 pub mod error;
 pub mod orchestrator_error;
-pub mod telemetry;
 pub mod task_ref;
+pub mod telemetry;
 pub mod tool_registry;
 pub mod tools;
 
@@ -38,12 +38,12 @@ pub use context_assembler::{
 };
 pub use error::{AgentError, ApiError, ConfigError, InitError, McpError};
 pub use generated_types::{Delegation, DelegationMode, PermissionLevel};
-pub use task_ref::{format_task_label, resolve_numeric_task_id, task_ref_json};
 pub use orchestrator_error::{
     call_tool_result_from_call_tool_error, call_tool_result_message,
     mcp_error_code_from_call_tool_error, mcp_error_code_from_call_tool_result, McpCodedToolError,
     OrchestratorError,
 };
+pub use task_ref::{format_task_label, resolve_numeric_task_id, task_ref_json};
 pub use telemetry::{classify_error, TelemetryEvent, TelemetryMetricsSnapshot, TelemetryRecorder};
 pub use tool_registry::{ToolRegistry, ToolValidationError};
 pub use tools::ToolContext;

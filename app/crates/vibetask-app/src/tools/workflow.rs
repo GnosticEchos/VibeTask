@@ -853,9 +853,7 @@ impl UpdateTaskProgressTool {
                                 false,
                             )
                             .await
-                            .map(|d| {
-                                crate::format_task_label(&d.identifier, d.id, self.project_id)
-                            })
+                            .map(|d| crate::format_task_label(&d.identifier, d.id, self.project_id))
                             .unwrap_or_else(|_| {
                                 format!("task id {} (project {})", self.task_id, self.project_id)
                             });

@@ -697,14 +697,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let task_details = ctx
                     .api_client
-                    .get_task_details(
-                        &api_key,
-                        project_id,
-                        resolved_task_id,
-                        &[],
-                        false,
-                        false,
-                    )
+                    .get_task_details(&api_key, project_id, resolved_task_id, &[], false, false)
                     .await
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
@@ -752,25 +745,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await
                 .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
                 UpdateTaskProgressTool {
-                project_id,
-                task_id: resolved_task_id,
-                progress_description: description,
-                completion_percentage,
-                files_in_progress: if files_in_progress.is_empty() {
-                    None
-                } else {
-                    Some(files_in_progress)
-                },
-                blockers: if blockers.is_empty() {
-                    None
-                } else {
-                    Some(blockers)
-                },
-            }
-            .call_tool(&ctx)
-            .await
-            .map(|r| json!(r.content))
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+                    project_id,
+                    task_id: resolved_task_id,
+                    progress_description: description,
+                    completion_percentage,
+                    files_in_progress: if files_in_progress.is_empty() {
+                        None
+                    } else {
+                        Some(files_in_progress)
+                    },
+                    blockers: if blockers.is_empty() {
+                        None
+                    } else {
+                        Some(blockers)
+                    },
+                }
+                .call_tool(&ctx)
+                .await
+                .map(|r| json!(r.content))
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
             }
             TaskCommands::LinkDocument {
                 project_id,
@@ -797,17 +790,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await
                 .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
                 LinkDocumentTool {
-                project_id,
-                task_id: resolved_task_id,
-                document_title: title,
-                document_content: content,
-                document_role: role,
-                link_description,
-            }
-            .call_tool(&ctx)
-            .await
-            .map(|r| json!(r.content))
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+                    project_id,
+                    task_id: resolved_task_id,
+                    document_title: title,
+                    document_content: content,
+                    document_role: role,
+                    link_description,
+                }
+                .call_tool(&ctx)
+                .await
+                .map(|r| json!(r.content))
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
             }
             TaskCommands::RequestHelp {
                 project_id,
@@ -835,18 +828,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await
                 .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
                 RequestHelpTool {
-                project_id,
-                task_id: resolved_task_id,
-                help_type,
-                help_description: description,
-                requested_from,
-                priority,
-                context,
-            }
-            .call_tool(&ctx)
-            .await
-            .map(|r| json!(r.content))
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+                    project_id,
+                    task_id: resolved_task_id,
+                    help_type,
+                    help_description: description,
+                    requested_from,
+                    priority,
+                    context,
+                }
+                .call_tool(&ctx)
+                .await
+                .map(|r| json!(r.content))
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
             }
             TaskCommands::Reflect {
                 task_id,
