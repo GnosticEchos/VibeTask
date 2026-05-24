@@ -356,21 +356,26 @@ export async function createTestProject(
   // Create project via API - use existing user's password
   const { token } = await authenticateUser(user.email, 'admin1234');
 
-  const { ownerId: _ownerId, ...apiPayload } = projectData;
   const response = await request(testApp)
     .post('/api/projects')
     .set('Authorization', `Bearer ${token}`)
-    .send(apiPayload);
+    .send({
+      name: projectData.name,
+      description: projectData.description,
+      prefix: projectData.prefix,
+      columns: projectData.columns,
+    });
 
   if (response.status !== 200 && response.status !== 201) {
-    const { columns: _columns, ownerId, ...dbProjectData } = projectData;
     const project = await db.project.create({
       data: {
-        ...dbProjectData,
-        ownerId,
+        name: projectData.name,
+        description: projectData.description,
+        prefix: projectData.prefix,
+        ownerId: projectData.ownerId,
         members: {
           create: {
-            userId: ownerId,
+            userId: projectData.ownerId,
             role: 'Owner',
           },
         },
@@ -400,15 +405,16 @@ export async function createTestProjectDirect(
   overrides: Partial<TestProjectData> = {}
 ): Promise<{ id: number; name: string; prefix: string; ownerId: number }> {
   const projectData = createTestProjectData(userId, overrides);
-  const { columns: _columns, ownerId, ...dbProjectData } = projectData;
 
   const project = await db.project.create({
     data: {
-      ...dbProjectData,
-      ownerId,
+      name: projectData.name,
+      description: projectData.description,
+      prefix: projectData.prefix,
+      ownerId: projectData.ownerId,
       members: {
         create: {
-          userId: ownerId,
+          userId: projectData.ownerId,
           role: 'Owner',
         },
       },
