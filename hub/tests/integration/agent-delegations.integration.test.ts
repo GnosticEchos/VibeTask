@@ -72,10 +72,10 @@ describe('Agent delegations POST', () => {
     const projectId = project.id;
 
     const column = await request(testApp)
-      .get(`/api/projects/${projectId}/columns`)
+      .get(`/api/columns?projectId=${projectId}`)
       .set('Authorization', `Bearer ${token}`);
     expect(column.status).toBe(200);
-    const verifyColumn = (column.body as { columns?: { id: number; name: string }[] }).columns?.[0];
+    const verifyColumn = (column.body as { data?: { id: number; name: string }[] }).data?.[0];
     expect(verifyColumn?.id).toBeTruthy();
 
     const create = await request(testApp)

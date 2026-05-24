@@ -142,26 +142,23 @@ export async function ensureCiBootstrapExistingUser(): Promise<void> {
 
   try {
     await authenticateUser(EXISTING_USER.email, EXISTING_USER.password);
-    return;
   } catch {
     // User missing or Account row missing — register below.
-  }
-
-  try {
-    await registerUser({
-      email: EXISTING_USER.email,
-      password: EXISTING_USER.password,
-      name: EXISTING_USER.name,
-      surname: EXISTING_USER.surname,
-    });
-  } catch {
-    // Already registered without a working login — createTestUser fallback handles Account.
-    await createTestUser({
-      email: EXISTING_USER.email,
-      password: EXISTING_USER.password,
-      name: EXISTING_USER.name,
-      surname: EXISTING_USER.surname,
-    });
+    try {
+      await registerUser({
+        email: EXISTING_USER.email,
+        password: EXISTING_USER.password,
+        name: EXISTING_USER.name,
+        surname: EXISTING_USER.surname,
+      });
+    } catch {
+      await createTestUser({
+        email: EXISTING_USER.email,
+        password: EXISTING_USER.password,
+        name: EXISTING_USER.name,
+        surname: EXISTING_USER.surname,
+      });
+    }
   }
 
   await db.user.updateMany({
@@ -348,7 +345,7 @@ export async function createTestProject(
   userId: number,
   overrides: Partial<TestProjectData> = {}
 ): Promise<ApiProjectResponse & { id: number }> {
-  const projectData = createTestProjectData(userId, overrides);
+  const projectData = createTestProjectData(userId, { columns: [], ...overrides });
   
   // Get auth token for the user
   const user = await db.user.findUnique({ where: { id: userId } });
@@ -358,17 +355,27 @@ export async function createTestProject(
 
   // Create project via API - use existing user's password
   const { token } = await authenticateUser(user.email, 'admin1234');
-  
+
+  const { ownerId: _ownerId, ...apiPayload } = projectData;
   const response = await request(testApp)
     .post('/api/projects')
     .set('Authorization', `Bearer ${token}`)
-    .send(projectData);
+    .send(apiPayload);
 
   if (response.status !== 200 && response.status !== 201) {
-    // Fallback: create directly in database
+    const { columns: _columns, ownerId, ...dbProjectData } = projectData;
     const project = await db.project.create({
-      data: projectData,
-  });
+      data: {
+        ...dbProjectData,
+        ownerId,
+        members: {
+          create: {
+            userId: ownerId,
+            role: 'Owner',
+          },
+        },
+      },
+    });
     
     trackEntity('projects', project.id);
     return { ...project, createdAt: project.createdAt.toISOString(), updatedAt: project.updatedAt.toISOString() };
@@ -393,9 +400,19 @@ export async function createTestProjectDirect(
   overrides: Partial<TestProjectData> = {}
 ): Promise<{ id: number; name: string; prefix: string; ownerId: number }> {
   const projectData = createTestProjectData(userId, overrides);
-  
+  const { columns: _columns, ownerId, ...dbProjectData } = projectData;
+
   const project = await db.project.create({
-    data: projectData,
+    data: {
+      ...dbProjectData,
+      ownerId,
+      members: {
+        create: {
+          userId: ownerId,
+          role: 'Owner',
+        },
+      },
+    },
   });
   
   trackEntity('projects', project.id);

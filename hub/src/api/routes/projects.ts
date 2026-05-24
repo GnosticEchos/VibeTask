@@ -118,6 +118,7 @@ router.post('/', requireAuth, validateBody(createProjectSchema), sanitize(['name
     return res.status(400).json({ error: 'Missing or invalid body' });
   }
   const { name, prefix, description, columns, template, settings } = body;
+  const columnsSpecified = columns !== undefined;
 
   // Resolve template or use explicit columns
   let resolvedColumns = columns;
@@ -128,8 +129,8 @@ router.post('/', requireAuth, validateBody(createProjectSchema), sanitize(['name
     if (!tmpl) {
       return res.status(400).json({ error: `Unknown template: ${template}` });
     }
-    // Template columns take precedence if no explicit columns provided
-    if (!resolvedColumns || resolvedColumns.length === 0) {
+    // Template columns when the client did not send a columns array
+    if (!columnsSpecified) {
       resolvedColumns = tmpl.columns.map((col: any) => ({
         name: col.name,
         order: col.order,
@@ -142,8 +143,8 @@ router.post('/', requireAuth, validateBody(createProjectSchema), sanitize(['name
     resolvedSettings = { ...tmpl.settings, ...settings };
   }
 
-  // Projects created without columns or template get a sensible default board
-  if (!resolvedColumns || resolvedColumns.length === 0) {
+  // Default board only when columns were omitted (not when explicitly empty)
+  if (!columnsSpecified && (!resolvedColumns || resolvedColumns.length === 0)) {
     const defaultTmpl = getTemplateById('ADHOC_OPS');
     if (defaultTmpl) {
       resolvedColumns = defaultTmpl.columns.map((col: any) => ({
@@ -176,7 +177,7 @@ router.post('/', requireAuth, validateBody(createProjectSchema), sanitize(['name
           role: 'Owner',
         },
       },
-      columns: resolvedColumns ? {
+      columns: resolvedColumns && resolvedColumns.length > 0 ? {
         create: resolvedColumns.map((col: any, index: number) => ({
           name: col.name,
           order: col.order ?? index,

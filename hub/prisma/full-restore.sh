@@ -21,6 +21,7 @@ SELECT id::int, email, name, surname, NULLIF("avatarUrl", ''),
        'USER'::"UserRole", NOW(), NOW()
 FROM users_csv;
 SELECT setval(pg_get_serial_sequence('"User"', 'id'), (SELECT COALESCE(MAX(id), 1) FROM "User"));
+UPDATE "User" SET role = 'ADMIN' WHERE id = 1;
 SELECT COUNT(*) AS users FROM "User";
 SQL
 
