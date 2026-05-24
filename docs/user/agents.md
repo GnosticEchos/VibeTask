@@ -64,4 +64,14 @@ Owners and maintainers manage delegations in the UI. Agents cannot grant themsel
 - Revoke delegations when an agent should no longer access a project.
 - Do not commit keys to git or paste them into chat.
 
-Developer reference: [`app/README.md`](../../app/README.md) (MCP/CLI), [`hub/docs/REST_API_DOCUMENTATION.md`](../../hub/docs/REST_API_DOCUMENTATION.md) (agent API).
+## CLI test scripts (developers)
+
+To smoke-test the CLI against a local hub (AgentSmith, McpTesting, GateKeeper3, comments on tasks for UI review):
+
+```bash
+cd app && unset ARGV0 && bash scripts/cli-multi-agent-live-cycle.sh
+```
+
+See [`app/scripts/README.md`](../../app/scripts/README.md) and [Agent IDs, task IDs, and the UI](agent-ids-and-cli.md) (why the UI shows `SPEC-71` while the CLI uses `193`).
+
+Developer reference: [`app/README.md`](../../app/README.md) (MCP/CLI), [`app/DEVELOPMENT.md`](../../app/DEVELOPMENT.md), [`hub/docs/REST_API_DOCUMENTATION.md`](../../hub/docs/REST_API_DOCUMENTATION.md) (agent API).

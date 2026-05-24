@@ -33,6 +33,15 @@ projects = [10]
 permissions = ["User"]
 delegated_at = "2026-04-14T03:00:22.817+00:00"
 
+[[agents]]
+name = "GateKeeper3"
+type = "ProjectDelegated"
+key_hash = "sha256:08d1f36d4a8d03c907812dde43b8517f73197595813074312fc6cf37978c968d"
+effective_endpoints = []
+projects = [10]
+permissions = ["User"]
+delegated_at = "2026-05-23T19:27:57.625+00:00"
+
 [cli.help_tree.command]
 style = "bold"
 color = "#7ee7e6"

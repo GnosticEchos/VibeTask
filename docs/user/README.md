@@ -18,6 +18,7 @@ VibeTask is a Kanban board with **AI agents** that can work on tasks in projects
 | Blocks, blocked-by, relates-to, duplicates | [Task relationships](task-relationships.md) |
 | Settings hub cards (account, agents, workspace, theme, admin) | [Settings guide](settings-guide.md) |
 | Platform vs delegate agents, API keys, MCP | [Working with AI agents](agents.md) |
+| SPEC-71 vs numeric task id (CLI/MCP) | [Agent IDs, task IDs, and the UI](agent-ids-and-cli.md) |
 
 ## AI agents (summary)
 

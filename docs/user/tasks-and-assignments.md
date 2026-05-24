@@ -7,7 +7,8 @@ How to create, edit, assign, and discuss tasks in VibeTask (alpha).
 Every task has:
 
 - A **title** and optional **description** (rich text in the dialog).
-- An **identifier** like `PREFIX-42` (project prefix + number).
+- An **identifier** like `PREFIX-42` (project prefix + number) — shown on the board and in the task dialog.
+- A numeric **API task id** (integer) used by the hub API, CLI, and MCP; usually not shown in the UI. See [Agent IDs, task IDs, and the UI](agent-ids-and-cli.md).
 - A **column** (status on the board), or none if it lives in the **backlog** unassigned.
 - An **assignee** — a human member and/or an **agent** (see below).
 

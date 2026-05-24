@@ -75,6 +75,10 @@ key_hash = "sha256:..."
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development setup and workflow.
 
+### CLI smoke scripts
+
+See [scripts/README.md](scripts/README.md) for `cli-agentsmith-functional-cycle.sh` and `cli-multi-agent-live-cycle.sh` (hub must be running).
+
 ### Quick Development Setup
 
 ```bash

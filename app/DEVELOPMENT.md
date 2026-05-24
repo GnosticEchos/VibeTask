@@ -215,6 +215,26 @@ Both `vibetask-cli` and `vibetask-mcp` now emit event-level telemetry (no payloa
 
 Event schema intentionally matches a future batch-ingest API shape (`POST /api/telemetry/events`): `command`, `toolName`, `agentType`, `projectId`, `taskId`, `durationMs`, `success`, `errorClass`, `timestamp`.
 
+### CLI integration test scripts
+
+End-to-end bash scripts exercise `vibetask-cli` against a running hub (project 10 by default). They are documented in [`scripts/README.md`](scripts/README.md).
+
+```bash
+cd app
+unset ARGV0
+cargo build -p vibetask-cli --release
+
+# Single-agent (AgentSmith) — all major subcommands
+bash scripts/cli-agentsmith-functional-cycle.sh
+
+# Multi-agent (McpTesting, AgentSmith, GateKeeper3) + UI comments
+bash scripts/cli-multi-agent-live-cycle.sh
+```
+
+Logs land under `app/cli-*-cycle.log`. Do not commit `[platform]` JWT lines from `agent session` or `.env.*` key files.
+
+Task **identifiers** (`SPEC-71`) vs numeric **API ids** (`193`) are explained in [`docs/user/agent-ids-and-cli.md`](../docs/user/agent-ids-and-cli.md).
+
 ### Configuration
 
 The project uses TOML configuration with atomic writes:
