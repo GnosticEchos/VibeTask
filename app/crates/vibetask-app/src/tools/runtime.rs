@@ -55,17 +55,21 @@ impl ToolContext {
             })?
             .clone();
 
-        let api_key = SecureKeyManager::retrieve_key(&entry.name)
-            .await
-            .map_err(|e| {
-                tool_error(
-                    "runtime",
-                    format!(
-                        "Failed to retrieve API key for agent '{}': {}",
-                        entry.name, e
-                    ),
-                )
-            })?;
+        let api_key = if let Some(key) = entry.api_key.clone() {
+            key
+        } else {
+            SecureKeyManager::retrieve_key(&entry.name)
+                .await
+                .map_err(|e| {
+                    tool_error(
+                        "runtime",
+                        format!(
+                            "Failed to retrieve API key for agent '{}': {}",
+                            entry.name, e
+                        ),
+                    )
+                })?
+        };
 
         debug_assert!(
             !entry.name.is_empty(),

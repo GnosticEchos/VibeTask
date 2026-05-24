@@ -1,7 +1,6 @@
 use chrono::Utc;
 use std::sync::Arc;
 use tempfile::TempDir;
-use vibetask_mcp::atomic_writer::SecureKeyManager;
 use vibetask_mcp::config::AgentConfig;
 use vibetask_mcp::generated_types::*;
 use vibetask_mcp::tools::ToolContext;
@@ -32,7 +31,7 @@ async fn create_test_context(mock_server: &MockServer) -> (ToolContext, TempDir)
         name: "TestProjectAgent".to_string(),
         agent_type: "ProjectDelegated".to_string(),
         key_hash: "sha256:test".to_string(),
-        api_key: None,
+        api_key: Some("test-api-key".to_string()),
         allowed_endpoints: None,
         effective_endpoints: None,
         projects: Some(vec![1]),
@@ -41,11 +40,6 @@ async fn create_test_context(mock_server: &MockServer) -> (ToolContext, TempDir)
     });
     config.server.active_agent = "TestProjectAgent".to_string();
     config.save(&config_path).await.unwrap();
-
-    // Store test key
-    SecureKeyManager::store_key("TestProjectAgent", "test-api-key")
-        .await
-        .unwrap();
 
     let api_client = Arc::new(VibeTaskClient::new(mock_server.uri()).unwrap());
     let context = ToolContext {
@@ -407,7 +401,7 @@ async fn test_platform_agent_tool_restriction() {
         name: "TestPlatformAgent".to_string(),
         agent_type: "Platform".to_string(), // Platform agent, not ProjectDelegated
         key_hash: "sha256:test".to_string(),
-        api_key: None,
+        api_key: Some("test-api-key".to_string()),
         allowed_endpoints: Some(vec!["/api/agent/health".to_string()]),
         effective_endpoints: Some(vec!["/api/agent/health".to_string()]),
         projects: None,
@@ -416,10 +410,6 @@ async fn test_platform_agent_tool_restriction() {
     });
     config.server.active_agent = "TestPlatformAgent".to_string();
     config.save(&config_path).await.unwrap();
-
-    SecureKeyManager::store_key("TestPlatformAgent", "test-api-key")
-        .await
-        .unwrap();
 
     let api_client = Arc::new(VibeTaskClient::new(mock_server.uri()).unwrap());
     let context = ToolContext {
