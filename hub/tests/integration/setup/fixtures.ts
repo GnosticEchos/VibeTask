@@ -32,40 +32,40 @@ import { MIN_TEST_ID } from './test-db.js';
 /**
  * Existing user credentials for testing
  * These users already exist in the database and should NOT be modified
- * Data sourced from prisma/DATADUMP/users.csv
+ * Data sourced from prisma/DATADUMP/users.csv (all use @example.com)
  */
 export const EXISTING_USERS = {
   user1: {
     id: 1,
-    email: 'lukaszpodlipskikontakt@gmail.com',
+    email: 'lukaszpodlipskikontakt@example.com',
     password: 'admin1234',
     name: 'Łukasz',
     surname: 'Podlipski',
   },
   user2: {
     id: 2,
-    email: 'andrzejpodlipski@gmail.com',
+    email: 'andrzejpodlipski@example.com',
     password: 'admin1234',
     name: 'Andrzej',
     surname: 'Podlipski',
   },
   user3: {
     id: 3,
-    email: 'jakkowalski@gmail.com',
+    email: 'jakkowalski@example.com',
     password: 'admin1234',
     name: 'Jan',
     surname: 'Kowalski',
   },
   user4: {
     id: 4,
-    email: 'adammickiewicz@gmail.com',
+    email: 'adammickiewicz@example.com',
     password: 'admin1234',
     name: 'Adam',
     surname: 'Mickiewicz',
   },
   user5: {
     id: 5,
-    email: 'juliuszslowacki@gmail.com',
+    email: 'juliuszslowacki@example.com',
     password: 'admin1234',
     name: 'Juliusz',
     surname: 'Słowacki',

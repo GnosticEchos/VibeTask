@@ -28,7 +28,7 @@ async function verifyUsers(): Promise<void> {
   
   // Actual seed data from prisma/DATADUMP/users.csv
   const expectedUsers = [
-    { id: 1, email: 'lukaszpodlipskikontakt@gmail.com', name: 'Łukasz' },
+    { id: 1, email: 'lukaszpodlipskikontakt@example.com', name: 'Łukasz' },
     { id: 2, email: 'andrzejpodlipski@example.com', name: 'Andrzej' },
     { id: 3, email: 'jakkowalski@example.com', name: 'Jan' },
     { id: 4, email: 'adammickiewicz@example.com', name: 'Adam' },

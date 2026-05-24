@@ -8,7 +8,7 @@
  * - POST /api/register - User registration
  * 
  * Uses existing test data:
- * - User: lukaszpodlipskikontakt@gmail.com / admin1234
+ * - User: lukaszpodlipskikontakt@example.com / admin1234
  * 
  * All created test data is cleaned up after each test.
  */
