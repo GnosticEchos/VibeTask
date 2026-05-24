@@ -176,6 +176,10 @@
     "linkedDocuments": "Powiązane dokumenty",
     "linkedDocumentsHint": "Dołącz dokumenty projektu, które opisują lub wspierają to zadanie.",
     "manageDocs": "Zarządzaj dokumentami",
+    "apiIdsTitle": "Numeryczne id dla CLI i API (vibetask task move ID_PROJEKTU ID_ZADANIA)",
+    "apiTaskId": "zadanie {id}",
+    "apiProjectId": "projekt {id}",
+    "copyApiIds": "Kopiuj id zadania i projektu (API)",
     "documentId": "Dokument #{id}",
     "unlinkDoc": "Odłącz",
     "noLinkedDocuments": "Brak powiązanych dokumentów",
@@ -768,6 +772,8 @@
     "save": "Zapisz",
     "cancel": "Anuluj",
     "back": "Powrót do dokumentów",
-    "emptyDocument": "Pusty dokument — kliknij Edytuj, aby dodać treść"
+    "emptyDocument": "Pusty dokument — kliknij Edytuj, aby dodać treść",
+    "apiDocumentId": "dok. {id}",
+    "copyApiDocumentId": "Kopiuj id dokumentu (API)"
   }
 }

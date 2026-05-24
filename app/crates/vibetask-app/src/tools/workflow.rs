@@ -842,11 +842,29 @@ impl UpdateTaskProgressTool {
                     .await
                 {
                     Ok(_) => {
+                        let task_label = ctx
+                            .api_client
+                            .get_task_details(
+                                api_key,
+                                self.project_id,
+                                self.task_id,
+                                &[],
+                                false,
+                                false,
+                            )
+                            .await
+                            .map(|d| {
+                                crate::format_task_label(&d.identifier, d.id, self.project_id)
+                            })
+                            .unwrap_or_else(|_| {
+                                format!("task id {} (project {})", self.task_id, self.project_id)
+                            });
+
                         let mut response = format!(
                             "✅ Task Progress Updated\n\n\
-                            Project: {} | Task: {}\n\
+                            {}\n\
                             Progress: {}\n",
-                            self.project_id, self.task_id, self.progress_description
+                            task_label, self.progress_description
                         );
 
                         if let Some(percentage) = self.completion_percentage {

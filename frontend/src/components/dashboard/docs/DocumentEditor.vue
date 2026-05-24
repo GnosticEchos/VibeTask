@@ -38,6 +38,22 @@
         </div>
         <span v-else class="badge badge-sm">{{ formatDocType(document?.docType || 'SPECIFICATION') }}</span>
         
+        <span
+          v-if="document"
+          class="badge badge-ghost badge-sm font-mono text-base-content/70"
+          :title="$t('docs.copyApiDocumentId')"
+        >
+          {{ $t('docs.apiDocumentId', { id: document.id }) }}
+        </span>
+        <button
+          v-if="document"
+          type="button"
+          class="btn btn-ghost btn-xs"
+          :aria-label="$t('docs.copyApiDocumentId')"
+          @click="copyDocumentId"
+        >
+          {{ $t('actions.copy') }}
+        </button>
         <span v-if="document" class="text-xs text-base-content/50">v{{ document.version }}</span>
       </div>
       <div class="flex items-center gap-1">
@@ -132,6 +148,7 @@
 <script setup lang="ts">
 import { ref, watch, type Component } from 'vue'
 import { useDark } from '@vueuse/core'
+import { useI18n } from 'vue-i18n'
 import type { ProjectDocument } from '../../../types/documentTypes'
 import { useLayoutStore } from '@/stores/layout'
 import { configureMdEditorMermaid } from '@/lib/md-editor-mermaid'
@@ -172,18 +189,29 @@ function preloadEditorOnHover() {
   }
 }
 
+const { t } = useI18n()
+const layoutStore = useLayoutStore()
+
 const props = defineProps<{
   document: ProjectDocument | null
   canEdit: boolean
   loading: boolean
 }>()
 
+async function copyDocumentId() {
+  if (!props.document?.id) return
+  try {
+    await navigator.clipboard.writeText(String(props.document.id))
+    layoutStore.openToast({ message: t('actions.copied'), type: 'success' })
+  } catch {
+    layoutStore.openToast({ message: t('toast.error'), type: 'error' })
+  }
+}
+
 const emit = defineEmits<{
   back: []
   save: [payload: { title: string; content: string; docType: string }]
 }>()
-
-const layoutStore = useLayoutStore()
 
 const isDark = useDark({
   selector: 'html',

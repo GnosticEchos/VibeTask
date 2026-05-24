@@ -751,6 +751,7 @@ async function handleAcceptPlan() {
       <TaskDialogHeader
         v-if="mergedTask"
         :task="mergedTask"
+        :project-id="taskProjectId || undefined"
         :refreshing="refreshing"
         @refresh="refreshTask"
       />

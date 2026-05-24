@@ -30,11 +30,11 @@ VibeTask uses more than one way to refer to a task. They are all valid; they ser
 - Used only for **Verify** workflow entrypoints that were designed around “project + task” in one token.
 - **Not** the same as the display suffix: `10-152` is not “SPEC-152”.
 
-## Why the UI does not show the numeric id today
+## UI and CLI now show both (human + API ids)
 
-The task dialog and board tiles emphasize **identifier** because it is unique per project and readable in stand-ups and docs. The numeric id is an implementation detail for APIs and automation.
+The task dialog header shows the **identifier** badge plus subdued **task** / **project** numeric ids (DaisyUI `badge-ghost`, copy button). Document editor shows **doc {id}** the same way.
 
-That creates a gap when you run the CLI or MCP against task `193` but only see `SPEC-71` in the browser.
+CLI and MCP output use a shared dual label, e.g. `SPEC-71 (task id 193, project 10)`, and `task move` accepts numeric id, compound id (`10-152`), or identifier (`SPEC-71`).
 
 ## How to map CLI output to the UI
 
@@ -47,30 +47,14 @@ That creates a gap when you run the CLI or MCP against task `193` but only see `
 
 Documents use numeric **document id** in agent/CLI paths (`read-doc 10 104`) while titles appear in the UI—same pattern as tasks.
 
-## Product direction (recommended)
+## Implemented behavior
 
-These are sensible improvements; none are required to use agents today:
+1. **UI** — Task dialog and document editor: ghost badges + copy (no global “show API ids on cards” toggle).
+2. **CLI** — Dual-label on create (MCP text), move (JSON `label` + `identifier`), progress updates, and task list queries.
+3. **CLI task reference** — `task move`, `update-progress`, `link-document`, and `request-help` accept numeric id, compound id, or identifier (resolved via agent search).
+4. **MCP** — `create_task`, `query_tasks`, and `update_task_progress` include the dual label in text results; `task move` JSON includes `id`, `identifier`, `projectId`, and `label`.
 
-1. **UI — copy-friendly technical row**  
-   In the task dialog header or footer, show a subdued line:  
-   `API task id: 193 · project: 10` with a copy button. Optional “developer details” collapse so casual users are not cluttered.
-
-2. **CLI — always dual-label**  
-   Standardize create/move/status output:  
-   `Task SPEC-71 (id 193) on project 10`.
-
-3. **CLI — accept identifier**  
-   Optional flags, e.g.  
-   `task move --identifier SPEC-71 --column-id 53`  
-   resolving via hub search (same as the UI).
-
-4. **MCP tools**  
-   Return `id`, `identifier`, and `project_id` together in tool results so agents do not guess.
-
-5. **Settings**  
-   Optional “Show API ids on cards” for agent operators (off by default).
-
-Until then, treat **identifier** as the human handle and **numeric id** as the machine handle; use CLI create/list output to link them.
+Treat **identifier** as the human handle and **numeric id** as the machine handle; copy from the task dialog copies `"{projectId} {taskId}"` for `vibetask-cli task move`.
 
 ## See also
 

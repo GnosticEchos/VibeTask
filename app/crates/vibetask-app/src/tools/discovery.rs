@@ -348,7 +348,12 @@ impl QueryTasksTool {
             ));
 
             for (i, task) in tasks_response.data.iter().take(tasks_to_show).enumerate() {
-                response.push_str(&format!("{}. {} ({})\n", i + 1, task.name, task.identifier));
+                response.push_str(&format!(
+                    "{}. {} ({})\n",
+                    i + 1,
+                    task.name,
+                    crate::format_task_label(&task.identifier, task.id, project_id)
+                ));
                 response.push_str(&format!("   Status: {:?}\n", task.status));
                 response.push_str(&format!("   Column: {}\n", task.column.name));
                 if let Some(description) = &task.description {

@@ -249,13 +249,15 @@ enum TaskCommands {
     /// Move a task to another column with client-side lattice pre-validation before PATCH.
     Move {
         project_id: i32,
-        task_id: i32,
+        /// Numeric id (`193`), compound verify id (`10-152`), or board identifier (`SPEC-71`).
+        task_id: String,
         target_column_id: i32,
     },
     /// Update progress for a task in Execute column.
     UpdateProgress {
         project_id: i32,
-        task_id: i32,
+        /// Numeric id, compound id, or board identifier (see `task move`).
+        task_id: String,
         description: String,
         #[arg(long)]
         completion_percentage: Option<u8>,
@@ -267,7 +269,8 @@ enum TaskCommands {
     /// Link a document to a task in Execute column.
     LinkDocument {
         project_id: i32,
-        task_id: i32,
+        /// Numeric id, compound id, or board identifier (see `task move`).
+        task_id: String,
         title: String,
         content: String,
         role: String,
@@ -277,7 +280,8 @@ enum TaskCommands {
     /// Request help while executing a task.
     RequestHelp {
         project_id: i32,
-        task_id: i32,
+        /// Numeric id, compound id, or board identifier (see `task move`).
+        task_id: String,
         help_type: String,
         description: String,
         #[arg(long)]
@@ -653,6 +657,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             cfg.server.active_agent, e
                         ))
                     })?;
+                let resolved_task_id = vibetask_app::resolve_numeric_task_id(
+                    &ctx.api_client,
+                    &api_key,
+                    project_id,
+                    &task_id,
+                )
+                .await
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+
                 let me = ctx
                     .api_client
                     .get_agent_me(&api_key)
@@ -675,16 +688,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .update_agent_task_column_with_precheck(
                         &api_key,
                         project_id,
-                        task_id,
+                        resolved_task_id,
                         target_column_id,
                         delegation,
                     )
                     .await
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
+                let task_details = ctx
+                    .api_client
+                    .get_task_details(
+                        &api_key,
+                        project_id,
+                        resolved_task_id,
+                        &[],
+                        false,
+                        false,
+                    )
+                    .await
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+
+                let label = vibetask_app::format_task_label(
+                    &task_details.identifier,
+                    task_details.id,
+                    project_id,
+                );
+
                 Ok(json!({
                     "projectId": project_id,
-                    "taskId": task_id,
+                    "taskId": resolved_task_id,
+                    "identifier": task_details.identifier,
+                    "label": label,
                     "targetColumnId": target_column_id,
                     "precheck": {
                         "delegationMode": delegation.delegation_mode,
@@ -700,9 +734,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 completion_percentage,
                 files_in_progress,
                 blockers,
-            } => UpdateTaskProgressTool {
+            } => {
+                let api_key = SecureKeyManager::retrieve_key(&cfg.server.active_agent)
+                    .await
+                    .map_err(|e| {
+                        std::io::Error::other(format!(
+                            "failed to retrieve key for active agent '{}': {}",
+                            cfg.server.active_agent, e
+                        ))
+                    })?;
+                let resolved_task_id = vibetask_app::resolve_numeric_task_id(
+                    &ctx.api_client,
+                    &api_key,
+                    project_id,
+                    &task_id,
+                )
+                .await
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+                UpdateTaskProgressTool {
                 project_id,
-                task_id,
+                task_id: resolved_task_id,
                 progress_description: description,
                 completion_percentage,
                 files_in_progress: if files_in_progress.is_empty() {
@@ -719,7 +770,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .call_tool(&ctx)
             .await
             .map(|r| json!(r.content))
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>),
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+            }
             TaskCommands::LinkDocument {
                 project_id,
                 task_id,
@@ -727,9 +779,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 content,
                 role,
                 link_description,
-            } => LinkDocumentTool {
+            } => {
+                let api_key = SecureKeyManager::retrieve_key(&cfg.server.active_agent)
+                    .await
+                    .map_err(|e| {
+                        std::io::Error::other(format!(
+                            "failed to retrieve key for active agent '{}': {}",
+                            cfg.server.active_agent, e
+                        ))
+                    })?;
+                let resolved_task_id = vibetask_app::resolve_numeric_task_id(
+                    &ctx.api_client,
+                    &api_key,
+                    project_id,
+                    &task_id,
+                )
+                .await
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+                LinkDocumentTool {
                 project_id,
-                task_id,
+                task_id: resolved_task_id,
                 document_title: title,
                 document_content: content,
                 document_role: role,
@@ -738,7 +807,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .call_tool(&ctx)
             .await
             .map(|r| json!(r.content))
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>),
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+            }
             TaskCommands::RequestHelp {
                 project_id,
                 task_id,
@@ -747,9 +817,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 requested_from,
                 priority,
                 context,
-            } => RequestHelpTool {
+            } => {
+                let api_key = SecureKeyManager::retrieve_key(&cfg.server.active_agent)
+                    .await
+                    .map_err(|e| {
+                        std::io::Error::other(format!(
+                            "failed to retrieve key for active agent '{}': {}",
+                            cfg.server.active_agent, e
+                        ))
+                    })?;
+                let resolved_task_id = vibetask_app::resolve_numeric_task_id(
+                    &ctx.api_client,
+                    &api_key,
+                    project_id,
+                    &task_id,
+                )
+                .await
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+                RequestHelpTool {
                 project_id,
-                task_id,
+                task_id: resolved_task_id,
                 help_type,
                 help_description: description,
                 requested_from,
@@ -759,7 +846,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .call_tool(&ctx)
             .await
             .map(|r| json!(r.content))
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>),
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+            }
             TaskCommands::Reflect {
                 task_id,
                 work_summary,
@@ -2083,7 +2171,7 @@ fn extract_cli_dimensions(
                 "task.move".to_string(),
                 None,
                 Some(*project_id),
-                Some(*task_id),
+                task_id.parse::<i32>().ok(),
             ),
             TaskCommands::UpdateProgress {
                 project_id,
@@ -2093,7 +2181,7 @@ fn extract_cli_dimensions(
                 "task.update_progress".to_string(),
                 None,
                 Some(*project_id),
-                Some(*task_id),
+                task_id.parse::<i32>().ok(),
             ),
             TaskCommands::LinkDocument {
                 project_id,
@@ -2103,7 +2191,7 @@ fn extract_cli_dimensions(
                 "task.link_document".to_string(),
                 None,
                 Some(*project_id),
-                Some(*task_id),
+                task_id.parse::<i32>().ok(),
             ),
             TaskCommands::RequestHelp {
                 project_id,
@@ -2113,7 +2201,7 @@ fn extract_cli_dimensions(
                 "task.request_help".to_string(),
                 None,
                 Some(*project_id),
-                Some(*task_id),
+                task_id.parse::<i32>().ok(),
             ),
             TaskCommands::Reflect { task_id, .. } => {
                 let parsed_task = task_id

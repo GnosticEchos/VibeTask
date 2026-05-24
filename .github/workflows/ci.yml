@@ -9,6 +9,10 @@ on:
   pull_request:
     branches: [main, master, develop]
 
+# GitHub Actions JavaScript runtime: opt into Node 24 for checkout/setup-node (Node 20 deprecated).
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   hub:
     name: Hub (backend)
