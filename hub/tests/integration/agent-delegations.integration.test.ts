@@ -8,6 +8,7 @@ import {
   authenticateExistingUser,
   cleanupTestData,
   createTestProject,
+  createTestColumn,
 } from '../helpers/integration-helpers.js';
 import { deleteAllAgentApiKeysForUser } from '../helpers/agent-api-key-cleanup.js';
 
@@ -71,12 +72,7 @@ describe('Agent delegations POST', () => {
     });
     const projectId = project.id;
 
-    const column = await request(testApp)
-      .get(`/api/columns?projectId=${projectId}`)
-      .set('Authorization', `Bearer ${token}`);
-    expect(column.status).toBe(200);
-    const verifyColumn = (column.body as { data?: { id: number; name: string }[] }).data?.[0];
-    expect(verifyColumn?.id).toBeTruthy();
+    const verifyColumn = await createTestColumn(projectId, 1, { name: 'Verify' });
 
     const create = await request(testApp)
       .post(`/api/agents/${agentId}/delegations`)
@@ -85,13 +81,13 @@ describe('Agent delegations POST', () => {
         projectId,
         permissionLevel: 'USER',
         delegationMode: 'COLUMN_BOUND',
-        restrictedColumnId: verifyColumn!.id,
+        restrictedColumnId: verifyColumn.id,
         allowedMoveRange: 1,
       });
 
     expect(create.status).toBe(201);
     expect(create.body.delegation.delegationMode).toBe('COLUMN_BOUND');
-    expect(create.body.delegation.restrictedColumnId).toBe(verifyColumn!.id);
+    expect(create.body.delegation.restrictedColumnId).toBe(verifyColumn.id);
     expect(create.body.delegation.allowedMoveRange).toBe(1);
 
     const list = await request(testApp)
@@ -101,6 +97,6 @@ describe('Agent delegations POST', () => {
     expect(list.status).toBe(200);
     expect(list.body.delegations).toHaveLength(1);
     expect(list.body.delegations[0].delegationMode).toBe('COLUMN_BOUND');
-    expect(list.body.delegations[0].restrictedColumnId).toBe(verifyColumn!.id);
+    expect(list.body.delegations[0].restrictedColumnId).toBe(verifyColumn.id);
   });
 });

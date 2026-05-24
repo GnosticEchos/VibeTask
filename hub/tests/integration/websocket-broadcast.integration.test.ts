@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import { io as clientIo, type Socket as ClientSocket } from 'socket.io-client';
 import { initializeBroadcaster } from '@/infrastructure/websocket/broadcaster.js';
 import { getRoomName, CHANNELS } from '@/infrastructure/websocket/channels.js';
-import { cleanupTestData, createTestColumn, createTestProjectDirect, createTestTaskDirect, createTestUser, addProjectMember } from '../helpers/integration-helpers.js';
+import { cleanupTestData, createTestColumn, createTestProjectDirect, createTestTaskDirect, createTestUser } from '../helpers/integration-helpers.js';
 
 describe('WebSocket broadcaster integration', () => {
   let httpServer: HttpServer;
@@ -44,7 +44,6 @@ describe('WebSocket broadcaster integration', () => {
   it('delivers task update to subscribed project member', async () => {
     const user = await createTestUser({ name: 'WsMember' });
     const project = await createTestProjectDirect(user.id, { name: 'WS Project', prefix: 'WSP' });
-    await addProjectMember(user.id, project.id, 'Owner');
     const column = await createTestColumn(project.id, 1, { name: 'Todo' });
     const task = await createTestTaskDirect(project.id, user.id, column.id, { name: 'WS Task', description: 'Before' });
 
