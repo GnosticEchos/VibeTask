@@ -97,6 +97,134 @@ describe('Agent docs/doc-links/summary endpoints', () => {
       expect(summaries).toHaveLength(1);
       expect(summaries[0].id).toBe(project.id);
     });
+
+    it('returns scoped counts for main and all task scopes', async () => {
+      const project = await createTestProject(userId, { name: 'Scoped Summary', prefix: 'SCP' });
+      const todo = await testPrisma.projectColumn.create({
+        data: { projectId: project.id, name: 'To Do', order: 1 },
+      });
+      const done = await testPrisma.projectColumn.create({
+        data: { projectId: project.id, name: 'Done', order: 2 },
+      });
+
+      const container = await createTestTask(project.id, userId, 'SCP', { projectColumnId: todo.id });
+      await testPrisma.task.update({
+        where: { id: container.id },
+        data: { isContainer: true },
+      });
+
+      await createTestTask(project.id, userId, 'SCP', { projectColumnId: todo.id });
+      const workspaceChild = await createTestTask(project.id, userId, 'SCP', { projectColumnId: done.id });
+      await testPrisma.task.update({
+        where: { id: workspaceChild.id },
+        data: { parentId: container.id },
+      });
+
+      const mainRes = await request(testApp)
+        .get('/api/agent/projects/summary?scope=main&projectId=' + project.id)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(mainRes.status).toBe(200);
+      const mainProject = (mainRes.body.projects as Array<any>)[0];
+      expect(mainProject.totalTasks).toBe(3);
+      expect(mainProject.mainBoardTasks).toBe(2);
+      expect(mainProject.workspaceContainers).toBe(1);
+      expect(mainProject.workspaceChildTasks).toBe(1);
+      expect(mainProject.summaryLine).toContain('on main board');
+
+      const mainTodo = mainProject.columns.find((c: any) => c.id === todo.id);
+      const mainDone = mainProject.columns.find((c: any) => c.id === done.id);
+      expect(mainTodo.taskCountMain).toBe(2);
+      expect(mainTodo.taskCountAll).toBe(2);
+      expect(mainTodo.taskCount).toBe(2);
+      expect(mainDone.taskCountMain).toBe(0);
+      expect(mainDone.taskCountAll).toBe(1);
+      expect(mainDone.taskCount).toBe(0);
+
+      const allRes = await request(testApp)
+        .get('/api/agent/projects/summary?scope=all&projectId=' + project.id)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(allRes.status).toBe(200);
+      const allProject = (allRes.body.projects as Array<any>)[0];
+      const allDone = allProject.columns.find((c: any) => c.id === done.id);
+      expect(allProject.totalTasks).toBe(3);
+      expect(allProject.mainBoardTasks).toBe(2);
+      expect(allDone.taskCountMain).toBe(0);
+      expect(allDone.taskCountAll).toBe(1);
+      expect(allDone.taskCount).toBe(1);
+    });
+
+    it('supports include buckets for documents, agent review, blocked, help requests, and workspaces', async () => {
+      const project = await createTestProject(userId, { name: 'Include Summary', prefix: 'INC' });
+      const todo = await testPrisma.projectColumn.create({
+        data: { projectId: project.id, name: 'To Do', order: 1 },
+      });
+      const review = await testPrisma.projectColumn.create({
+        data: { projectId: project.id, name: 'Agent Review', order: 2, roleType: 'AGENT_REVIEW' },
+      });
+
+      const container = await createTestTask(project.id, userId, 'INC', { projectColumnId: todo.id });
+      await testPrisma.task.update({
+        where: { id: container.id },
+        data: { isContainer: true },
+      });
+      const child = await createTestTask(project.id, userId, 'INC', { projectColumnId: todo.id });
+      await testPrisma.task.update({
+        where: { id: child.id },
+        data: { parentId: container.id },
+      });
+      const blocked = await createTestTask(project.id, userId, 'INC', { projectColumnId: todo.id });
+      await testPrisma.task.update({
+        where: { id: blocked.id },
+        data: { relationMode: 'blocked-by', relationId: child.id },
+      });
+      await createTestTask(project.id, userId, 'INC', { projectColumnId: review.id });
+
+      await testPrisma.projectDocument.create({
+        data: {
+          projectId: project.id,
+          title: 'Spec Doc',
+          content: 'Spec content',
+          docType: 'SPECIFICATION',
+          createdById: userId,
+        },
+      });
+      await testPrisma.projectDocument.create({
+        data: {
+          projectId: project.id,
+          title: 'Plan Doc',
+          content: 'Plan content',
+          docType: 'IMPLEMENTATION_PLAN',
+          createdById: userId,
+        },
+      });
+
+      await testPrisma.taskComment.create({
+        data: {
+          taskId: blocked.id,
+          userId,
+          content: '🆘 **Help Request (TECHNICAL)**\nNeed review',
+        },
+      });
+
+      const res = await request(testApp)
+        .get(`/api/agent/projects/summary?projectId=${project.id}&include=documents,agentReview,helpRequests,blocked,workspaces`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      const summary = (res.body.projects as Array<any>)[0];
+      expect(summary.documents.total).toBe(2);
+      expect(summary.documents.byType.SPECIFICATION).toBe(1);
+      expect(summary.documents.byType.IMPLEMENTATION_PLAN).toBe(1);
+      expect(summary.agentReview.taskCount).toBe(1);
+      expect(summary.agentReview.identifiers.length).toBeGreaterThan(0);
+      expect(summary.helpRequests.open).toBe(1);
+      expect(summary.blocked.taskCount).toBe(1);
+      expect(summary.workspaces.activeCount).toBe(1);
+      expect(summary.workspaces.items).toHaveLength(1);
+      expect(summary.workspaces.items[0].childCount).toBe(1);
+    });
   });
 
   describe('GET /api/agent/projects/:projectId/docs', () => {
