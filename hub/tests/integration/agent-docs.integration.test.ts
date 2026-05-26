@@ -83,6 +83,20 @@ describe('Agent docs/doc-links/summary endpoints', () => {
       expect(summary.formalityLevel).toBeDefined();
       expect(typeof summary.totalTasks).toBe('number');
     });
+
+    it('filters summaries by projectId query param', async () => {
+      const project = await createTestProject(userId, { name: 'Filtered Summary', prefix: 'FSM' });
+      await createTestProject(userId, { name: 'Other Summary', prefix: 'OTH' });
+
+      const res = await request(testApp)
+        .get(`/api/agent/projects/summary?projectId=${project.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      const summaries = res.body.projects as Array<{ id: number }>;
+      expect(summaries).toHaveLength(1);
+      expect(summaries[0].id).toBe(project.id);
+    });
   });
 
   describe('GET /api/agent/projects/:projectId/docs', () => {

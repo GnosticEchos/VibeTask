@@ -11,6 +11,25 @@ import { requireAgentProjectAccess, ProjectAction } from '../../../infrastructur
 
 const router = Router();
 
+function parseOptionalProjectIdFilter(query: Record<string, unknown>): number | null {
+  const raw = query.projectId;
+  if (raw === undefined || raw === null || raw === '') {
+    return null;
+  }
+  const id = parseInt(String(raw), 10);
+  return Number.isFinite(id) && id > 0 ? id : null;
+}
+
+function filterSummaryByProjectId<T extends { id: number }>(
+  items: T[],
+  projectId: number | null,
+): T[] {
+  if (projectId === null) {
+    return items;
+  }
+  return items.filter((item) => item.id === projectId);
+}
+
 // GET /api/agent/projects - List accessible projects
 router.get('/', asyncHandler(async (req, res) => {
   const auth = (req as any).auth;
@@ -123,7 +142,8 @@ router.get('/summary', asyncHandler(async (req, res) => {
       };
     }));
 
-    return res.json({ projects: summary });
+    const projectIdFilter = parseOptionalProjectIdFilter(req.query as Record<string, unknown>);
+    return res.json({ projects: filterSummaryByProjectId(summary, projectIdFilter) });
   }
 
   const memberships = await prisma.projectUser.findMany({
@@ -196,7 +216,8 @@ router.get('/summary', asyncHandler(async (req, res) => {
     };
   }));
 
-  return res.json({ projects: summary });
+  const projectIdFilter = parseOptionalProjectIdFilter(req.query as Record<string, unknown>);
+  return res.json({ projects: filterSummaryByProjectId(summary, projectIdFilter) });
 }));
 
 // GET /api/agent/projects/:projectId - Get single project

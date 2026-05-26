@@ -5664,6 +5664,98 @@
         "operationId": "listAgentProjects"
       }
     },
+    "/api/agent/projects/summary": {
+      "get": {
+        "tags": [
+          "Agent API"
+        ],
+        "summary": "Fleet project statistics (counts only)",
+        "description": "Returns lightweight per-project task and column counts without task bodies. Agents see active delegations; users see all membership projects. Platform agents may call when the route is on their read allowlist and a user-scoped platform session is present.\n\nQuery params `scope`, `include`, `workspace`, and `listWorkspaces` are part of the contract for Phase 2 stats; only `projectId` is enforced today.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "agentAuth": []
+          },
+          {
+            "platformSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "When set, return at most this project if accessible."
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "main",
+              "enum": [
+                "main",
+                "all"
+              ]
+            },
+            "description": "Task counting scope. `main` excludes workspace children (parentId IS NULL). `all` counts every task. Phase 2: also `workspace:{containerTaskId}`."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated optional stat buckets: `documents`, `agentReview`, `helpRequests`, `blocked`, `workspaces`, `workspaces:all`. Phase 2."
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Container task identifier or unique title for single-workspace scope. Phase 2."
+          },
+          {
+            "name": "listWorkspaces",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "When true, include workspace container digests (same as `include=workspaces`). Phase 2."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project statistics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProjectsSummaryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing authentication"
+          },
+          "500": {
+            "description": "Failed to load project summaries"
+          }
+        },
+        "operationId": "getAgentProjectsSummary"
+      }
+    },
     "/api/agent/projects/{projectId}/tasks": {
       "get": {
         "tags": [
@@ -7235,9 +7327,215 @@
           }
         }
       },
+      "ProjectColumnStats": {
+        "type": "object",
+        "description": "Per-column task counts in a project stats payload",
+        "required": [
+          "id",
+          "name",
+          "taskCount"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "roleType": {
+            "type": "string",
+            "nullable": true,
+            "description": "Column workflow role (e.g. AGENT_REVIEW)"
+          },
+          "taskCount": {
+            "type": "integer",
+            "description": "Tasks in this column (all scopes until scope=main is implemented)"
+          },
+          "taskCountMain": {
+            "type": "integer",
+            "description": "Phase 2: tasks with parentId IS NULL in this column"
+          },
+          "taskCountAll": {
+            "type": "integer",
+            "description": "Phase 2: all tasks in this column regardless of parentId"
+          },
+          "color": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ProjectStats": {
+        "type": "object",
+        "description": "Lightweight project statistics (counts only, no task bodies). Used by agent fleet summary and planned human summary routes. Agent responses omit member emails.",
+        "required": [
+          "id",
+          "name",
+          "prefix",
+          "formalityLevel",
+          "totalTasks",
+          "columns"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "formalityLevel": {
+            "type": "string",
+            "enum": [
+              "FORMAL",
+              "LIGHTWEIGHT"
+            ],
+            "description": "FORMAL when project has a description, else LIGHTWEIGHT"
+          },
+          "totalTasks": {
+            "type": "integer",
+            "description": "All tasks in the project (includes workspace children until scope=main is implemented)"
+          },
+          "mainBoardTasks": {
+            "type": "integer",
+            "description": "Phase 2: tasks with parentId IS NULL"
+          },
+          "workspaceContainers": {
+            "type": "integer",
+            "description": "Phase 2: isContainer = true"
+          },
+          "workspaceChildTasks": {
+            "type": "integer",
+            "description": "Phase 2: parentId IS NOT NULL"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectColumnStats"
+            }
+          },
+          "activeSprints": {
+            "type": "integer",
+            "description": "Reserved; currently always 0"
+          },
+          "summaryLine": {
+            "type": "string",
+            "description": "Phase 2: one-line MCP-friendly summary including scope"
+          },
+          "documents": {
+            "$ref": "#/components/schemas/ProjectDocumentStats"
+          },
+          "agentReview": {
+            "$ref": "#/components/schemas/ProjectAgentReviewStats"
+          },
+          "helpRequests": {
+            "$ref": "#/components/schemas/ProjectHelpRequestStats"
+          },
+          "blocked": {
+            "$ref": "#/components/schemas/ProjectBlockedTaskStats"
+          },
+          "workspaces": {
+            "$ref": "#/components/schemas/ProjectWorkspaceStats"
+          }
+        }
+      },
+      "AgentProjectsSummaryResponse": {
+        "type": "object",
+        "required": [
+          "projects"
+        ],
+        "properties": {
+          "projects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectStats"
+            }
+          }
+        }
+      },
+      "ProjectDocumentStats": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "byType": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          }
+        }
+      },
+      "ProjectAgentReviewStats": {
+        "type": "object",
+        "properties": {
+          "taskCount": {
+            "type": "integer"
+          },
+          "identifiers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Capped task identifiers in Agent Review column"
+          }
+        }
+      },
+      "ProjectHelpRequestStats": {
+        "type": "object",
+        "properties": {
+          "open": {
+            "type": "integer"
+          }
+        }
+      },
+      "ProjectBlockedTaskStats": {
+        "type": "object",
+        "properties": {
+          "taskCount": {
+            "type": "integer"
+          }
+        }
+      },
+      "ProjectWorkspaceStats": {
+        "type": "object",
+        "properties": {
+          "activeCount": {
+            "type": "integer"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectWorkspaceDigest"
+            }
+          }
+        }
+      },
+      "ProjectWorkspaceDigest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "identifier": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "childCount": {
+            "type": "integer"
+          }
+        }
+      },
       "ProjectSummary": {
         "type": "object",
-        "description": "Project summary response",
+        "description": "Legacy human project summary response (members + column names). Prefer ProjectStats for new consumers.",
         "properties": {
           "projectName": {
             "type": "string"

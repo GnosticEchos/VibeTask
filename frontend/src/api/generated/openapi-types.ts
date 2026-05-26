@@ -1210,6 +1210,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent/projects/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fleet project statistics (counts only)
+         * @description Returns lightweight per-project task and column counts without task bodies. Agents see active delegations; users see all membership projects. Platform agents may call when the route is on their read allowlist and a user-scoped platform session is present.
+         *
+         *     Query params `scope`, `include`, `workspace`, and `listWorkspaces` are part of the contract for Phase 2 stats; only `projectId` is enforced today.
+         */
+        get: operations["getAgentProjectsSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent/projects/{projectId}/tasks": {
         parameters: {
             query?: never;
@@ -1671,7 +1693,80 @@ export interface components {
             columns?: components["schemas"]["Column"][];
             members?: components["schemas"]["Member"][];
         };
-        /** @description Project summary response */
+        /** @description Per-column task counts in a project stats payload */
+        ProjectColumnStats: {
+            id: number;
+            name: string;
+            /** @description Column workflow role (e.g. AGENT_REVIEW) */
+            roleType?: string | null;
+            /** @description Tasks in this column (all scopes until scope=main is implemented) */
+            taskCount: number;
+            /** @description Phase 2: tasks with parentId IS NULL in this column */
+            taskCountMain?: number;
+            /** @description Phase 2: all tasks in this column regardless of parentId */
+            taskCountAll?: number;
+            color?: string | null;
+        };
+        /** @description Lightweight project statistics (counts only, no task bodies). Used by agent fleet summary and planned human summary routes. Agent responses omit member emails. */
+        ProjectStats: {
+            id: number;
+            name: string;
+            prefix: string;
+            /**
+             * @description FORMAL when project has a description, else LIGHTWEIGHT
+             * @enum {string}
+             */
+            formalityLevel: "FORMAL" | "LIGHTWEIGHT";
+            /** @description All tasks in the project (includes workspace children until scope=main is implemented) */
+            totalTasks: number;
+            /** @description Phase 2: tasks with parentId IS NULL */
+            mainBoardTasks?: number;
+            /** @description Phase 2: isContainer = true */
+            workspaceContainers?: number;
+            /** @description Phase 2: parentId IS NOT NULL */
+            workspaceChildTasks?: number;
+            columns: components["schemas"]["ProjectColumnStats"][];
+            /** @description Reserved; currently always 0 */
+            activeSprints?: number;
+            /** @description Phase 2: one-line MCP-friendly summary including scope */
+            summaryLine?: string;
+            documents?: components["schemas"]["ProjectDocumentStats"];
+            agentReview?: components["schemas"]["ProjectAgentReviewStats"];
+            helpRequests?: components["schemas"]["ProjectHelpRequestStats"];
+            blocked?: components["schemas"]["ProjectBlockedTaskStats"];
+            workspaces?: components["schemas"]["ProjectWorkspaceStats"];
+        };
+        AgentProjectsSummaryResponse: {
+            projects: components["schemas"]["ProjectStats"][];
+        };
+        ProjectDocumentStats: {
+            total?: number;
+            byType?: {
+                [key: string]: number;
+            };
+        };
+        ProjectAgentReviewStats: {
+            taskCount?: number;
+            /** @description Capped task identifiers in Agent Review column */
+            identifiers?: string[];
+        };
+        ProjectHelpRequestStats: {
+            open?: number;
+        };
+        ProjectBlockedTaskStats: {
+            taskCount?: number;
+        };
+        ProjectWorkspaceStats: {
+            activeCount?: number;
+            items?: components["schemas"]["ProjectWorkspaceDigest"][];
+        };
+        ProjectWorkspaceDigest: {
+            id?: number;
+            identifier?: string | null;
+            title?: string | null;
+            childCount?: number;
+        };
+        /** @description Legacy human project summary response (members + column names). Prefer ProjectStats for new consumers. */
         ProjectSummary: {
             projectName?: string;
             projectDescription?: string | null;
@@ -6194,6 +6289,51 @@ export interface operations {
                 content?: never;
             };
             /** @description Failed to list projects */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getAgentProjectsSummary: {
+        parameters: {
+            query?: {
+                /** @description When set, return at most this project if accessible. */
+                projectId?: number;
+                /** @description Task counting scope. `main` excludes workspace children (parentId IS NULL). `all` counts every task. Phase 2: also `workspace:{containerTaskId}`. */
+                scope?: "main" | "all";
+                /** @description Comma-separated optional stat buckets: `documents`, `agentReview`, `helpRequests`, `blocked`, `workspaces`, `workspaces:all`. Phase 2. */
+                include?: string;
+                /** @description Container task identifier or unique title for single-workspace scope. Phase 2. */
+                workspace?: string;
+                /** @description When true, include workspace container digests (same as `include=workspaces`). Phase 2. */
+                listWorkspaces?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Project statistics retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentProjectsSummaryResponse"];
+                };
+            };
+            /** @description Unauthorized - invalid or missing authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Failed to load project summaries */
             500: {
                 headers: {
                     [name: string]: unknown;
