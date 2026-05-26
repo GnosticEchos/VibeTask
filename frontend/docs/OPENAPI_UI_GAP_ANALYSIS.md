@@ -77,7 +77,7 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 | Method | Path | Summary | Notes |
 |--------|------|---------|-------|
 | `PATCH` | `/api/projects/{id}/settings` | Update project settings | **Covered** — column enter/exit policies + default `subBoardOutlineColor` in Project Settings → Columns card |
-| `GET` | `/api/projects/{id}/summary` | Project summary | No summary dashboard |
+| `GET` | `/api/projects/{id}/summary` | Project summary | **Partial** — human route exists; explore uses heavy list; agent `/summary` undocumented in OpenAPI (see [`docs/api/PROJECT_SUMMARY_GAP_ANALYSIS.md`](../../docs/api/PROJECT_SUMMARY_GAP_ANALYSIS.md)) |
 | `DELETE` | `/api/tasks/{id}` | Delete task | OpenAPI summary fixed; still no delete control in UI |
 | `POST` | `/api/tasks/{id}/monitor-pass/{columnId}` | Record monitor pass | Types only |
 | `DELETE` | `/api/tasks/{id}/monitor-pass/{columnId}` | Clear monitor pass | Types only |
@@ -98,6 +98,7 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 | **Tasks — create** | `POST /api/tasks` | **Partial** — optional `isContainer` checkbox; `parentId` still not sent from Add New Task |
 | **Tasks — update** | `PATCH /api/tasks/{id}` | Hub allows `isContainer`, `subBoardOutlineColor`, `parentId`; `TaskDialog` save does not send them |
 | **Plan / sub-board** | `POST .../accept-plan` | Single entry: task dialog after plan doc-link |
+| **Project summaries / workspaces** | Summary endpoints | Explore + agent counts include **all** tasks (workspace children in column totals); main board filters client-side only — see [`docs/api/PROJECT_SUMMARY_GAP_ANALYSIS.md`](../../docs/api/PROJECT_SUMMARY_GAP_ANALYSIS.md#workspaces-sub-boards-and-counting-semantics) |
 | **Documents** | CRUD + search | `deleteDocument` and `useDocumentSearch` exist; `DocsView` does not wire delete or `DocumentSearchOverlay` |
 | **Projects — delete** | `DELETE /api/projects/{id}` | Implemented in settings / explore (easy to miss in spec-only reviews) |
 | **Comments** | `PATCH /api/tasks/comment/{id}` vs `POST .../comments` | UI uses legacy PATCH; both routes exist on hub |
