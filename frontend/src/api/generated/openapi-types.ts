@@ -1232,6 +1232,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent/projects/{projectId}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Single-project statistics (counts only)
+         * @description Returns lightweight stats for one accessible project without task bodies. Requires project access.
+         */
+        get: operations["getAgentProjectSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent/projects/{projectId}/tasks": {
         parameters: {
             query?: never;
@@ -1738,6 +1758,9 @@ export interface components {
         };
         AgentProjectsSummaryResponse: {
             projects: components["schemas"]["ProjectStats"][];
+        };
+        AgentProjectSummaryResponse: {
+            project: components["schemas"]["ProjectStats"];
         };
         ProjectDocumentStats: {
             total?: number;
@@ -6335,6 +6358,59 @@ export interface operations {
             };
             /** @description Failed to load project summaries */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getAgentProjectSummary: {
+        parameters: {
+            query?: {
+                /** @description Task counting scope. */
+                scope?: "main" | "all";
+                /** @description Comma-separated optional stat buckets: documents, agentReview, helpRequests, blocked, workspaces, workspaces:all. */
+                include?: string;
+                /** @description Container identifier or title for workspace-scoped summary (reserved). */
+                workspace?: string;
+                /** @description Alias for including workspace digests. */
+                listWorkspaces?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Project summary retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentProjectSummaryResponse"];
+                };
+            };
+            /** @description Unauthorized - invalid or missing authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden - no access to this project */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

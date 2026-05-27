@@ -11,3 +11,4 @@ pub use crate::tools::find_tools::FindToolsTool;
 pub use crate::tools::governance::EstimateComplexityTool;
 pub use crate::tools::read_project_overview::ReadProjectOverviewTool;
 pub use crate::tools::read_project_state::ReadProjectStateTool;
+pub use crate::tools::read_project_summary::ReadProjectSummaryTool;

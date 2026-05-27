@@ -449,6 +449,32 @@ router.get('/summary', asyncHandler(async (req, res) => {
   return res.json({ projects: filterSummaryByProjectId(summary, projectIdFilter) });
 }));
 
+// GET /api/agent/projects/:projectId/summary - Single-project lightweight summary
+router.get('/:projectId/summary', requireAgentProjectAccess(ProjectAction.VIEW_PROJECT), asyncHandler(async (req, res) => {
+  const auth = (req as any).auth;
+  const projectId = parseInt(String(req.params.projectId), 10);
+
+  if (!auth) {
+    throw new UnauthorizedError('Unauthorized');
+  }
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true, name: true, prefix: true, description: true },
+  });
+
+  if (!project) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+
+  const query = req.query as Record<string, unknown>;
+  const scope = parseSummaryScope(query);
+  const include = parseSummaryIncludeOptions(query);
+  const [summary] = await buildProjectStatsSummary([project], scope, include);
+
+  return res.json({ project: summary });
+}));
+
 // GET /api/agent/projects/:projectId - Get single project
 // NOTE: This route MUST be defined AFTER /summary to avoid "summary" being matched as a projectId
 router.get('/:projectId', requireAgentProjectAccess(ProjectAction.VIEW_PROJECT), asyncHandler(async (req, res) => {

@@ -15,6 +15,7 @@ pub const DELEGATE_AGENT: &str = "delegate_agent";
 pub const FIND_TOOLS: &str = "find_tools";
 pub const READ_PROJECT_STATE: &str = "read_project_state";
 pub const READ_PROJECT_OVERVIEW: &str = "read_project_overview";
+pub const READ_PROJECT_SUMMARY: &str = "read_project_summary";
 
 pub fn platform_tools() -> HashSet<String> {
     [
@@ -32,6 +33,7 @@ pub fn platform_tools() -> HashSet<String> {
         FIND_TOOLS,
         READ_PROJECT_STATE,
         READ_PROJECT_OVERVIEW,
+        READ_PROJECT_SUMMARY,
     ]
     .iter()
     .map(|s| s.to_string())
@@ -62,6 +64,7 @@ pub fn project_delegated_full_catalog(
         FIND_TOOLS,
         READ_PROJECT_STATE,
         READ_PROJECT_OVERVIEW,
+        READ_PROJECT_SUMMARY,
     ] {
         names.insert(t.to_string());
     }
@@ -218,6 +221,7 @@ pub fn tool_keywords() -> Vec<(String, Vec<String>)> {
             "overview".to_string(),
             vec![
                 "read_project_overview".to_string(),
+                "read_project_summary".to_string(),
                 "read_project_state".to_string(),
             ],
         ),

@@ -541,6 +541,76 @@ impl VibeTaskClient {
         self.execute_request(request).await
     }
 
+    /// Get single-project summary stats from /api/agent/projects/{projectId}/summary
+    ///
+    /// If the hub returns 404 (route not deployed yet), falls back to
+    /// `GET /api/agent/projects/summary?projectId=…` which older hubs expose.
+    pub async fn get_project_summary_for_project(
+        &self,
+        api_key: &str,
+        project_id: i32,
+        scope: Option<&str>,
+        include: Option<&str>,
+        list_workspaces: bool,
+    ) -> Result<serde_json::Value, ApiError> {
+        let endpoint = format!("/api/agent/projects/{}/summary", project_id);
+        let mut url = self.build_url(&endpoint)?;
+        Self::append_project_summary_query(&mut url, None, scope, include, list_workspaces);
+
+        let request = self.authenticated_request(reqwest::Method::GET, url, api_key);
+        debug!("Fetching single project summary for {}", project_id);
+        match self.execute_request(request).await {
+            Ok(value) => return Ok(value),
+            Err(ApiError::NotFound) => {
+                debug!(
+                    "Single-project summary route returned 404; retrying fleet summary with projectId={}",
+                    project_id
+                );
+            }
+            Err(err) => return Err(err),
+        }
+
+        let mut fleet_url = self.build_url("/api/agent/projects/summary")?;
+        Self::append_project_summary_query(
+            &mut fleet_url,
+            Some(project_id),
+            scope,
+            include,
+            list_workspaces,
+        );
+        let request = self.authenticated_request(reqwest::Method::GET, fleet_url, api_key);
+        let fleet: serde_json::Value = self.execute_request(request).await?;
+        let project = fleet
+            .get("projects")
+            .and_then(|p| p.as_array())
+            .and_then(|arr| arr.first())
+            .cloned()
+            .ok_or(ApiError::NotFound)?;
+        Ok(serde_json::json!({ "project": project }))
+    }
+
+    fn append_project_summary_query(
+        url: &mut Url,
+        project_id_filter: Option<i32>,
+        scope: Option<&str>,
+        include: Option<&str>,
+        list_workspaces: bool,
+    ) {
+        let mut qp = url.query_pairs_mut();
+        if let Some(pid) = project_id_filter {
+            qp.append_pair("projectId", &pid.to_string());
+        }
+        if let Some(scope) = scope.filter(|s| !s.trim().is_empty()) {
+            qp.append_pair("scope", scope);
+        }
+        if let Some(include) = include.filter(|s| !s.trim().is_empty()) {
+            qp.append_pair("include", include);
+        }
+        if list_workspaces {
+            qp.append_pair("listWorkspaces", "true");
+        }
+    }
+
     /// Get project tasks
     pub async fn get_project_tasks(
         &self,

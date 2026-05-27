@@ -3,7 +3,7 @@ use crate::error::ConfigError;
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use tempfile::NamedTempFile;
 use tokio::fs;
 use tracing::{info, warn};
@@ -121,23 +121,7 @@ impl SecureKeyManager {
         let mut seen = HashSet::new();
 
         let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-        let mut dirs_to_probe = Vec::new();
-
-        if let Ok(dir) = std::env::var("VIBETASK_AGENT_ENV_DIR") {
-            dirs_to_probe.push(PathBuf::from(dir));
-        }
-        dirs_to_probe.extend(Self::extra_env_search_roots());
-        dirs_to_probe.push(cwd.clone());
-
-        // Probe likely workspace locations for existing development key files.
-        for ancestor in cwd.ancestors().take(8) {
-            dirs_to_probe.push(ancestor.to_path_buf());
-            dirs_to_probe.push(ancestor.join("app"));
-            dirs_to_probe.push(ancestor.join("app/crates/vibetask-app"));
-            dirs_to_probe.push(ancestor.join("crates/vibetask-mcp"));
-            dirs_to_probe.push(ancestor.join("crates/vibetask-mcp/examples"));
-            dirs_to_probe.push(ancestor.join("crates/vibetask-app"));
-        }
+        let dirs_to_probe = Self::test_env_probe_dirs(cwd.clone());
 
         for dir in dirs_to_probe {
             let path = dir.join(&file_name);
@@ -146,7 +130,71 @@ impl SecureKeyManager {
             }
         }
 
+        if cfg!(test) {
+            return candidates;
+        }
+
+        // Probe likely workspace locations for existing development key files.
+        for ancestor in cwd.ancestors().take(8) {
+            let candidate_dirs = [
+                ancestor.to_path_buf(),
+                ancestor.join("app"),
+                ancestor.join("app/crates/vibetask-app"),
+                ancestor.join("crates/vibetask-mcp"),
+                ancestor.join("crates/vibetask-mcp/examples"),
+                ancestor.join("crates/vibetask-app"),
+            ];
+            for dir in candidate_dirs {
+                let path = dir.join(&file_name);
+                if seen.insert(path.clone()) {
+                    candidates.push(path);
+                }
+            }
+        }
+
         candidates
+    }
+
+    /// Stable directory for `.env.<agent>` files during `cargo test`.
+    /// Avoids flaky reads when parallel tests change process CWD or register temp dirs
+    /// that are deleted when those tests finish.
+    fn test_keys_root() -> PathBuf {
+        static ROOT: OnceLock<PathBuf> = OnceLock::new();
+        ROOT.get_or_init(|| {
+            let dir = std::env::temp_dir()
+                .join(format!("vibetask-agent-test-keys-{}", std::process::id()));
+            let _ = std::fs::create_dir_all(&dir);
+            dir
+        })
+        .clone()
+    }
+
+    fn test_env_probe_dirs(cwd: PathBuf) -> Vec<PathBuf> {
+        let mut dirs_to_probe = Vec::new();
+        let mut seen = HashSet::new();
+
+        let mut push_dir = |dir: PathBuf| {
+            if seen.insert(dir.clone()) {
+                dirs_to_probe.push(dir);
+            }
+        };
+
+        if cfg!(test) {
+            push_dir(Self::test_keys_root());
+        }
+
+        if let Ok(dir) = std::env::var("VIBETASK_AGENT_ENV_DIR") {
+            push_dir(PathBuf::from(dir));
+        }
+        for root in Self::extra_env_search_roots() {
+            push_dir(root);
+        }
+
+        if !cfg!(test) {
+            push_dir(cwd);
+        }
+
+        dirs_to_probe
     }
 
     async fn read_key_from_env_file(path: &Path) -> Result<Option<String>, ConfigError> {
@@ -208,10 +256,35 @@ impl SecureKeyManager {
         if cfg!(test) {
             let env_file = format!(".env.{}", agent_name.to_lowercase());
             let content = format!("VIBETASK_API_KEY={}\n", api_key);
-            fs::write(&env_file, content).await.map_err(|e| {
-                ConfigError::WriteError(format!("Failed to write test env file: {}", e))
-            })?;
-            return Ok(());
+            let mut wrote_any = false;
+            let mut write_errors: Vec<String> = Vec::new();
+
+            // Write to CWD and any registered/env override roots so retrieval stays stable
+            // even if other tests mutate process CWD.
+            let probe_dirs = Self::test_env_probe_dirs(
+                std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
+            );
+
+            let mut seen = HashSet::new();
+            for dir in probe_dirs {
+                let path = dir.join(&env_file);
+                if !seen.insert(path.clone()) {
+                    continue;
+                }
+                match fs::write(&path, &content).await {
+                    Ok(_) => wrote_any = true,
+                    Err(err) => write_errors.push(format!("{} ({})", path.display(), err)),
+                }
+            }
+
+            if wrote_any {
+                return Ok(());
+            }
+
+            return Err(ConfigError::WriteError(format!(
+                "Failed to write test env file to any candidate path: {}",
+                write_errors.join("; ")
+            )));
         }
 
         use keyring::Entry;
@@ -340,10 +413,24 @@ impl SecureKeyManager {
     pub async fn remove_key(agent_name: &str) -> Result<(), ConfigError> {
         if cfg!(test) {
             let env_file = format!(".env.{}", agent_name.to_lowercase());
-            if tokio::fs::metadata(&env_file).await.is_ok() {
-                tokio::fs::remove_file(&env_file).await.map_err(|e| {
-                    ConfigError::WriteError(format!("Failed to remove test env file: {}", e))
-                })?;
+            let probe_dirs = Self::test_env_probe_dirs(
+                std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
+            );
+            let mut seen = HashSet::new();
+            for dir in probe_dirs {
+                let path = dir.join(&env_file);
+                if !seen.insert(path.clone()) {
+                    continue;
+                }
+                if tokio::fs::metadata(&path).await.is_ok() {
+                    tokio::fs::remove_file(&path).await.map_err(|e| {
+                        ConfigError::WriteError(format!(
+                            "Failed to remove test env file {}: {}",
+                            path.display(),
+                            e
+                        ))
+                    })?;
+                }
             }
             return Ok(());
         }
@@ -472,26 +559,13 @@ impl SecureKeyManager {
 
     /// List all stored agent keys (names only, not the actual keys)
     pub async fn list_stored_agents() -> Result<Vec<String>, ConfigError> {
+        if cfg!(test) {
+            return Self::list_stored_agents_from_env_files().await;
+        }
+
         #[cfg(debug_assertions)]
         {
-            // Development: List .env files
-            let mut agents = Vec::new();
-            let mut entries = tokio::fs::read_dir(".")
-                .await
-                .map_err(|e| ConfigError::ReadError(format!("Failed to read directory: {}", e)))?;
-
-            while let Some(entry) = entries.next_entry().await.map_err(|e| {
-                ConfigError::ReadError(format!("Failed to read directory entry: {}", e))
-            })? {
-                if let Some(file_name) = entry.file_name().to_str() {
-                    if file_name.starts_with(".env.") && file_name != ".env" {
-                        let agent_name = file_name.strip_prefix(".env.").unwrap();
-                        agents.push(agent_name.to_string());
-                    }
-                }
-            }
-
-            Ok(agents)
+            Self::list_stored_agents_from_env_files().await
         }
 
         #[cfg(not(debug_assertions))]
@@ -501,6 +575,37 @@ impl SecureKeyManager {
             warn!("Listing stored agents not supported in production keyring mode");
             Ok(Vec::new())
         }
+    }
+
+    async fn list_stored_agents_from_env_files() -> Result<Vec<String>, ConfigError> {
+        let mut agents = HashSet::new();
+        let probe_dirs = Self::test_env_probe_dirs(
+            std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
+        );
+        let mut seen_dirs = HashSet::new();
+        for dir in probe_dirs {
+            if !seen_dirs.insert(dir.clone()) {
+                continue;
+            }
+            let mut entries = match tokio::fs::read_dir(&dir).await {
+                Ok(entries) => entries,
+                Err(_) => continue,
+            };
+            while let Some(entry) = entries.next_entry().await.map_err(|e| {
+                ConfigError::ReadError(format!("Failed to read directory entry: {}", e))
+            })? {
+                if let Some(file_name) = entry.file_name().to_str() {
+                    if file_name.starts_with(".env.") && file_name != ".env" {
+                        let agent_name = file_name.strip_prefix(".env.").unwrap();
+                        agents.insert(agent_name.to_string());
+                    }
+                }
+            }
+        }
+
+        let mut sorted: Vec<String> = agents.into_iter().collect();
+        sorted.sort();
+        Ok(sorted)
     }
 }
 
@@ -899,25 +1004,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_list_stored_agents() {
-        // This test only works in debug mode with .env files
-        #[cfg(debug_assertions)]
-        {
-            let agent1 = "test_list_agent1";
-            let agent2 = "test_list_agent2";
-            let key = "test-key-for-listing";
+        let agent1 = "test_list_agent1";
+        let agent2 = "test_list_agent2";
+        let key = "test-key-for-listing";
 
-            // Store keys for two agents
-            SecureKeyManager::store_key(agent1, key).await.unwrap();
-            SecureKeyManager::store_key(agent2, key).await.unwrap();
+        SecureKeyManager::store_key(agent1, key).await.unwrap();
+        SecureKeyManager::store_key(agent2, key).await.unwrap();
 
-            // List agents
-            let agents = SecureKeyManager::list_stored_agents().await.unwrap();
-            assert!(agents.contains(&agent1.to_string()));
-            assert!(agents.contains(&agent2.to_string()));
+        let agents = SecureKeyManager::list_stored_agents().await.unwrap();
+        assert!(agents.contains(&agent1.to_string()));
+        assert!(agents.contains(&agent2.to_string()));
 
-            // Clean up
-            SecureKeyManager::remove_key(agent1).await.unwrap();
-            SecureKeyManager::remove_key(agent2).await.unwrap();
-        }
+        SecureKeyManager::remove_key(agent1).await.unwrap();
+        SecureKeyManager::remove_key(agent2).await.unwrap();
     }
 }

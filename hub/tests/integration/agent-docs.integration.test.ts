@@ -227,6 +227,67 @@ describe('Agent docs/doc-links/summary endpoints', () => {
     });
   });
 
+  describe('GET /api/agent/projects/:projectId/summary', () => {
+    it('returns 401 without credentials', async () => {
+      const res = await request(testApp).get('/api/agent/projects/1/summary');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 403 when delegated agent lacks project access', async () => {
+      const project = await createTestProject(userId, { name: 'Single No Access', prefix: 'SNA' });
+      const other = await createTestProject(userId, { name: 'Other Project', prefix: 'OTH2' });
+      const { rawKey } = await createAgentWithDelegation(other.id);
+
+      const res = await request(testApp)
+        .get(`/api/agent/projects/${project.id}/summary`)
+        .set('x-agent-api-key', rawKey);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('returns single project summary with include fields', async () => {
+      const project = await createTestProject(userId, { name: 'Single Summary', prefix: 'SSM' });
+      const todo = await testPrisma.projectColumn.create({
+        data: { projectId: project.id, name: 'To Do', order: 1 },
+      });
+      const review = await testPrisma.projectColumn.create({
+        data: { projectId: project.id, name: 'Agent Review', order: 2, roleType: 'AGENT_REVIEW' },
+      });
+      const container = await createTestTask(project.id, userId, 'SSM', { projectColumnId: todo.id });
+      await testPrisma.task.update({
+        where: { id: container.id },
+        data: { isContainer: true },
+      });
+      const child = await createTestTask(project.id, userId, 'SSM', { projectColumnId: todo.id });
+      await testPrisma.task.update({
+        where: { id: child.id },
+        data: { parentId: container.id },
+      });
+      await createTestTask(project.id, userId, 'SSM', { projectColumnId: review.id });
+
+      await testPrisma.projectDocument.create({
+        data: {
+          projectId: project.id,
+          title: 'Spec',
+          content: 'Spec content',
+          docType: 'SPECIFICATION',
+          createdById: userId,
+        },
+      });
+
+      const res = await request(testApp)
+        .get(`/api/agent/projects/${project.id}/summary?scope=main&include=documents,agentReview,workspaces`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.project.id).toBe(project.id);
+      expect(res.body.project.documents.total).toBe(1);
+      expect(res.body.project.agentReview.taskCount).toBe(1);
+      expect(res.body.project.workspaces.activeCount).toBe(1);
+      expect(Array.isArray(res.body.project.columns)).toBe(true);
+    });
+  });
+
   describe('GET /api/agent/projects/:projectId/docs', () => {
     it('returns 401 without credentials', async () => {
       const res = await request(testApp).get('/api/agent/projects/1/docs');

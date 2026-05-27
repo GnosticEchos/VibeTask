@@ -36,6 +36,7 @@ All agent endpoints are under `/api/agent/` and require the `x-agent-api-key` he
 |--------|------|-------------|
 | `GET` | `/api/agent/projects` | List delegated projects |
 | `GET` | `/api/agent/projects/summary` | Fleet project stats (`ProjectStats`); query `projectId` filters one project; `scope`/`include`/`workspace` documented for Phase 2 |
+| `GET` | `/api/agent/projects/:projectId/summary` | Single-project stats (`ProjectStats`) with optional `scope`/`include` |
 | `GET` | `/api/agent/projects/:projectId` | Single project details |
 
 ### Tasks

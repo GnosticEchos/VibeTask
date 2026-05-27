@@ -5756,6 +5756,101 @@
         "operationId": "getAgentProjectsSummary"
       }
     },
+    "/api/agent/projects/{projectId}/summary": {
+      "get": {
+        "tags": [
+          "Agent API"
+        ],
+        "summary": "Single-project statistics (counts only)",
+        "description": "Returns lightweight stats for one accessible project without task bodies. Requires project access.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "agentAuth": []
+          },
+          {
+            "platformSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Project ID"
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "main",
+              "enum": [
+                "main",
+                "all"
+              ]
+            },
+            "description": "Task counting scope."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated optional stat buckets: documents, agentReview, helpRequests, blocked, workspaces, workspaces:all."
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Container identifier or title for workspace-scoped summary (reserved)."
+          },
+          {
+            "name": "listWorkspaces",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Alias for including workspace digests."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project summary retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProjectSummaryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing authentication"
+          },
+          "403": {
+            "description": "Forbidden - no access to this project"
+          },
+          "404": {
+            "description": "Project not found"
+          }
+        },
+        "operationId": "getAgentProjectSummary"
+      }
+    },
     "/api/agent/projects/{projectId}/tasks": {
       "get": {
         "tags": [
@@ -7452,6 +7547,17 @@
             "items": {
               "$ref": "#/components/schemas/ProjectStats"
             }
+          }
+        }
+      },
+      "AgentProjectSummaryResponse": {
+        "type": "object",
+        "required": [
+          "project"
+        ],
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/ProjectStats"
           }
         }
       },
