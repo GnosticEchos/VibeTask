@@ -155,6 +155,40 @@ describe('Agent docs/doc-links/summary endpoints', () => {
       expect(allDone.taskCount).toBe(1);
     });
 
+    it('counts workspace child tasks in Agent Review column on main scope (board parity)', async () => {
+      const project = await createTestProject(userId, { name: 'Review Scope', prefix: 'REV' });
+      const todo = await testPrisma.projectColumn.create({
+        data: { projectId: project.id, name: 'To Do', order: 1 },
+      });
+      const review = await testPrisma.projectColumn.create({
+        data: { projectId: project.id, name: 'Agent Review', order: 2, roleType: 'AGENT_REVIEW' },
+      });
+
+      const container = await createTestTask(project.id, userId, 'REV', { projectColumnId: todo.id });
+      await testPrisma.task.update({
+        where: { id: container.id },
+        data: { isContainer: true },
+      });
+      const nestedReview = await createTestTask(project.id, userId, 'REV', { projectColumnId: review.id });
+      await testPrisma.task.update({
+        where: { id: nestedReview.id },
+        data: { parentId: container.id },
+      });
+
+      const res = await request(testApp)
+        .get('/api/agent/projects/summary?scope=main&projectId=' + project.id)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      const summary = (res.body.projects as Array<any>)[0];
+      const reviewCol = summary.columns.find((c: any) => c.id === review.id);
+      expect(reviewCol.taskCountMain).toBe(1);
+      expect(reviewCol.taskCount).toBe(1);
+      expect(reviewCol.taskCountAll).toBe(1);
+      // Container on main board (todo) + nested review task visible in Agent Review column
+      expect(summary.mainBoardTasks).toBe(2);
+    });
+
     it('supports include buckets for documents, agent review, blocked, help requests, and workspaces', async () => {
       const project = await createTestProject(userId, { name: 'Include Summary', prefix: 'INC' });
       const todo = await testPrisma.projectColumn.create({

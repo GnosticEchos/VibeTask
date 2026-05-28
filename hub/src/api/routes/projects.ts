@@ -5,7 +5,8 @@
  * - GET /api/projects - Get list of user's projects
  * - POST /api/projects - Create a new project
  * - GET /api/projects/:id - Get project data with columns and tasks
- * - GET /api/projects/:id/summary - Get project summary
+ * - GET /api/projects/summary - Fleet ProjectStats for current user's memberships
+ * - GET /api/projects/:id/summary - ProjectStats + members for one project
  * - PATCH /api/projects/:id - Update project data
  * - DELETE /api/projects/:id - Delete a project
  * - GET /api/projects/:id/board - Get complete board data
@@ -32,6 +33,14 @@ import { paginatedResponse } from '../../validation/schemas/common.schemas.js';
 import { checkProjectMembership } from '../../infrastructure/auth/project-role-check.js';
 import { getTemplateById, listTemplates } from '../../config/project-templates.js';
 import { readDefaultWorkspaceOutlineColor } from '../../services/workspace-outline-color.js';
+import {
+  buildProjectStatsSummary,
+  filterSummaryByProjectId,
+  parseOptionalProjectIdFilter,
+  parseSummaryIncludeOptions,
+  parseSummaryScope,
+  parseWorkspaceScopeSelector,
+} from '../../services/project-stats-summary.js';
 
 const router = Router();
 
@@ -193,6 +202,41 @@ router.post('/', requireAuth, validateBody(createProjectSchema), sanitize(['name
   res.status(201).json(transformProject(project));
 }));
 
+// GET /api/projects/summary - Fleet ProjectStats for current user's memberships (same query semantics as agent fleet summary)
+// NOTE: Must be registered before /:id so "summary" is not captured as a project id.
+router.get('/summary', requireAuth, asyncHandler(async (req, res) => {
+  const user = req.user!;
+
+  const memberships = await prisma.projectUser.findMany({
+    where: { userId: user.id },
+    select: {
+      project: {
+        select: {
+          id: true,
+          name: true,
+          prefix: true,
+          description: true,
+        },
+      },
+    },
+  });
+
+  const projects = memberships.map((m) => ({
+    id: m.project.id,
+    name: m.project.name,
+    prefix: m.project.prefix,
+    description: m.project.description,
+  }));
+
+  const query = req.query as Record<string, unknown>;
+  const scope = parseSummaryScope(query);
+  const workspaceScopeSelector = parseWorkspaceScopeSelector(query);
+  const include = parseSummaryIncludeOptions(query);
+  const summary = await buildProjectStatsSummary(projects, scope, include, workspaceScopeSelector);
+  const projectIdFilter = parseOptionalProjectIdFilter(query);
+  res.json({ projects: filterSummaryByProjectId(summary, projectIdFilter) });
+}));
+
 // GET /api/projects/:id - Get project data with columns and tasks
 router.get('/:id', requireAuth, validateParams(projectIdParamSchema), asyncHandler(async (req, res) => {
   const user = req.user!;
@@ -284,7 +328,7 @@ router.get('/:id', requireAuth, validateParams(projectIdParamSchema), asyncHandl
   });
 }));
 
-// GET /api/projects/:id/summary - Get project summary
+// GET /api/projects/:id/summary - ProjectStats + members (human; same stats engine as agent summary)
 router.get('/:id/summary', requireAuth, validateParams(projectIdParamSchema), asyncHandler(async (req, res) => {
   const params = getValidatedParams<{ id: number }>(req);
   if (!params) {
@@ -295,11 +339,6 @@ router.get('/:id/summary', requireAuth, validateParams(projectIdParamSchema), as
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: {
-      columns: {
-        include: {
-          tasks: true,
-        },
-      },
       members: {
         include: {
           user: { select: { id: true, name: true, surname: true, email: true, avatarUrl: true } },
@@ -312,20 +351,41 @@ router.get('/:id/summary', requireAuth, validateParams(projectIdParamSchema), as
     throw new NotFoundError('Project');
   }
 
+  const membership = project.members.find((m) => m.userId === req.user!.id);
+  if (!membership) {
+    throw new ForbiddenError('Access denied');
+  }
+
+  const query = req.query as Record<string, unknown>;
+  const scope = parseSummaryScope(query);
+  const workspaceScopeSelector = parseWorkspaceScopeSelector(query);
+  const include = parseSummaryIncludeOptions(query);
+
+  const [stats] = await buildProjectStatsSummary(
+    [
+      {
+        id: project.id,
+        name: project.name,
+        prefix: project.prefix,
+        description: project.description,
+      },
+    ],
+    scope,
+    include,
+    workspaceScopeSelector,
+  );
+
+  const members = project.members.map((m) => ({
+    id: m.user.id,
+    name: `${m.user.name} ${m.user.surname}`,
+    email: m.user.email,
+    avatarUrl: m.user.avatarUrl,
+    role: m.role,
+  }));
+
   res.json({
-    projectName: project.name,
-    projectDescription: project.description,
-    members: project.members.map(m => ({
-      id: m.user.id,
-      name: `${m.user.name} ${m.user.surname}`,
-      email: m.user.email,
-      avatarUrl: m.user.avatarUrl,
-      role: m.role,
-    })),
-    columnSummary: project.columns.map(col => ({
-      columnName: col.name,
-      totalTasks: col.tasks.length,
-    })),
+    project: stats,
+    members,
   });
 }));
 

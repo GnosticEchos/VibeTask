@@ -4,7 +4,7 @@ This document maps **hub OpenAPI capabilities** to **what the Vue frontend actua
 
 **Spec source:** `hub/src/openapi.json` (canonical), copied to `frontend/openapi.json` via `npm run openapi:sync` from `frontend/` or `npm run openapi:sync-fe` from `hub/`.
 
-**Last reviewed:** 2026-05-19 (code + GitNexus symbol traces; narrative docs may lag).
+**Last reviewed:** 2026-05-28 (Explore summary, workspace scope, Task dialog workspace fields).
 
 ---
 
@@ -22,15 +22,15 @@ Human-facing OpenAPI: **~86 operations** across **75 paths**. Agent MCP surface:
 
 ---
 
-## `POST /api/tasks` and `isContainer` (fixed 2026-05-19)
+## `POST /api/tasks` and workspace fields
 
-Hub create now persists `isContainer` and `subBoardOutlineColor`; `parentId` + `isContainer` together are rejected. OpenAPI documents these fields on `POST /api/tasks`.
+Hub create persists `isContainer`, `parentId`, and `subBoardOutlineColor` (with validation when `parentId` + `isContainer` conflict).
 
-**Add New Task** exposes a **workspace container** checkbox (`isContainer: true`). Accept-plan and `PATCH` remain alternate paths. Sub-boards are still container tasks plus optional `parentId` children — not a separate REST resource.
+**Add New Task** exposes a **Create as workspace** checkbox (`isContainer: true`), optional **Workspace** membership dropdown on the main board, and sends **`parentId`** when the route is a workspace board (`?workspace=` on main board or **SubBoard** `parentId` param).
 
 ---
 
-## Sub-boards (container tasks)
+## Workspaces (container tasks)
 
 ### API model
 
@@ -39,27 +39,31 @@ Hub create now persists `isContainer` and `subBoardOutlineColor`; `parentId` + `
 | Container | Task with `isContainer: true` |
 | Child task | Task with `parentId` set to container id |
 | Plan expansion | `accept-plan` parses `##` / `###` headings from linked `IMPLEMENTATION_PLAN` doc |
-| Workspace list | `GET /api/projects/{id}/active-workspaces` — containers with metadata |
-| Sub-board board | `GET /api/projects/{id}/board?parentId={containerId}` |
+| Workspace list | `GET /api/projects/{id}/active-workspaces` |
+| Workspace board | `GET /api/projects/{id}/board?parentId={containerId}` |
+| Fleet stats | `GET /api/projects/summary?scope=main\|all\|workspace:…` → `ProjectStats` |
 
 ### UI coverage
 
 | User intent | API | UI status |
 |-------------|-----|-----------|
-| Switch between sub-boards | `GET .../active-workspaces` | **Covered** — `ProjectView`, `BoardTopbar` |
-| View sub-board kanban | `GET .../board?parentId=` | **Covered** — `SubBoardView` |
-| Accept plan → create container + children | `POST .../accept-plan/{taskId}` | **Partial** — `TaskDialog` only; requires `IMPLEMENTATION_PLAN` doc-link and Maintainer+ |
-| “New sub-board” / mark task as container | `POST` with `isContainer` | **Partial** — Add New Task checkbox; accept-plan still primary for spawning children |
-| Add child task on workspace board | `POST /api/tasks` with `parentId` | **Partial** — `AddNewTaskDialog` sends `parentId` when `?workspace=` is set |
-| Edit outline color | `subBoardOutlineColor` on task / project settings | **Partial** — project default in Settings; per-task edit in Task dialog still missing |
-| Column protection on workspace | `PATCH /api/projects/{id}/settings` | **Covered** — Project Settings → Columns: policies + default workspace color |
+| Switch between workspaces | `GET .../active-workspaces` | **Covered** — `ProjectView`, `BoardTopbar` |
+| View workspace kanban | `GET .../board?parentId=` | **Covered** — `SubBoardView`, `?workspace=` on main board |
+| Accept plan → container + children | `POST .../accept-plan/{taskId}` | **Partial** — `TaskDialog`; requires `IMPLEMENTATION_PLAN` doc-link and Maintainer+ |
+| New workspace / mark as container | `POST` with `isContainer` | **Covered** — **New workspace** tab, Add New Task checkbox, Task dialog checkbox |
+| Add child on workspace board | `POST /api/tasks` with `parentId` | **Covered** — `AddNewTaskDialog` when `?workspace=` or SubBoard route |
+| Edit outline color | `subBoardOutlineColor` on task / settings | **Covered** — project default in Settings; per-task in Task dialog for workspace roots |
+| Column protection on workspace | `PATCH /api/projects/{id}/settings` | **Covered** — Project Settings → Columns |
+| Explore column totals | `GET /api/projects/summary` | **Covered** — `ExploreProjectsView`, **Main board** / **All tasks** toggle (`scope=main\|all`) |
+| Assign membership without drag | `PATCH` `parentId` | **Covered** — Task dialog **Workspace** dropdown |
 
 ```mermaid
 flowchart LR
   subgraph ui [Frontend today]
-    A[Add task] --> B[Link IMPLEMENTATION_PLAN]
+    A[Add task / New workspace] --> B[Optional plan doc-link]
     B --> C[Accept plan in TaskDialog]
-    C --> D[View sub-board]
+    C --> D[View workspace board]
+    A --> D
   end
   subgraph api [Hub]
     C --> E[POST accept-plan]
@@ -76,9 +80,8 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 
 | Method | Path | Summary | Notes |
 |--------|------|---------|-------|
-| `PATCH` | `/api/projects/{id}/settings` | Update project settings | **Covered** — column enter/exit policies + default `subBoardOutlineColor` in Project Settings → Columns card |
-| `GET` | `/api/projects/{id}/summary` | Project summary | **Partial** — human route exists; explore uses heavy list; agent `/summary` undocumented in OpenAPI (see [`docs/api/PROJECT_SUMMARY_GAP_ANALYSIS.md`](../../docs/api/PROJECT_SUMMARY_GAP_ANALYSIS.md)) |
-| `DELETE` | `/api/tasks/{id}` | Delete task | OpenAPI summary fixed; still no delete control in UI |
+| `GET` | `/api/projects/{id}/summary` | Project stats + members | **No UI** — fleet Explore uses `/api/projects/summary` only |
+| `DELETE` | `/api/tasks/{id}` | Delete task | OpenAPI documented; no delete control in UI |
 | `POST` | `/api/tasks/{id}/monitor-pass/{columnId}` | Record monitor pass | Types only |
 | `DELETE` | `/api/tasks/{id}/monitor-pass/{columnId}` | Clear monitor pass | Types only |
 | `POST` | `/api/tasks/{id}/monitor-reject/{columnId}` | Reject to previous column | Types only |
@@ -95,12 +98,11 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 
 | Area | Operation(s) | Gap detail |
 |------|----------------|------------|
-| **Tasks — create** | `POST /api/tasks` | **Partial** — optional `isContainer` checkbox; `parentId` still not sent from Add New Task |
-| **Tasks — update** | `PATCH /api/tasks/{id}` | Hub allows `isContainer`, `subBoardOutlineColor`, `parentId`; `TaskDialog` save does not send them |
-| **Plan / sub-board** | `POST .../accept-plan` | Single entry: task dialog after plan doc-link |
-| **Project summaries / workspaces** | Summary endpoints | Explore + agent counts include **all** tasks (workspace children in column totals); main board filters client-side only — see [`docs/api/PROJECT_SUMMARY_GAP_ANALYSIS.md`](../../docs/api/PROJECT_SUMMARY_GAP_ANALYSIS.md#workspaces-sub-boards-and-counting-semantics) |
+| **Plan / workspace** | `POST .../accept-plan` | Single entry: task dialog after plan doc-link |
+| **Workspaces — UX** | `parentId` | No drag-onto-workspace; dropdown + create-on-workspace-board only |
+| **Project summaries** | `scope=workspace:…` | API supports workspace-scoped stats; Explore uses `main` / `all` only |
 | **Documents** | CRUD + search | `deleteDocument` and `useDocumentSearch` exist; `DocsView` does not wire delete or `DocumentSearchOverlay` |
-| **Projects — delete** | `DELETE /api/projects/{id}` | Implemented in settings / explore (easy to miss in spec-only reviews) |
+| **Projects — delete** | `DELETE /api/projects/{id}` | Implemented in settings / explore |
 | **Comments** | `PATCH /api/tasks/comment/{id}` vs `POST .../comments` | UI uses legacy PATCH; both routes exist on hub |
 
 ---
@@ -110,8 +112,8 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 | Domain | Primary UI |
 |--------|------------|
 | Auth | `LoginView`, `SignUpView`, session restore |
-| Projects | Explore, board, settings, create/delete |
-| Tasks | Board, backlog, dialogs, drag → `POST .../move` |
+| Projects | Explore (stats summary), board, settings, create/delete |
+| Tasks | Board, backlog, dialogs, drag → `POST .../move`, relations, workspace fields on PATCH |
 | Columns | Board, workspace settings |
 | Members | Project members, invite, role patch |
 | Search | `SearchInput`, overlays |
@@ -126,46 +128,44 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 
 | Issue | Status |
 |-------|--------|
-| Incomplete `POST /api/tasks` body | **Fixed** — documents `isContainer`, `parentId`, `subBoardOutlineColor` |
+| Incomplete `POST /api/tasks` body | **Fixed** — `isContainer`, `parentId`, `subBoardOutlineColor` |
+| Human `GET /projects/summary` → `ProjectStats` | **Fixed** — legacy `ProjectSummary` removed |
 | Wrong `DELETE /api/tasks/{id}` summary | **Fixed** — “Delete task” |
-| Missing `GET /projects/templates`, `GET /projects/{id}/delegates` | **Fixed** in spec |
-| Duplicate comment paths | Still two routes; UI uses legacy PATCH |
-| Board payload missing relations | **Fixed** — `GET .../board` includes `relationMode`, `relationId`, `relatedTask` |
+| Board payload missing relations | **Fixed** — `GET .../board` includes relation fields |
 
 ---
 
-## Relations and board UX (2026-05-19)
+## Relations and board UX
 
 | Capability | Status |
 |------------|--------|
 | Relation badge on board cards | **Covered** — `TaskTile` |
 | Block Done when blocked-by open | **Covered** — hub `task-relation-policy` + board toast on 403 |
-| Remove invalid “Duplicated by” create option | **Fixed** — enum is `duplicate-of` only |
+| WebSocket partial upserts | **Covered** — `mergeBoardTaskFromWebsocket` preserves relation chips |
 
 ---
 
 ## Agent API (by design)
 
-**21 operations** under `/api/agent/*` for **VibeTask MCP** / CLI (`app/crates/vibetask-mcp`). Not expected in the SPA. See [`docs/user/agents.md`](../../docs/user/agents.md) for platform session vs delegate agents.
+**21 operations** under `/api/agent/*` for **VibeTask MCP** / CLI (`app/crates/vibetask-mcp`). Not expected in the SPA. See [`docs/user/agents.md`](../../docs/user/agents.md).
 
 ---
 
 ## Verification tips
 
 1. Refresh spec: `cd frontend && npm run openapi:sync`
-2. Regenerate types: `cd frontend && npm run openapi:generate` (if scripted)
-3. For behavior vs docs: prefer **GitNexus** `context` / `impact` on API wrappers (e.g. `acceptPlan`, `getActiveWorkspaces`) and read hub route handlers under `hub/src/api/routes/`
-4. Do not rely on this file alone after large API changes — re-run a gap pass against `openapi.json` and `frontend/src/api/`
+2. Regenerate types: `cd frontend && npm run openapi:gen-types`
+3. For behavior vs docs: prefer **GitNexus** `context` / `impact` on route handlers under `hub/src/api/routes/`
+4. Re-run this pass after large API or Explore/workspace changes
 
 ---
 
 ## Suggested implementation priority (product)
 
-1. Workspace: per-task `subBoardOutlineColor` in Task dialog; drag-into-workspace (v1 uses dropdown)
-2. Documents: wire delete + search overlay in Docs view (gap matrix)
-3. Documents: wire search overlay and delete in `DocsView`
-4. Monitor pass/reject and task delete if review-column workflow is required
-5. TaskDialog PATCH: expose `isContainer` / `subBoardOutlineColor` for edit-in-place
+1. **Documents:** wire delete + search overlay in `DocsView`
+2. **Workspaces:** drag-into-workspace for membership (v1 uses dialog dropdown)
+3. **Explore:** optional workspace-scoped summary when drilling into one workspace
+4. Monitor pass/reject and task delete if review-column workflow needs SPA controls
 
 ---
 

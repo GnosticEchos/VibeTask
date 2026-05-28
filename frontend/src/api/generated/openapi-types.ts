@@ -147,6 +147,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fleet project statistics (counts only)
+         * @description Returns `ProjectStats` for each project the authenticated user is a member of. Same query semantics as `GET /api/agent/projects/summary` for users (`projectId`, `scope`, `include`, `workspace`, `listWorkspaces`).
+         */
+        get: operations["listProjectsFleetSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{id}": {
         parameters: {
             query?: never;
@@ -173,7 +193,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get project summary */
+        /** Get project statistics and members */
         get: operations["listProjectsSummary"];
         put?: never;
         post?: never;
@@ -1732,6 +1752,7 @@ export interface components {
             id: number;
             name: string;
             prefix: string;
+            description?: string | null;
             /**
              * @description FORMAL when project has a description, else LIGHTWEIGHT
              * @enum {string}
@@ -1762,6 +1783,17 @@ export interface components {
         AgentProjectSummaryResponse: {
             project: components["schemas"]["ProjectStats"];
         };
+        HumanProjectSummaryMember: {
+            id?: number;
+            name?: string;
+            email?: string;
+            avatarUrl?: string | null;
+            role?: string;
+        };
+        HumanProjectDetailSummaryResponse: {
+            project: components["schemas"]["ProjectStats"];
+            members: components["schemas"]["HumanProjectSummaryMember"][];
+        };
         ProjectDocumentStats: {
             total?: number;
             byType?: {
@@ -1788,16 +1820,6 @@ export interface components {
             identifier?: string | null;
             title?: string | null;
             childCount?: number;
-        };
-        /** @description Legacy human project summary response (members + column names). Prefer ProjectStats for new consumers. */
-        ProjectSummary: {
-            projectName?: string;
-            projectDescription?: string | null;
-            members?: components["schemas"]["Member"][];
-            columnSummary?: {
-                columnName?: string;
-                totalTasks?: number;
-            }[];
         };
         /** @description Complete board data with columns, tasks, and members */
         BoardResponse: {
@@ -2621,6 +2643,55 @@ export interface operations {
             };
         };
     };
+    listProjectsFleetSummary: {
+        parameters: {
+            query?: {
+                /** @description When set, return at most this project if the user is a member. */
+                projectId?: number;
+                /** @description Task counting scope. `main` excludes workspace children (parentId IS NULL). `all` counts every task. `workspace:{containerTaskId|identifier|title}` scopes to one workspace. */
+                scope?: string;
+                /** @description Comma-separated optional stat buckets: `documents`, `agentReview`, `helpRequests`, `blocked`, `workspaces`, `workspaces:all`. */
+                include?: string;
+                /** @description Reserved for workspace-scoped summaries (Phase 2). */
+                workspace?: string;
+                /** @description When true, include workspace container digests (same as `include=workspaces`). */
+                listWorkspaces?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Project statistics retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentProjectsSummaryResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Failed to load project summaries */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     getProjects: {
         parameters: {
             query?: never;
@@ -2776,7 +2847,16 @@ export interface operations {
     };
     listProjectsSummary: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Task counting scope. Supports `main`, `all`, or `workspace:{containerTaskId|identifier|title}`. */
+                scope?: string;
+                /** @description Comma-separated optional stat buckets: documents, agentReview, helpRequests, blocked, workspaces, workspaces:all. */
+                include?: string;
+                /** @description Reserved for workspace-scoped summary. */
+                workspace?: string;
+                /** @description Alias for including workspace digests. */
+                listWorkspaces?: boolean;
+            };
             header?: never;
             path: {
                 id: number;
@@ -2785,17 +2865,26 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Summary retrieved */
+            /** @description Project statistics and members retrieved */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProjectSummary"];
+                    "application/json": components["schemas"]["HumanProjectDetailSummaryResponse"];
                 };
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Access denied */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6326,7 +6415,7 @@ export interface operations {
                 /** @description When set, return at most this project if accessible. */
                 projectId?: number;
                 /** @description Task counting scope. `main` excludes workspace children (parentId IS NULL). `all` counts every task. Phase 2: also `workspace:{containerTaskId}`. */
-                scope?: "main" | "all";
+                scope?: string;
                 /** @description Comma-separated optional stat buckets: `documents`, `agentReview`, `helpRequests`, `blocked`, `workspaces`, `workspaces:all`. Phase 2. */
                 include?: string;
                 /** @description Container task identifier or unique title for single-workspace scope. Phase 2. */
@@ -6368,8 +6457,8 @@ export interface operations {
     getAgentProjectSummary: {
         parameters: {
             query?: {
-                /** @description Task counting scope. */
-                scope?: "main" | "all";
+                /** @description Task counting scope. Supports `main`, `all`, or `workspace:{containerTaskId|identifier|title}`. */
+                scope?: string;
                 /** @description Comma-separated optional stat buckets: documents, agentReview, helpRequests, blocked, workspaces, workspaces:all. */
                 include?: string;
                 /** @description Container identifier or title for workspace-scoped summary (reserved). */

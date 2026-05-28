@@ -20,6 +20,10 @@ You must be signed in. New projects make you the **Owner**.
 
 From **Explore**, click a project card to open its **board** tab (default view).
 
+### Explore project overview
+
+On **Explore**, each project card shows **column counts** from the fleet summary API. Use **Main board** vs **All tasks** to match how the main Kanban counts tasks (main excludes workspace children except **Agent Review**, which includes nested tasks for parity with the board). Counts refresh after task changes when you revisit Explore or when caches invalidate.
+
 ### Project roles
 
 | Role | Typical use |
@@ -44,7 +48,7 @@ The **board** is a column-based Kanban view for one project.
 ### Task cards
 
 - **Double-click** a card (or open from search) for the full **task dialog**: description, assignee, relations, comments, linked documents.
-- Cards show a **container** badge (⧉) when the task is a sub-board parent.
+- Cards show a **container** badge (⧉) when the task is a **workspace** root (nested board parent).
 - Use the **card size** slider on the board toolbar to zoom tiles.
 
 ### Tabs on a project
@@ -61,17 +65,19 @@ The **board** is a column-based Kanban view for one project.
 
 The **Backlog** view (sidebar) lists tasks for your projects that are not assigned to a column (unassigned). Use it to triage work before pulling items onto the board.
 
-## Sub-boards (container tasks)
+## Workspaces (container tasks)
 
-A **sub-board** is not a separate project. It is a **container task** on the main board with its own child tasks shown on a filtered board view.
+A **workspace** (sometimes called a sub-board in older copy) is not a separate project. It is a **container task** on the main board with its own child tasks on a filtered board view.
 
-### How workspaces are created today
+### How workspaces are created
 
 - **New workspace** tab on the project board (creates a container and can open its workspace board).
-- **Make this a workspace** in the task dialog (Editor+) on an existing card.
-- **Create as workspace** when adding a task (checkbox).
+- **This task is a workspace** in the task dialog (Editor+) on an existing card.
+- **Create as workspace** when adding a task (checkbox on the main board).
 
-To place an existing task inside a workspace, use **Relationships → Workspace** in the task dialog (not drag-and-drop yet).
+To place an existing task inside a workspace, use **Relationships → Workspace** in the task dialog, or add a task while viewing that workspace board (main board **Workspace** menu or workspace route). Drag-and-drop onto workspace cards is not supported yet.
+
+Per-workspace **outline color** can be set in the task dialog for workspace roots; the project **default workspace color** is under **Settings → Project Settings → Columns & descriptions**.
 
 The main workflow to spawn many child tasks from a plan is still:
 
@@ -81,11 +87,11 @@ The main workflow to spawn many child tasks from a plan is still:
 4. If you are **Maintainer** or **Owner**, click **Accept Plan & Expand** in the task dialog.
 5. The app marks the parent as a container, accepts the plan, and creates child tasks in columns.
 
-### Using sub-boards after creation
+### Using workspaces after creation
 
-- Open the **Sub-board** menu on the board toolbar to switch between **Main board** and **active sub-boards**.
-- **DRAFT** on a sub-board means the container exists but the plan is not fully accepted (or children exist before acceptance).
-- Open a sub-board to see only that container’s child tasks.
+- Open the **Workspace** menu on the board toolbar to switch between **Main board** and active workspaces.
+- **DRAFT** on a workspace means the container exists but the plan is not fully accepted (or children exist before acceptance).
+- Open a workspace to see only that container’s child tasks.
 
 For automation (agents creating containers), see [Working with AI agents](agents.md).
 

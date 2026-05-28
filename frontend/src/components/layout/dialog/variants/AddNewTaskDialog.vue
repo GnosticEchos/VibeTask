@@ -58,8 +58,15 @@ const relationOptions = computed(() => dependencyRelationTypeOptions())
 const isWorkspaceContainer: Ref<boolean> = ref(false)
 
 const activeWorkspaceParentId = computed(() => {
-  const fromRoute = route.query?.workspace
-  if (fromRoute) return Number(fromRoute)
+  const fromQuery = route.query?.workspace
+  if (fromQuery) {
+    const id = Number(fromQuery)
+    if (Number.isFinite(id)) return id
+  }
+  if (route.name === 'SubBoard' && route.params.parentId) {
+    const id = Number(route.params.parentId)
+    if (Number.isFinite(id)) return id
+  }
   return null
 })
 
@@ -203,6 +210,21 @@ async function ensureDropdownData() {
   loadingDropdowns.value = false
 }
 
+function defaultColumnIdForCreate(): number | null {
+  const first = columnsSorted.value?.[0]
+  return typeof first?.id === 'number' ? first.id : null
+}
+
+watch(
+  [activeWorkspaceParentId, columnsSorted],
+  () => {
+    if (activeWorkspaceParentId.value == null || projectColumnId.value != null) return
+    const defaultCol = defaultColumnIdForCreate()
+    if (defaultCol != null) projectColumnId.value = defaultCol
+  },
+  { immediate: true },
+)
+
 onMounted(() => {
   ensureDropdownData()
   if (props.task?.createWorkspace) {
@@ -210,6 +232,10 @@ onMounted(() => {
   }
   if (activeWorkspaceParentId.value != null) {
     workspaceParentId.value = activeWorkspaceParentId.value
+    if (projectColumnId.value == null) {
+      const defaultCol = defaultColumnIdForCreate()
+      if (defaultCol != null) projectColumnId.value = defaultCol
+    }
   }
 })
 
@@ -232,6 +258,11 @@ const addTask = async () => {
   } else if (activeWorkspaceParentId.value != null) {
     params.parentId = activeWorkspaceParentId.value
   }
+  const workspaceContextId = activeWorkspaceParentId.value ?? workspaceParentId.value
+  if (workspaceContextId != null && projectColumnId.value == null) {
+    const defaultCol = defaultColumnIdForCreate()
+    if (defaultCol != null) projectColumnId.value = defaultCol
+  }
   if (relationId.value != null && relationMode.value) {
     const rid = Number(relationId.value)
     if (!Number.isNaN(rid)) {
@@ -246,6 +277,13 @@ const addTask = async () => {
     if (projectId != null) {
       await queryClient.invalidateQueries({ queryKey: ['board', projectId] })
       await queryClient.invalidateQueries({ queryKey: ['project', projectId] })
+      const workspaceParent = params.parentId ?? activeWorkspaceParentId.value
+      if (workspaceParent != null) {
+        await queryClient.invalidateQueries({
+          queryKey: ['subboard', projectId, Number(workspaceParent)],
+        })
+        await queryClient.invalidateQueries({ queryKey: ['task', Number(workspaceParent)] })
+      }
     }
     const createdId = (created as { id?: number })?.id
     if (props.task?.openWorkspaceAfter && createdId && projectId != null) {

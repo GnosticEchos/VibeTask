@@ -598,6 +598,102 @@
         "operationId": "listProjectTemplates"
       }
     },
+    "/api/projects/summary": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Fleet project statistics (counts only)",
+        "description": "Returns `ProjectStats` for each project the authenticated user is a member of. Same query semantics as `GET /api/agent/projects/summary` for users (`projectId`, `scope`, `include`, `workspace`, `listWorkspaces`).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "When set, return at most this project if the user is a member."
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "main"
+            },
+            "description": "Task counting scope. `main` excludes workspace children (parentId IS NULL). `all` counts every task. `workspace:{containerTaskId|identifier|title}` scopes to one workspace."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated optional stat buckets: `documents`, `agentReview`, `helpRequests`, `blocked`, `workspaces`, `workspaces:all`."
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Reserved for workspace-scoped summaries (Phase 2)."
+          },
+          {
+            "name": "listWorkspaces",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "When true, include workspace container digests (same as `include=workspaces`)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project statistics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProjectsSummaryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to load project summaries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listProjectsFleetSummary"
+      }
+    },
     "/api/projects/{id}": {
       "get": {
         "tags": [
@@ -804,7 +900,7 @@
         "tags": [
           "Projects"
         ],
-        "summary": "Get project summary",
+        "summary": "Get project statistics and members",
         "security": [
           {
             "bearerAuth": []
@@ -818,21 +914,69 @@
             "schema": {
               "type": "integer"
             }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "main"
+            },
+            "description": "Task counting scope. Supports `main`, `all`, or `workspace:{containerTaskId|identifier|title}`."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated optional stat buckets: documents, agentReview, helpRequests, blocked, workspaces, workspaces:all."
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Reserved for workspace-scoped summary."
+          },
+          {
+            "name": "listWorkspaces",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Alias for including workspace digests."
           }
         ],
         "responses": {
           "200": {
-            "description": "Summary retrieved",
+            "description": "Project statistics and members retrieved",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProjectSummary"
+                  "$ref": "#/components/schemas/HumanProjectDetailSummaryResponse"
                 }
               }
             }
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -5698,11 +5842,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "default": "main",
-              "enum": [
-                "main",
-                "all"
-              ]
+              "default": "main"
             },
             "description": "Task counting scope. `main` excludes workspace children (parentId IS NULL). `all` counts every task. Phase 2: also `workspace:{containerTaskId}`."
           },
@@ -5790,13 +5930,9 @@
             "required": false,
             "schema": {
               "type": "string",
-              "default": "main",
-              "enum": [
-                "main",
-                "all"
-              ]
+              "default": "main"
             },
-            "description": "Task counting scope."
+            "description": "Task counting scope. Supports `main`, `all`, or `workspace:{containerTaskId|identifier|title}`."
           },
           {
             "name": "include",
@@ -7481,6 +7617,10 @@
           "prefix": {
             "type": "string"
           },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
           "formalityLevel": {
             "type": "string",
             "enum": [
@@ -7561,6 +7701,45 @@
           }
         }
       },
+      "HumanProjectSummaryMember": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "type": "string"
+          }
+        }
+      },
+      "HumanProjectDetailSummaryResponse": {
+        "type": "object",
+        "required": [
+          "project",
+          "members"
+        ],
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/ProjectStats"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HumanProjectSummaryMember"
+            }
+          }
+        }
+      },
       "ProjectDocumentStats": {
         "type": "object",
         "properties": {
@@ -7636,39 +7815,6 @@
           },
           "childCount": {
             "type": "integer"
-          }
-        }
-      },
-      "ProjectSummary": {
-        "type": "object",
-        "description": "Legacy human project summary response (members + column names). Prefer ProjectStats for new consumers.",
-        "properties": {
-          "projectName": {
-            "type": "string"
-          },
-          "projectDescription": {
-            "type": "string",
-            "nullable": true
-          },
-          "members": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Member"
-            }
-          },
-          "columnSummary": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "columnName": {
-                  "type": "string"
-                },
-                "totalTasks": {
-                  "type": "integer"
-                }
-              }
-            }
           }
         }
       },

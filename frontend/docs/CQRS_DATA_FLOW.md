@@ -8,7 +8,8 @@ Short reference for where **reads** (queries) and **writes** (commands) live so 
 
 | Data | Source | Notes |
 |------|--------|------|
-| **Projects list** | `useProjectsQuery()` | TanStack Query; single source. No projects Pinia store. |
+| **Projects list** | `useProjectsQuery()` | TanStack Query; settings/topbar/member pickers. No projects Pinia store. |
+| **Projects fleet stats (explore)** | `useProjectsSummaryQuery()` | TanStack Query; `GET /api/projects/summary?scope=main`. |
 | **Single project** | `useProjectQuery(id)` | TanStack Query via `projectsApi.getSingleProject`. |
 | **Board (columns + tasks)** | `useBoardQuery(projectId)` | TanStack Query; fetches `/projects/:id/board`. Board and grid consume this. |
 | **Columns (standalone)** | `useColumnsQuery(projectId)` | TanStack Query; use when you need columns without full board. |

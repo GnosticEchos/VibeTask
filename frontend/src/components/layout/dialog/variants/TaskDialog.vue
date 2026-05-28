@@ -28,6 +28,7 @@ import TaskCoreFields from './task/TaskCoreFields.vue'
 import TaskDialogHeader from './task/TaskDialogHeader.vue'
 import TaskLinkedDocumentsPanel from './task/TaskLinkedDocumentsPanel.vue'
 import TaskRelationField from './task/TaskRelationField.vue'
+import { normalizeHexColor, resolveWorkspaceOutlineColor } from '@/utils/workspaceOutlineColor'
 
 // --- PROPS AND MERGED TASK (must come first) ---
 const props = defineProps<{ open: boolean; task: iTask }>()
@@ -168,9 +169,14 @@ const parentBaseline = ref<{ taskId: number | null; parentId: number | null }>({
   parentId: null,
 })
 const localIsWorkspace = ref(false)
+const localSubBoardOutlineColor = ref('')
 const workspaceContainerBaseline = ref<{ taskId: number | null; isContainer: boolean }>({
   taskId: null,
   isContainer: false,
+})
+const outlineColorBaseline = ref<{ taskId: number | null; color: string | null }>({
+  taskId: null,
+  color: null,
 })
 const isSaving = ref(false)
 const saveError = ref('')
@@ -240,6 +246,16 @@ watch(mergedTask, (task) => {
         taskId: task.id ?? null,
         isContainer: !!taskAny.isContainer,
       }
+      const taskOutline = (task as { subBoardOutlineColor?: string | null }).subBoardOutlineColor
+      const resolvedOutline =
+        normalizeHexColor(taskOutline ?? null) ??
+        resolveWorkspaceOutlineColor(projectStore.project?.settings) ??
+        '#8B5CF6'
+      localSubBoardOutlineColor.value = resolvedOutline
+      outlineColorBaseline.value = {
+        taskId: task.id ?? null,
+        color: normalizeHexColor(taskOutline ?? null),
+      }
     }
   }
 }, { immediate: true })
@@ -296,6 +312,20 @@ function workspaceContainerPatchIfChanged(): { isContainer?: boolean } {
   return { isContainer: localIsWorkspace.value }
 }
 
+function outlineColorPatchIfChanged(): { subBoardOutlineColor?: string | null } {
+  const isWorkspace =
+    localIsWorkspace.value || !!(mergedTask.value as { isContainer?: boolean } | null)?.isContainer
+  if (!isWorkspace) return {}
+  const normalized = normalizeHexColor(localSubBoardOutlineColor.value)
+  if (!normalized) return {}
+  const taskId = mergedTask.value?.id ?? null
+  const base = outlineColorBaseline.value
+  if (taskId == null) return { subBoardOutlineColor: normalized }
+  if (base.taskId !== taskId) return { subBoardOutlineColor: normalized }
+  if (normalized === base.color) return {}
+  return { subBoardOutlineColor: normalized }
+}
+
 function buildRelatedTaskSummary(
   relationIdVal: number | null,
   relationModeVal: string | null,
@@ -327,6 +357,7 @@ async function saveTask(): Promise<void> {
   const relationPatch = relationPatchIfChanged()
   const parentPatch = parentPatchIfChanged()
   const containerPatch = workspaceContainerPatchIfChanged()
+  const outlinePatch = outlineColorPatchIfChanged()
   uiLog.debug('saveTask called', {
     localName: localName.value,
     localDescription: localDescription.value,
@@ -335,6 +366,7 @@ async function saveTask(): Promise<void> {
     relationPatch,
     parentPatch,
     containerPatch,
+    outlinePatch,
   })
   try {
     const assigneeKind = localAssigneeId.value.startsWith('agent:') ? 'agent' : localAssigneeId.value.startsWith('user:') ? 'user' : 'none'
@@ -358,6 +390,7 @@ async function saveTask(): Promise<void> {
       ...relationPatch,
       ...parentPatch,
       ...containerPatch,
+      ...outlinePatch,
       ...(assigneeKind === 'user' && { assigneeId: Number(assigneeValue) }),
       ...(assigneeKind === 'agent' && { assigneeApiKeyId: assigneeValue, assigneeId: null }),
       ...(assigneeKind === 'none' && { assigneeId: null, assigneeApiKeyId: null }),
@@ -393,6 +426,12 @@ async function saveTask(): Promise<void> {
         workspaceContainerBaseline.value = {
           taskId: savedTaskId,
           isContainer: localIsWorkspace.value,
+        }
+      }
+      if (Object.keys(outlinePatch).length > 0) {
+        outlineColorBaseline.value = {
+          taskId: savedTaskId,
+          color: normalizeHexColor(localSubBoardOutlineColor.value),
         }
       }
       uiLog.debug('saveTask updateItem finished', { tasksStoreItem: tasksStore.item })
@@ -796,6 +835,22 @@ async function handleAcceptPlan() {
           <p v-else class="mt-1 text-xs text-base-content/60">
             {{ $t('taskDialog.makeWorkspaceHint') }}
           </p>
+          <div
+            v-if="localIsWorkspace || mergedTask.isContainer"
+            class="mt-3 flex flex-col gap-1"
+          >
+            <span class="text-xs font-medium text-base-content/70">
+              {{ $t('taskDialog.workspaceOutlineColor') }}
+            </span>
+            <input
+              type="color"
+              class="h-10 w-14 cursor-pointer rounded border border-base-300 bg-base-100"
+              :value="localSubBoardOutlineColor"
+              :aria-label="$t('taskDialog.workspaceOutlineColorPickerAria')"
+              @input="localSubBoardOutlineColor = ($event.target as HTMLInputElement).value"
+            />
+            <p class="text-xs text-base-content/50">{{ $t('taskDialog.workspaceOutlineColorHint') }}</p>
+          </div>
         </div>
 
         <TaskRelationField

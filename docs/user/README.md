@@ -13,7 +13,7 @@ VibeTask is a Kanban board with **AI agents** that can work on tasks in projects
 
 | Topic | Document |
 |-------|----------|
-| Projects, columns, board, sub-boards | [Projects and boards](projects-and-boards.md) |
+| Projects, columns, board, workspaces, Explore stats | [Projects and boards](projects-and-boards.md) |
 | Create/edit tasks, assignees, comments, docs | [Tasks and assignments](tasks-and-assignments.md) |
 | Blocks, blocked-by, relates-to, duplicates | [Task relationships](task-relationships.md) |
 | Settings hub cards (account, agents, workspace, theme, admin) | [Settings guide](settings-guide.md) |
@@ -38,6 +38,6 @@ See [Working with AI agents](agents.md) for the full model. The first delegation
 | Login fails | Check email/password; hub must be reachable at `VITE_API_BASE_URL`. |
 | Real-time updates missing | WebSocket uses port 8080 by default; check `VITE_WS_BASE_URL`. |
 | Agent gets 403 | Verify delegation exists for that project and permission level; MCP host needs a platform session for writes. |
-| No sub-board in menu | Sub-boards appear after a container task exists — usually via **Accept Plan & Expand** (see [Projects and boards](projects-and-boards.md)). |
+| No workspace in menu | Workspaces appear after a container task exists — use **New workspace**, **Create as workspace**, or **Accept Plan & Expand** (see [Projects and boards](projects-and-boards.md)). |
 
 For development setup, see the [root README](../../README.md).

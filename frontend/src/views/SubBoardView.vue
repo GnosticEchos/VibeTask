@@ -17,7 +17,7 @@ import api from '@/api/v1/indexApi'
 import { validateId } from '@/utils/validation'
 import { uiLog } from '@/utils/logger'
 import type { Ref } from 'vue'
-import { applyBoardTaskScope } from '@/utils/boardTaskScope'
+import { applyBoardTaskScope, mergeWorkspaceChildrenIntoBoard } from '@/utils/boardTaskScope'
 import { resolveTaskWorkspaceOutlineColor } from '@/utils/workspaceOutlineColor'
 
 const props = withDefaults(defineProps<{
@@ -111,25 +111,36 @@ watch(reviewCount, (count) => {
   emit('update:reviewCount', count)
 }, { immediate: true })
 
-// Sync board data to Pinia store
-watch(boardData, (newData) => {
+function syncSubBoardColumnsFromApi(boardPayload: { columns?: iColumn[]; members?: unknown } | undefined) {
+  if (!boardPayload) return
+  const scopedColumns = applyBoardTaskScope(boardPayload.columns || [], parentId.value, {
+    includeNestedReviewOnMain: false,
+  })
+  const children = (parentTask.value as { children?: Parameters<typeof mergeWorkspaceChildrenIntoBoard>[2] } | undefined)
+    ?.children
+  const withOrphans = mergeWorkspaceChildrenIntoBoard(
+    scopedColumns,
+    parentId.value,
+    children ?? [],
+  )
+  localColumns.value = deepCloneColumns(withOrphans)
+  if (Array.isArray(withOrphans)) {
+    columnsStore.setItems([...withOrphans])
+    const allTasks = withOrphans.flatMap((col: iColumn) =>
+      Array.isArray(col.tasks) ? col.tasks : [],
+    )
+    items.value = allTasks
+  }
+  if (Array.isArray(boardPayload.members)) {
+    membersStore.setItems([...boardPayload.members])
+  }
+}
+
+// Sync board data to Pinia store (re-run when parent children list changes)
+watch([boardData, parentTask], ([newData]) => {
   uiLog.debug('SubBoardView: boardData changed', { newData, hasColumns: !!newData?.columns, columnsLength: newData?.columns?.length, hasMembers: !!newData?.members })
   if (newData) {
-    const scopedColumns = applyBoardTaskScope(newData.columns || [], parentId.value, {
-      includeNestedReviewOnMain: false,
-    })
-    localColumns.value = deepCloneColumns(scopedColumns)
-    if (Array.isArray(scopedColumns)) {
-      columnsStore.setItems([...scopedColumns])
-      const allTasks = scopedColumns.flatMap((col: iColumn) =>
-        Array.isArray(col.tasks) ? col.tasks : [],
-      )
-      items.value = allTasks
-    }
-    // Update members store for TaskDialog
-    if (Array.isArray(newData.members)) {
-      membersStore.setItems([...newData.members])
-    }
+    syncSubBoardColumnsFromApi(newData)
   }
 }, { immediate: true })
 

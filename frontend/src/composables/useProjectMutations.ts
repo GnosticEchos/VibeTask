@@ -11,6 +11,7 @@ export function useProjectMutations() {
     mutationFn: (id: number) => projectsApi.deleteProject(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', 'summary'] })
     },
   })
 
@@ -18,6 +19,7 @@ export function useProjectMutations() {
     mutationFn: (projectData: CreateProjectPayload) => projectsApi.createProject(projectData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', 'summary'] })
     },
   })
 
@@ -26,6 +28,7 @@ export function useProjectMutations() {
       projectsApi.updateProject(id, payload),
     onSuccess: (/* data, */ variables) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', 'summary'] })
       queryClient.invalidateQueries({ queryKey: ['project', variables.id] })
     },
   })

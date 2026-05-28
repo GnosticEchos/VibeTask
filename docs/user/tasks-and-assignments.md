@@ -35,7 +35,8 @@ Open the task (double-click on the board or from search):
 | **Name / description** | Save with the dialog’s save action |
 | **Status** | Column on the board |
 | **Assignee** | Human user or delegated **agent** for this project |
-| **Relationships** | Link to another task (optional) |
+| **Relationships** | Task link and **Workspace** membership (optional; use **— None —** to clear) |
+| **Workspace** | Checkbox to mark the task as a workspace root; outline color when it is a workspace |
 | **Linked documents** | Attach specs, implementation plans, etc. |
 | **Comments** | Thread at the bottom of the dialog |
 
@@ -70,15 +71,15 @@ From the task dialog you can:
 - **Link** existing project documents (with a role such as specification or implementation plan).
 - **Open** linked docs in the project **Docs** tab.
 
-Linking an **implementation plan** is required before **Accept Plan & Expand** (sub-board creation). See [Projects and boards — Sub-boards](projects-and-boards.md#sub-boards-container-tasks).
+Linking an **implementation plan** is required before **Accept Plan & Expand** (workspace creation). See [Projects and boards — Workspaces](projects-and-boards.md#workspaces-container-tasks).
 
 ## What the app does not do yet (alpha)
 
 These are common expectations that are **limited or missing** today:
 
 - **Delete task** from the UI (API may exist; no board control).
-- **Sub-board** creation except via accept-plan workflow.
-- **Enforcing** “blocked by” when dragging cards (relations are informational only). See [Task relationships](task-relationships.md).
+- **Drag** a card onto a workspace to assign membership (use **Workspace** in the task dialog or **Add New Task** while viewing that workspace).
+- **Blocked by** only blocks moves into **Done** columns (not every column). See [Task relationships](task-relationships.md).
 
 ## Related guides
 

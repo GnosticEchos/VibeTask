@@ -5,7 +5,8 @@
  * - GET /api/projects - Get list of user's projects
  * - POST /api/projects - Create a new project
  * - GET /api/projects/:id - Get project data with columns and tasks
- * - GET /api/projects/:id/summary - Get project summary
+ * - GET /api/projects/summary - Fleet project stats
+ * - GET /api/projects/:id/summary - Project stats + members
  * - PATCH /api/projects/:id - Update project data
  * - DELETE /api/projects/:id - Delete a project
  * - GET /api/projects/:id/board - Get complete board data
@@ -297,6 +298,79 @@ describe('Projects Integration Tests', () => {
     });
   });
 
+  describe('GET /api/projects/summary', () => {
+    it('should return 401 without authentication', async () => {
+      const response = await request(testApp).get('/api/projects/summary');
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should return fleet ProjectStats for member projects', async () => {
+      const project = await createTestProject(userId, {
+        name: 'Fleet Summary Project',
+        prefix: 'FSP',
+      });
+
+      const response = await request(testApp)
+        .get('/api/projects/summary')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.body.projects)).toBe(true);
+      const row = response.body.projects.find((p: { id: number }) => p.id === project.id);
+      expect(row).toBeDefined();
+      expect(row.name).toBe('Fleet Summary Project');
+      expect(Array.isArray(row.columns)).toBe(true);
+    });
+
+    it('should filter by projectId when provided', async () => {
+      const a = await createTestProject(userId, { name: 'Filter A', prefix: 'FA' });
+      await createTestProject(userId, { name: 'Filter B', prefix: 'FB' });
+
+      const response = await request(testApp)
+        .get(`/api/projects/summary?projectId=${a.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.projects.length).toBe(1);
+      expect(response.body.projects[0].id).toBe(a.id);
+    });
+
+    it('should support workspace scoped counts via scope and workspace selector', async () => {
+      const project = await createTestProject(userId, { name: 'Workspace Scope Fleet', prefix: 'WSF' });
+      const todo = await createTestColumn(project.id, 1, { name: 'To Do' });
+      const done = await createTestColumn(project.id, 2, { name: 'Done' });
+      const workspace = await createTestTaskDirect(project.id, userId, todo.id, { name: 'Workspace Container' });
+      await testPrisma.task.update({
+        where: { id: workspace.id },
+        data: { isContainer: true, identifier: 'WSF-SPACE' },
+      });
+      const childDone = await createTestTaskDirect(project.id, userId, done.id, { name: 'Workspace Child' });
+      await testPrisma.task.update({
+        where: { id: childDone.id },
+        data: { parentId: workspace.id },
+      });
+
+      const byScope = await request(testApp)
+        .get(`/api/projects/summary?scope=workspace:${workspace.id}&projectId=${project.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(byScope.status).toBe(200);
+      expect(byScope.body.projects).toHaveLength(1);
+      expect(byScope.body.projects[0].totalTasks).toBe(1);
+
+      const byWorkspace = await request(testApp)
+        .get(`/api/projects/summary?workspace=WSF-SPACE&projectId=${project.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(byWorkspace.status).toBe(200);
+      expect(byWorkspace.body.projects).toHaveLength(1);
+      const doneCol = byWorkspace.body.projects[0].columns.find((c: { id: number }) => c.id === done.id);
+      expect(doneCol.taskCount).toBe(1);
+      expect(doneCol.taskCountMain).toBe(1);
+    });
+  });
+
   describe('GET /api/projects/:id/summary', () => {
     it('should return 401 without authentication', async () => {
       const response = await request(testApp)
@@ -319,9 +393,10 @@ describe('Projects Integration Tests', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.projectName).toBe('Summary Test Project');
-      expect(response.body.columnSummary).toBeDefined();
-      expect(response.body.columnSummary.length).toBe(2);
+      expect(response.body.project).toBeDefined();
+      expect(response.body.project.name).toBe('Summary Test Project');
+      expect(response.body.project.columns).toBeDefined();
+      expect(response.body.project.columns.length).toBe(2);
     });
 
     it('should include member information', async () => {
@@ -337,6 +412,8 @@ describe('Projects Integration Tests', () => {
       expect(response.status).toBe(200);
       expect(response.body.members).toBeDefined();
       expect(response.body.members.length).toBeGreaterThan(0);
+      expect(response.body.members[0].email).toBeDefined();
+      expect(response.body.project).toBeDefined();
     });
 
     it('should return 404 for non-existent project', async () => {

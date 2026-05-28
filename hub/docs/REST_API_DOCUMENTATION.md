@@ -16,6 +16,15 @@ http://localhost:3000/api
 | Agent API key | `x-agent-api-key: <api_key>` | AI agents (all endpoints) | Admin panel or `POST /api/agents` |
 | Platform session | `x-platform-session: <jwt>` | Platform agent write operations | `POST /api/agent/session` |
 
+## Human project statistics (Bearer)
+
+Aligned with agent `ProjectStats`; membership-scoped.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/projects/summary` | Fleet `ProjectStats` for projects the user belongs to; optional `projectId`, `scope`, `include`, `listWorkspaces` (same semantics as agent fleet summary) |
+| `GET` | `/api/projects/:id/summary` | Single project: `{ project: ProjectStats, members: [...] }` with optional `scope` / `include` |
+
 ## Agent API Endpoints
 
 All agent endpoints are under `/api/agent/` and require the `x-agent-api-key` header.

@@ -215,7 +215,16 @@ router.get('/:id', requireAuth, validateParams(taskIdParamSchema), asyncHandler(
         },
       },
       children: {
-        select: { id: true, name: true, identifier: true, order: true, isContainer: true, planAccepted: true },
+        select: {
+          id: true,
+          name: true,
+          identifier: true,
+          order: true,
+          isContainer: true,
+          planAccepted: true,
+          parentId: true,
+          projectColumnId: true,
+        },
         orderBy: { order: 'asc' },
       },
       _count: { select: { children: true } },
@@ -271,6 +280,8 @@ router.get('/:id', requireAuth, validateParams(taskIdParamSchema), asyncHandler(
       order: c.order,
       isContainer: c.isContainer,
       planAccepted: c.planAccepted,
+      parentId: c.parentId,
+      projectColumnId: c.projectColumnId,
     })),
   });
 }));

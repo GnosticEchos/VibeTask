@@ -1,7 +1,7 @@
 # Project summary API — gap analysis & implementation spec
 
-**Status:** Gap analysis (pre-implementation)  
-**Last updated:** 2026-05-26 (open-question decisions captured)  
+**Status:** Phases **1–5 shipped** (explore uses `GET /api/projects/summary?scope=main`); Phase **6** docs/platform polish optional  
+**Last updated:** 2026-05-26 (Phase 5 explore migration)  
 **Audience:** Hub, frontend, app (MCP/CLI)  
 **Related:** [`frontend/docs/OPENAPI_UI_GAP_ANALYSIS.md`](../../frontend/docs/OPENAPI_UI_GAP_ANALYSIS.md), [`CONTRACT.md`](../../CONTRACT.md)
 
@@ -23,9 +23,11 @@
 
 | Path | Auth | Payload | Used by |
 |------|------|---------|---------|
-| `GET /api/projects` | User Bearer | Projects + columns + **all tasks** | Explore (`useProjectsQuery` → `ProjectSummaryCard`) |
-| `GET /api/projects/{id}/summary` | User Bearer | Members + `columnSummary` (name + count) | **Nothing in SPA** |
-| `GET /api/agent/projects/summary` | User Bearer **or** agent API key | `groupBy` counts per column, no tasks | **`read_project_overview` MCP**, integration tests |
+| `GET /api/projects` | User Bearer | Projects + columns + **all tasks** | Settings, TopBar, member pickers (`useProjectsQuery`) |
+| `GET /api/projects/summary` | User Bearer | `{ projects: ProjectStats[] }` — membership fleet | **Explore** (`useProjectsSummaryQuery` → `ProjectSummaryCard`) |
+| `GET /api/projects/{id}/summary` | User Bearer | `{ project: ProjectStats, members: [...] }` | **No SPA consumer yet** (available for project settings modal later) |
+| `GET /api/agent/projects/summary` | User Bearer **or** agent API key | `{ projects: ProjectStats[] }` | **`read_project_overview` MCP**, CLI `project overview`, integration tests |
+| `GET /api/agent/projects/{projectId}/summary` | Agent key (+ access) | `{ project: ProjectStats }` | **`read_project_summary` MCP**, CLI `project summary`, integration tests |
 
 Explore builds card UI client-side from heavy list data:
 
@@ -53,13 +55,17 @@ read_project_overview → GET /api/agent/projects/summary
 
 | Item | Status |
 |------|--------|
-| `GET /api/agent/projects/summary` | **Implemented in hub, missing from `hub/src/openapi.json`** |
-| `ProjectSummary` schema (human) | Documents members + `columnSummary`; **does not match** agent summary shape |
-| `GET /api/projects` list | Spec implies project list; **implementation embeds full tasks** (undocumented heaviness) |
-| Agent Review (`roleType: AGENT_REVIEW`) | In DB/schema; **not surfaced** in summary counts |
-| Document counts | **Not in any summary endpoint** |
-| Open help requests | **Not in summary** |
-| Blocked tasks | **Not in summary** |
+| `GET /api/agent/projects/summary` | **Shipped** — documented in `hub/src/openapi.json`; `scope` / `include` / `listWorkspaces` |
+| `GET /api/agent/projects/{projectId}/summary` | **Shipped** |
+| `GET /api/projects/summary` | **Shipped** — human fleet; same `ProjectStats` as agent (membership-scoped) |
+| `GET /api/projects/{id}/summary` | **Shipped** — `HumanProjectDetailSummaryResponse` (`project` + `members`); query `scope` / `include` |
+| `ProjectSummary` schema (human legacy) | **Deprecated in spec** — retained for history; **no route references it** (Redocly unused-component warning) |
+| `GET /api/projects` list | Spec implies project list; **implementation still embeds full tasks** (explore debt — Phase 5) |
+| Agent Review (`roleType: AGENT_REVIEW`) | **Shipped** when `include=agentReview` |
+| Document counts | **Shipped** when `include=documents` |
+| Open help requests | **Shipped** when `include=helpRequests` |
+| Blocked tasks | **Shipped** when `include=blocked` |
+| `scope=workspace:{id}` / `workspace=` query | **Not implemented** — only `main` and `all` today |
 
 ### Access model (agents)
 
@@ -99,14 +105,13 @@ Main board "Plan: 5"  ≠  Explore card "Plan: 15"
                          (15 may include 10 workspace children still assigned to Plan column)
 ```
 
-### Summary / explore today — **unscoped** (misleading vs main board)
+### Summary / explore today — scope by route
 
-| Surface | Filters `parentId`? | What `totalTasks` / column bars include |
-|---------|---------------------|----------------------------------------|
-| Explore `GET /api/projects` → `ProjectSummaryCard` | **No** | Every task row in the project, bucketed by `projectColumnId` |
-| Agent `GET /api/agent/projects/summary` | **No** | Same — `groupBy` on all tasks |
-| Human `GET /api/projects/{id}/summary` | **No** | Same |
-| `GET /api/projects/{id}/active-workspaces` | N/A (containers only) | Lists `isContainer: true` tasks — **not** used for explore card math |
+| Surface | Default scope | What column bars use |
+|---------|---------------|----------------------|
+| Explore `GET /api/projects/summary` → `ProjectSummaryCard` | **`main`** | `mainBoardTasks` + `columns[].taskCountMain`; optional “+N in workspaces” hint |
+| Agent / human `GET …/summary` (fleet or single) | **`scope=main`** | `columns[].taskCount` = main-board count; `taskCountMain` / `taskCountAll` both returned |
+| `GET /api/projects/{id}/active-workspaces` | N/A (containers only) | Lists `isContainer: true` tasks — **not** wired to explore cards |
 
 **Implication:**
 
@@ -172,11 +177,12 @@ When `include=workspaces`: add `workspaces.activeCount` (containers) and optiona
 
 ### Acceptance criteria (workspace-specific)
 
-- [ ] Project with accept-plan children: `totalTasks > mainBoardTasks`
-- [ ] `scope=main` column counts match `applyBoardTaskScope(..., null)` on same seed data
-- [ ] `scope=workspace:{id}` counts match sub-board view for that container
-- [ ] `scope=all` matches current explore card totals (regression baseline)
-- [ ] MCP `summary_line` states scope, e.g. `Spec Task Board: 43 on main board, 71 total (28 in workspaces)`
+- [x] Project with accept-plan children: `totalTasks > mainBoardTasks` (covered by stats engine + agent integration tests)
+- [x] `scope=main` vs `scope=all` diverge on column `taskCount` (agent-docs integration tests)
+- [ ] `scope=main` column counts match `applyBoardTaskScope(..., null)` on same seed data (explicit board parity test not added)
+- [ ] `scope=workspace:{id}` counts match sub-board view for that container (**query not implemented**)
+- [ ] `scope=all` matches legacy explore totals (explore now defaults to `scope=main`; no UI toggle)
+- [x] `summaryLine` states scope, e.g. `… on main board, … total (… in workspaces)` (`buildProjectStatsSummary`)
 
 ---
 
@@ -191,9 +197,10 @@ When `include=workspaces`: add `workspaces.activeCount` (containers) and optiona
 
 ### Endpoints (proposed)
 
-#### A. Fleet summary (extend existing)
+#### A. Fleet summary (extend existing) — **shipped**
 
-`GET /api/agent/projects/summary`
+`GET /api/agent/projects/summary`  
+Human mirror: **`GET /api/projects/summary`** (Bearer, membership-scoped).
 
 Query params (all optional):
 
@@ -247,25 +254,25 @@ Resolve `workspace` / `include=<identifier>` server-side to a container task (`i
 
 **Product decision (2026-05-26):** Agreed — fleet does **not** embed workspace digests by default; use `include=workspaces`, `workspaces:all`, or `workspace=` / `include=<name>` when the user or agent needs sub-board visibility.
 
-#### B. Single-project summary (new)
+#### B. Single-project summary (new) — **shipped**
 
 `GET /api/agent/projects/{projectId}/summary`
 
 Same `ProjectStats` schema as one element of fleet response. Requires delegation / membership (existing agent project access).
 
-#### C. Human explore list (new or extended)
+#### C. Human explore list (new or extended) — **shipped (C1)**
 
-**Option C1 (preferred):** `GET /api/projects/summary` — membership-scoped fleet summary, **same `ProjectStats` schema** as agent fleet (minus agent-only fields if any).
+**Implemented:** `GET /api/projects/summary` — membership-scoped fleet summary, same `ProjectStats` as agent fleet.
 
-**Option C2:** Add `?view=summary` to `GET /api/projects` — avoids new path but blurs list vs stats semantics.
+**Deferred:** Option C2 (`?view=summary` on list) — not needed while C1 exists.
 
-Recommend **C1** for clarity and cache keys; keep `GET /api/projects` for settings/admin flows that need full project metadata without tasks.
+Keep `GET /api/projects` for settings/admin flows that need full project metadata without tasks.
 
-#### D. Human single-project (align)
+#### D. Human single-project (align) — **shipped (breaking)**
 
-Extend `GET /api/projects/{id}/summary` to return **`ProjectStats`** (or redirect internally to shared handler) instead of the legacy `{ projectName, members, columnSummary }` shape.
+`GET /api/projects/{id}/summary` returns **`{ project: ProjectStats, members: [...] }`** via shared `buildProjectStatsSummary` in `hub/src/services/project-stats-summary.ts`.
 
-Deprecation: map old fields for one release or version bump in OpenAPI `operationId`.
+**Breaking:** Legacy `{ projectName, projectDescription, columnSummary }` removed (no SPA consumer existed). OpenAPI uses `HumanProjectDetailSummaryResponse`; legacy `ProjectSummary` schema kept but unreferenced.
 
 ---
 
@@ -316,13 +323,13 @@ After OpenAPI update: prefer **generated** hub-client method for `/summary` inst
 
 ### Required spec additions
 
-1. Path: `GET /api/agent/projects/summary` (document existing behavior + new query params + response).
-2. Path: `GET /api/agent/projects/{projectId}/summary` (new).
-3. Path: `GET /api/projects/summary` (new human fleet) **or** documented query on list.
-4. Schemas: `ProjectStats`, `ColumnStats` (`taskCountMain`, `taskCountAll`), `WorkspaceStats`, `DocumentStats`, `AgentReviewStats`, `ProjectSummaryResponse`, etc.
-5. Document query param `scope` on all summary routes.
-6. Update human `ProjectSummary` or replace with `ProjectStats` + migration note.
-7. Document `roleType` enum on column stats (`AGENT_REVIEW`, …).
+1. [x] Path: `GET /api/agent/projects/summary`
+2. [x] Path: `GET /api/agent/projects/{projectId}/summary`
+3. [x] Path: `GET /api/projects/summary` (human fleet)
+4. [x] Schemas: `ProjectStats`, column stats (`taskCountMain`, `taskCountAll`), optional buckets, `HumanProjectDetailSummaryResponse`
+5. [x] Query param `scope` on agent + human summary routes (`main` \| `all` only until workspace scope is built)
+6. [x] Human single route uses `ProjectStats` + members; legacy `ProjectSummary` deprecated (unused in paths)
+7. [x] `roleType` on column stats in `ProjectStats`
 
 ### Validation checklist (every PR touching contract)
 
@@ -378,11 +385,12 @@ Expand [`CONTRACT.md`](../../CONTRACT.md) beyond the current table:
 
 ## Hub implementation notes
 
-Shared handler: `buildProjectStats(projectId, includeFlags)` used by:
+Shared module: **`hub/src/services/project-stats-summary.ts`** — `buildProjectStatsSummary`, `parseSummaryScope`, `parseSummaryIncludeOptions`, `parseOptionalProjectIdFilter`, `filterSummaryByProjectId`.
 
-- Agent fleet summary
-- Agent single summary
-- Human fleet/single summary (auth wrapper differs)
+Used by:
+
+- Agent fleet + single summary (`hub/src/api/routes/agent/projects.ts`)
+- Human fleet + single summary (`hub/src/api/routes/projects.ts`; register `GET /summary` **before** `GET /:id`)
 
 SQL strategy (keep lightweight):
 
@@ -404,49 +412,50 @@ Platform agent: add `/api/agent/projects/summary` and `/api/agent/projects/:proj
 
 ### API
 
-- [ ] Agent key: delegated project appears with correct column counts
-- [ ] Agent key: non-delegated project → 403 on single summary
-- [ ] User Bearer on agent summary: all membership projects
-- [ ] `include=agentReview` returns count; identifiers length ≤ cap
-- [ ] `include=documents` returns byType counts without doc bodies
-- [ ] `projectId` filter returns one project
-- [ ] Human `GET /api/projects/summary` matches agent stats shape (minus forbidden fields)
-- [ ] Workspace regression: `scope=main` vs `scope=all` vs `scope=workspace:{id}` on seed project with accept-plan children
+- [x] Agent key: delegated project appears with correct column counts (`agent-docs.integration.test.ts`)
+- [x] Agent key: non-delegated project → 403 on single summary (agent access middleware)
+- [x] User Bearer on agent summary: all membership projects
+- [x] `include=agentReview` returns count; identifiers length ≤ cap
+- [x] `include=documents` returns byType counts without doc bodies
+- [x] `projectId` filter returns one project (agent + human fleet)
+- [x] Human `GET /api/projects/summary` + `GET /api/projects/{id}/summary` (`projects.integration.test.ts`)
+- [x] Workspace regression: `scope=main` vs `scope=all` (agent integration tests)
+- [ ] `scope=workspace:{id}` (**not implemented**)
 
 ### MCP / CLI
 
-- [ ] `read_project_overview` output ≤ agreed size budget on seed project 10 (smoke: no full task arrays)
-- [ ] `read_project_summary` for project 10 matches hub JSON
-- [ ] Generated Progenitor client compiles; new methods used in hub-client wrapper
+- [x] `read_project_overview` uses agent fleet summary (no full task arrays in overview path)
+- [x] `read_project_summary` + CLI `project summary` (Phase 3; hub-client 404 fallback to fleet `?projectId=`)
+- [x] Hub-client builds; agent summary via typed/raw JSON as documented in `app/`
 
 ### Frontend
 
-- [ ] Explore cards use main-board counts; optional “+N in workspaces” hint
-- [ ] Explore card totals no longer exceed main board totals unless `scope=all` explicitly requested
+- [x] Explore cards use main-board counts; “+N in workspaces” when `workspaceChildTasks > 0`
+- [x] Explore fleet fetch is counts-only (`useProjectsSummaryQuery`)
 
 ### Contract
 
-- [ ] `hub npm run openapi:validate` passes
-- [ ] `frontend openapi:check-sync` passes
-- [ ] `openapi-types.ts` updated
-- [ ] `CONTRACT.md` updated with validation matrix
-- [ ] This doc + `OPENAPI_UI_GAP_ANALYSIS.md` status updated
+- [x] `hub npm run openapi:validate` passes
+- [x] `frontend openapi:check-sync` passes
+- [x] `openapi-types.ts` updated
+- [ ] `CONTRACT.md` expanded validation matrix (Phase 0 governance — optional)
+- [x] This doc updated; `OPENAPI_UI_GAP_ANALYSIS.md` partial row updated (full “Covered” after Phase 5 explore migration)
 
 ---
 
 ## Implementation phases (sequential)
 
-| Phase | Scope | Deliverable |
+| Phase | Status | Deliverable |
 |-------|--------|-------------|
-| **0** | Governance | `CONTRACT.md` expansion; optional root symlink/bundle note; OpenAPI debt ticket for undocumented `/summary` |
-| **1** | OpenAPI + agent fleet | Document `GET /api/agent/projects/summary`; add schemas; `include` + `projectId`; Progenitor + TS types |
-| **2** | Hub stats engine | Shared `buildProjectStats` with `scope`; workspace buckets; agentReview, documents, helpRequests, blocked |
-| **3** | Agent single + MCP | `GET /api/agent/projects/{id}/summary`; `read_project_summary` tool; CLI subcommand |
-| **4** | Human summary | `GET /api/projects/summary`; align `GET /api/projects/{id}/summary` |
-| **5** | Frontend explore | `useProjectsSummaryQuery`; migrate `ProjectSummaryCard` |
-| **6** | Docs & platform | `agents.md` tool guide; platform allowlist; update gap analyses |
+| **0** | Partial | `CONTRACT.md` expansion optional; agent `/summary` OpenAPI debt **closed** |
+| **1** | **Done** | OpenAPI agent fleet + `ProjectStats` schemas; TS + hub-client sync |
+| **2** | **Done** | `project-stats-summary.ts` — `scope`, workspace buckets, optional `include` buckets |
+| **3** | **Done** | Agent single summary; `read_project_summary`; CLI `project summary` |
+| **4** | **Done** | `GET /api/projects/summary`; human `GET /api/projects/{id}/summary` → `{ project, members }` |
+| **5** | **Done** | `useProjectsSummaryQuery`; `ProjectSummaryCard` / `ProjectHierarchy` on `ProjectStats` |
+| **6** | Partial | REST doc human summary rows; platform allowlist / `agents.md` as needed |
 
-**Implementation:** Open questions below are decided (2026-05-26). Phase 0+ may proceed when explicitly requested.
+**Next (optional):** Single-project human summary in UI; `scope=all` toggle on explore; remove unused `ProjectSummary` OpenAPI schema.
 
 ---
 
@@ -454,7 +463,7 @@ Platform agent: add `/api/agent/projects/summary` and `/api/agent/projects/:proj
 
 1. **Platform “all my projects”:** Allow platform agent multi-project macro stats under user scope (example: "how many tasks/plans need my review across projects?").
 2. **Human vs agent schema:** Agent response is a subset of `ProjectStats`; do not include member emails in agent payloads.
-3. **Legacy `ProjectSummary`:** Keep `ProjectSummary` available for now; implement new DB-side aggregation as `ProjectStats` and migrate consumers to it.
+3. **Legacy `ProjectSummary`:** Human route now returns `ProjectStats` + `members`. `ProjectSummary` schema remains in OpenAPI for reference only (no path refs); safe to remove in a later cleanup PR.
 4. **Explore pagination:** Keep explore pagination behavior as-is for now (fleet summary path should remain paginated for large project counts).
 5. **Root OpenAPI file:** Stay hub-only (`hub/src/openapi.json`) for now.
 6. **Explore card scope (product):** Default to `scope=main`.

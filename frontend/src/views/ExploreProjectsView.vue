@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { /* ref, watch, */ onMounted, onUnmounted } from 'vue'
+import { ref, /* watch, */ onMounted, onUnmounted } from 'vue'
 import ProjectHierarchy from '../components/dashboard/explore/ProjectHierarchy.vue'
-import { useProjectsQuery } from '@/composables/useProjectsQuery'
+import { useProjectsSummaryQuery, type ProjectsSummaryScope } from '@/composables/useProjectsSummaryQuery'
 import { useSearch } from '@/composables/useSearch'
 import { useLayoutStore } from '@/stores/layout'
 import SearchInput from '@/components/search/SearchInput.vue'
@@ -9,7 +9,8 @@ import SearchResultsOverlay from '@/components/search/SearchResultsOverlay.vue'
 import { uiLog } from '@/utils/logger'
 import type { iTask } from '@/types/taskTypes'
 
-const { data: projects, isLoading, isError } = useProjectsQuery()
+const summaryScope = ref<ProjectsSummaryScope>('main')
+const { data: projects, isLoading, isError } = useProjectsSummaryQuery(summaryScope)
 const layoutStore = useLayoutStore()
 
 // Search composable for cross-project search (no projectId filter)
@@ -57,6 +58,25 @@ onUnmounted(() => {
         @search="search.search"
         @clear="search.clearSearch"
       />
+      <div class="mt-3 flex items-center gap-2">
+        <span class="text-xs text-base-content/70">Explore scope:</span>
+        <button
+          type="button"
+          class="btn btn-xs"
+          :class="summaryScope === 'main' ? 'btn-primary' : 'btn-ghost'"
+          @click="summaryScope = 'main'"
+        >
+          Main board
+        </button>
+        <button
+          type="button"
+          class="btn btn-xs"
+          :class="summaryScope === 'all' ? 'btn-primary' : 'btn-ghost'"
+          @click="summaryScope = 'all'"
+        >
+          All tasks
+        </button>
+      </div>
     </div>
 
     <!-- Search results overlay -->
@@ -86,7 +106,7 @@ onUnmounted(() => {
     </div>
     
     <div v-else-if="projects && projects.length" class="flex flex-wrap">
-      <ProjectHierarchy :projects="projects" />
+      <ProjectHierarchy :projects="projects" :scope="summaryScope" />
     </div>
     
     <div v-else class="alert alert-info shadow-lg mt-8 mx-4">
