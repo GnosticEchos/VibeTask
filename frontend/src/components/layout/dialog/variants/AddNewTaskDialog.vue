@@ -284,6 +284,8 @@ const addTask = async () => {
         })
         await queryClient.invalidateQueries({ queryKey: ['task', Number(workspaceParent)] })
       }
+      await queryClient.invalidateQueries({ queryKey: ['project', projectId, 'summary'] })
+      await queryClient.invalidateQueries({ queryKey: ['projects', 'summary'] })
     }
     const createdId = (created as { id?: number })?.id
     if (props.task?.openWorkspaceAfter && createdId && projectId != null) {

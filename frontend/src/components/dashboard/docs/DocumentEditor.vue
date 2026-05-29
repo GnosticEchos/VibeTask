@@ -95,6 +95,14 @@
         >
           Cancel
         </button>
+        <button
+          v-if="canEdit && document && !isEditing"
+          type="button"
+          class="btn btn-ghost btn-xs text-error"
+          @click="emit('delete')"
+        >
+          {{ $t('docs.delete') }}
+        </button>
       </div>
     </div>
 
@@ -211,6 +219,7 @@ async function copyDocumentId() {
 const emit = defineEmits<{
   back: []
   save: [payload: { title: string; content: string; docType: string }]
+  delete: []
 }>()
 
 const isDark = useDark({

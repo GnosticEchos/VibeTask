@@ -80,7 +80,7 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 
 | Method | Path | Summary | Notes |
 |--------|------|---------|-------|
-| `GET` | `/api/projects/{id}/summary` | Project stats + members | **No UI** — fleet Explore uses `/api/projects/summary` only |
+| `GET` | `/api/projects/{id}/summary` | Project stats + members | **Covered** — `ProjectStatsBar` on project views (`scope=main` or `workspace:{id}`) |
 | `DELETE` | `/api/tasks/{id}` | Delete task | OpenAPI documented; no delete control in UI |
 | `POST` | `/api/tasks/{id}/monitor-pass/{columnId}` | Record monitor pass | Types only |
 | `DELETE` | `/api/tasks/{id}/monitor-pass/{columnId}` | Clear monitor pass | Types only |
@@ -100,8 +100,8 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 |------|----------------|------------|
 | **Plan / workspace** | `POST .../accept-plan` | Single entry: task dialog after plan doc-link |
 | **Workspaces — UX** | `parentId` | No drag-onto-workspace; dropdown + create-on-workspace-board only |
-| **Project summaries** | `scope=workspace:…` | API supports workspace-scoped stats; Explore uses `main` / `all` only |
-| **Documents** | CRUD + search | `deleteDocument` and `useDocumentSearch` exist; `DocsView` does not wire delete or `DocumentSearchOverlay` |
+| **Project summaries** | `scope=workspace:…` | **Covered** on workspace board routes via `ProjectStatsBar`; fleet Explore still uses `main` / `all` only |
+| **Documents** | CRUD + search | **Covered** — `DocsView` wires `DocumentSearchOverlay` and delete (list + editor) |
 | **Projects — delete** | `DELETE /api/projects/{id}` | Implemented in settings / explore |
 | **Comments** | `PATCH /api/tasks/comment/{id}` vs `POST .../comments` | UI uses legacy PATCH; both routes exist on hub |
 
@@ -162,10 +162,9 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 
 ## Suggested implementation priority (product)
 
-1. **Documents:** wire delete + search overlay in `DocsView`
-2. **Workspaces:** drag-into-workspace for membership (v1 uses dialog dropdown)
-3. **Explore:** optional workspace-scoped summary when drilling into one workspace
-4. Monitor pass/reject and task delete if review-column workflow needs SPA controls
+1. **Workspaces:** drag-into-workspace for membership (v1 uses dialog dropdown)
+2. Monitor pass/reject and task delete if review-column workflow needs SPA controls
+3. **Explore:** optional `scope=all` on per-project header (fleet explore already toggles main/all)
 
 ---
 

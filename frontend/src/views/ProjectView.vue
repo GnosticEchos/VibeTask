@@ -10,6 +10,9 @@ import { useWebsocketStore } from '@/stores/websocket'
 import { useI18n } from 'vue-i18n'
 import { uiLog } from '@/utils/logger'
 import { resolveWorkspaceOutlineColor } from '@/utils/workspaceOutlineColor'
+import { validateId } from '@/utils/validation'
+import ProjectStatsBar from '@/components/dashboard/project/ProjectStatsBar.vue'
+import type { ProjectDetailSummaryScope } from '@/composables/useProjectDetailSummaryQuery'
 import type { Ref } from 'vue'
 
 const projectStore = useProjectStore()
@@ -33,9 +36,40 @@ const projectId = computed(() => {
 
 const isBoardRoute = computed(() => route.name === 'Board' || route.name === 'SubBoard')
 const isMainBoard = computed(() => route.name === 'Board' && !route.query.workspace)
+
+const activeWorkspaceId = computed(() => {
+  if (route.name === 'SubBoard') {
+    return validateId(route.params.parentId)
+  }
+  const fromQuery = route.query?.workspace
+  if (fromQuery) {
+    const id = Number(fromQuery)
+    return Number.isFinite(id) ? id : null
+  }
+  return null
+})
+
+const projectSummaryScope = computed((): ProjectDetailSummaryScope => {
+  const workspaceId = activeWorkspaceId.value
+  if (workspaceId != null) {
+    return { kind: 'workspace', workspaceId }
+  }
+  return { kind: 'main' }
+})
+
 const subBoardMenuRef = ref<HTMLDetailsElement | null>(null)
 const isLoadingWorkspaces = ref(false)
 const activeWorkspaces = ref<Array<{ id: number; name: string; identifier: string; subBoardOutlineColor: string | null; planAccepted: boolean }>>([])
+
+const workspaceSummaryLabel = computed(() => {
+  if (activeWorkspaceId.value == null) return null
+  const match = activeWorkspaces.value.find((ws) => ws.id === activeWorkspaceId.value)
+  if (match) return match.identifier
+  if (route.name === 'SubBoard') {
+    return String(route.params.parentId)
+  }
+  return null
+})
 const reviewDrawerOpen = ref(false)
 const activeReviewCount = ref(0)
 
@@ -416,6 +450,15 @@ onUnmounted(() => {
         <span class="badge badge-xs">{{ activeReviewCount }}</span>
       </button>
     </div>
+
+    <ProjectStatsBar
+      v-if="projectId"
+      :project-id="projectId"
+      :scope="projectSummaryScope"
+      :workspace-label="workspaceSummaryLabel"
+      @open-members="openMembersDialog"
+    />
+
     <router-view v-slot="{ Component }">
       <component
         :is="Component"

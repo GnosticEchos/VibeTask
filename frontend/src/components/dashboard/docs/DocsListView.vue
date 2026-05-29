@@ -101,7 +101,19 @@
         >
           <div class="card-body p-4">
             <div class="flex items-start justify-between gap-2 mb-2">
-              <h3 class="card-title text-sm font-medium line-clamp-2">{{ doc.title }}</h3>
+              <h3 class="card-title text-sm font-medium line-clamp-2 flex-1">{{ doc.title }}</h3>
+              <button
+                v-if="canEdit"
+                type="button"
+                class="btn btn-ghost btn-xs btn-square text-error shrink-0"
+                :disabled="deleteLoading"
+                :aria-label="$t('docs.delete')"
+                @click.stop="emit('delete', doc.id, doc.title)"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
             </div>
             <p class="text-xs text-base-content/60 line-clamp-3 mb-3">{{ doc.content?.slice(0, 150) || 'Empty document' }}</p>
             <div class="flex items-center justify-between text-xs text-base-content/40">
@@ -127,11 +139,13 @@ const props = defineProps<{
   loading: boolean
   error: string | null
   canEdit: boolean
+  deleteLoading?: boolean
 }>()
 
 const emit = defineEmits<{
   create: []
   open: [docId: number]
+  delete: [docId: number, title?: string]
 }>()
 
 const selectedType = ref('')

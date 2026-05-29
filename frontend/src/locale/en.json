@@ -792,6 +792,16 @@
     "back": "Back to documents",
     "emptyDocument": "Empty document — click Edit to add content",
     "apiDocumentId": "doc {id}",
-    "copyApiDocumentId": "Copy document API id"
+    "copyApiDocumentId": "Copy document API id",
+    "searchPlaceholder": "Search documents (press Enter)",
+    "searchHint": "Full-text search across titles and content. Press Enter to open results.",
+    "delete": "Delete",
+    "deleteConfirm": "Delete “{title}”? This cannot be undone.",
+    "deleteSuccess": "Document deleted",
+    "deleteError": "Could not delete document"
+  },
+  "documents": {
+    "searchResults": "Document search results",
+    "noSearchResults": "No documents match your search"
   }
 }

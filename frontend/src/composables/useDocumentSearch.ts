@@ -1,4 +1,4 @@
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, unref, type MaybeRef } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import debounce from 'lodash.debounce'
 import { axiosApi } from '../api/axios'
@@ -30,11 +30,11 @@ export interface DocumentSearchResponse {
 }
 
 export interface UseDocumentSearchOptions {
-  projectId: number | string
+  projectId: MaybeRef<number | string>
 }
 
 export function useDocumentSearch(options: UseDocumentSearchOptions) {
-  const { projectId } = options
+  const projectId = computed(() => unref(options.projectId))
 
   const searchQuery = ref('')
   const debouncedQuery = ref('')
@@ -64,13 +64,13 @@ export function useDocumentSearch(options: UseDocumentSearchOptions) {
       limit: limit.value,
     }
 
-    const response = await axiosApi.get(`/projects/${projectId}/docs/search`, { params })
+    const response = await axiosApi.get(`/projects/${projectId.value}/docs/search`, { params })
     return response.data as DocumentSearchResponse
   }
 
   // Vue Query for search
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: computed(() => ['documents', 'search', projectId, debouncedQuery.value, currentPage.value]),
+    queryKey: computed(() => ['documents', 'search', projectId.value, debouncedQuery.value, currentPage.value]),
     queryFn: () => fetchSearchResults(debouncedQuery.value, currentPage.value),
     enabled: computed(() => debouncedQuery.value.trim().length > 0),
     staleTime: 30_000,
