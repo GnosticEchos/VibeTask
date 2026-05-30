@@ -24,7 +24,7 @@ cd frontend && npm run openapi:check-sync && npm run openapi:gen-types
 cd app && cargo build -p vibetask-hub-client
 ```
 
-See `frontend/docs/DEVELOPER_HELPER_TOOLS.md` for full workflow.
+See [`docs/developer/DEVELOPER_HELPER_TOOLS.md`](docs/developer/DEVELOPER_HELPER_TOOLS.md) for full workflow.
 
 ### Repo-root OpenAPI
 

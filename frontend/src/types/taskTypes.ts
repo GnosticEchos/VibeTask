@@ -47,6 +47,7 @@ export interface iTask {
   assigneeApiKeyId?: string | null
   assigneeApiKey?: { id: string; name?: string | null } | null
   projectColumnId: number | null
+  archivedAt?: string | null
   identifier: string
   // Search API returns these
   projectId?: number

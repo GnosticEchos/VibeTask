@@ -41,7 +41,7 @@ npx prisma migrate deploy
 npm run dev            # :3000
 ```
 
-Details: [`hub/README.md`](hub/README.md) · Env table in hub README · DB helpers in [`frontend/docs/DEVELOPER_HELPER_TOOLS.md`](frontend/docs/DEVELOPER_HELPER_TOOLS.md)
+Details: [`hub/README.md`](hub/README.md) · Env table in hub README · DB helpers in [`docs/developer/DEVELOPER_HELPER_TOOLS.md`](docs/developer/DEVELOPER_HELPER_TOOLS.md)
 
 ### 2. Frontend
 
@@ -81,7 +81,7 @@ cd frontend && npm run openapi:check-sync
 |----------|------------|
 | **Product users** | [`docs/user/README.md`](docs/user/README.md) (boards, tasks, relations, settings, agents) |
 | **Web / hub developers** | [`hub/README.md`](hub/README.md), [`hub/docs/REST_API_DOCUMENTATION.md`](hub/docs/REST_API_DOCUMENTATION.md) |
-| **Frontend developers** | [`frontend/README.md`](frontend/README.md), [`frontend/docs/DEVELOPER_HELPER_TOOLS.md`](frontend/docs/DEVELOPER_HELPER_TOOLS.md) |
+| **Frontend developers** | [`frontend/README.md`](frontend/README.md), [`docs/developer/DEVELOPER_HELPER_TOOLS.md`](docs/developer/DEVELOPER_HELPER_TOOLS.md) |
 | **Agent / CLI / MCP** | [`app/README.md`](app/README.md), [`app/DEVELOPMENT.md`](app/DEVELOPMENT.md) |
 | **API contract** | [`CONTRACT.md`](CONTRACT.md), [`frontend/docs/OPENAPI_UI_GAP_ANALYSIS.md`](frontend/docs/OPENAPI_UI_GAP_ANALYSIS.md) |
 

@@ -486,6 +486,7 @@ router.get('/:id/board', requireAuth, validateParams(projectIdParamSchema), asyn
       columns: {
         include: {
           tasks: {
+            where: { archivedAt: null },
             include: {
               assignee: { select: { id: true, name: true, avatarUrl: true } },
               relatedTo: { select: { id: true, identifier: true, name: true } },

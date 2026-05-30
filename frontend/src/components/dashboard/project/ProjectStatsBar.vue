@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import type { ProjectDetailSummaryScope } from '@/composables/useProjectDetailSummaryQuery'
 import { useProjectDetailSummaryQuery } from '@/composables/useProjectDetailSummaryQuery'
 import { columnMainTaskCount, projectMainBoardTaskTotal } from '@/types/projectStatsTypes'
+import type { ProjectBoardCountMode } from '@/types/projectBoardScope'
+import { isWallCountMode } from '@/types/projectBoardScope'
+import { useBacklogStore } from '@/stores/backlog'
+import { useArchiveStore } from '@/stores/archive'
+import { storeToRefs } from 'pinia'
 
-export type ProjectBoardCountMode = 'main' | 'all'
+export type { ProjectBoardCountMode } from '@/types/projectBoardScope'
 
 const props = defineProps<{
   projectId: number
@@ -19,6 +24,24 @@ const emit = defineEmits<{
   openMembers: []
 }>()
 
+const backlogStore = useBacklogStore()
+const archiveStore = useArchiveStore()
+const { items: backlogItems, isLoading: backlogLoading } = storeToRefs(backlogStore)
+const { items: archiveItems, isLoading: archiveLoading } = storeToRefs(archiveStore)
+
+watch(
+  () => props.projectId,
+  (id) => {
+    if (id) {
+      backlogStore.fetchBacklogTasks(id)
+      archiveStore.fetchArchivedTasks(id)
+    }
+  },
+  { immediate: true },
+)
+
+const isWallMode = computed(() => isWallCountMode(countMode.value))
+
 const effectiveScope = computed((): ProjectDetailSummaryScope => {
   if (props.workspaceId != null) {
     return { kind: 'workspace', workspaceId: props.workspaceId }
@@ -30,7 +53,7 @@ const effectiveScope = computed((): ProjectDetailSummaryScope => {
 const showScopeToggle = computed(() => props.workspaceId == null)
 
 const { data, isLoading, isFetching, isError } = useProjectDetailSummaryQuery(
-  () => props.projectId,
+  computed(() => props.projectId),
   effectiveScope,
 )
 
@@ -38,6 +61,8 @@ const project = computed(() => data.value?.project)
 const members = computed(() => data.value?.members ?? [])
 
 const taskTotal = computed(() => {
+  if (countMode.value === 'backlog') return backlogItems.value.length
+  if (countMode.value === 'archive') return archiveItems.value.length
   const stats = project.value
   if (!stats) return 0
   if (effectiveScope.value.kind === 'all') return stats.totalTasks ?? 0
@@ -48,6 +73,7 @@ const taskTotal = computed(() => {
 })
 
 const columnChips = computed(() => {
+  if (isWallMode.value) return []
   const stats = project.value
   if (!stats?.columns?.length) return []
   const useAll = effectiveScope.value.kind === 'all'
@@ -63,10 +89,22 @@ const columnChips = computed(() => {
 
 const scopeHint = computed(() => {
   if (!showScopeToggle.value) return null
+  if (countMode.value === 'backlog') {
+    return 'Tasks without a column. Select cards, pick a status above, and apply to move them in batch.'
+  }
+  if (countMode.value === 'archive') {
+    return 'Archived tasks are hidden from the board. Select cards and apply a new status to restore or reassign.'
+  }
   if (countMode.value === 'all') {
     return 'Counts and board include workspace tasks in each column.'
   }
   return 'Main-board tasks only; workspace children are hidden on the board.'
+})
+
+const wallLoading = computed(() => {
+  if (countMode.value === 'backlog') return backlogLoading.value
+  if (countMode.value === 'archive') return archiveLoading.value
+  return false
 })
 </script>
 
@@ -76,7 +114,7 @@ const scopeHint = computed(() => {
     aria-live="polite"
   >
     <div class="flex flex-wrap items-center gap-2">
-      <div v-if="showScopeToggle" class="flex items-center gap-1" role="group" aria-label="Task count scope">
+      <div v-if="showScopeToggle" class="flex flex-wrap items-center gap-1" role="group" aria-label="Task count scope">
         <button
           type="button"
           class="btn btn-xs"
@@ -95,16 +133,39 @@ const scopeHint = computed(() => {
         >
           All tasks
         </button>
+        <button
+          type="button"
+          class="btn btn-xs gap-1"
+          :class="countMode === 'backlog' ? 'btn-primary' : 'btn-ghost'"
+          :aria-pressed="countMode === 'backlog'"
+          @click="countMode = 'backlog'"
+        >
+          {{ $t('project.backlog') }}
+          <span v-if="backlogItems.length" class="badge badge-xs badge-ghost">{{ backlogItems.length }}</span>
+        </button>
+        <button
+          type="button"
+          class="btn btn-xs gap-1"
+          :class="countMode === 'archive' ? 'btn-primary' : 'btn-ghost'"
+          :aria-pressed="countMode === 'archive'"
+          @click="countMode = 'archive'"
+        >
+          {{ $t('project.archive') }}
+          <span v-if="archiveItems.length" class="badge badge-xs badge-ghost">{{ archiveItems.length }}</span>
+        </button>
       </div>
       <span v-else class="badge badge-ghost badge-sm font-medium">
         {{ workspaceLabel ? `Workspace · ${workspaceLabel}` : `Workspace · #${workspaceId}` }}
       </span>
 
       <span
-        v-if="isLoading || isFetching"
+        v-if="isLoading || isFetching || wallLoading"
         class="loading loading-spinner loading-xs"
         :title="isFetching ? 'Updating counts…' : 'Loading counts…'"
       />
+      <template v-else-if="isWallMode">
+        <span class="font-medium text-base-content/80">{{ taskTotal }} tasks</span>
+      </template>
       <template v-else-if="isError">
         <span class="text-base-content/50">Stats unavailable</span>
       </template>
@@ -138,7 +199,7 @@ const scopeHint = computed(() => {
         </button>
       </template>
     </div>
-    <p v-if="scopeHint && !isLoading" class="text-[0.65rem] text-base-content/45 leading-tight">
+    <p v-if="scopeHint && !isLoading && !wallLoading" class="text-[0.65rem] text-base-content/45 leading-tight">
       {{ scopeHint }}
     </p>
   </div>

@@ -24,11 +24,15 @@ import { useAgentAuth } from '@/composables/useAgentAuth'
 import { useSearch } from '@/composables/useSearch'
 import SearchInput from '@/components/search/SearchInput.vue'
 import SearchResultsOverlay from '@/components/search/SearchResultsOverlay.vue'
+import TaskWall from '@/components/dashboard/tasks/TaskWall.vue'
+import type { ProjectBoardCountMode } from '@/types/projectBoardScope'
+import { isWallCountMode } from '@/types/projectBoardScope'
+import { useArchiveStore } from '@/stores/archive'
 
 const props = withDefaults(defineProps<{
   reviewDrawerOpen?: boolean
-  /** Main board only vs all tasks in columns (includes workspace children). */
-  taskCountMode?: 'main' | 'all'
+  /** Main board vs all tasks vs backlog/archive wall views. */
+  taskCountMode?: ProjectBoardCountMode
 }>(), {
   reviewDrawerOpen: false,
   taskCountMode: 'main',
@@ -71,7 +75,31 @@ const projectStore = useProjectStore()
 const columnsStore = useColumnsStore()
 const membersStore = useMembersStore()
 const backlogStore = useBacklogStore()
+const archiveStore = useArchiveStore()
 const layoutStore = useLayoutStore()
+const { items: backlogItems, isLoading: backlogLoading } = storeToRefs(backlogStore)
+const { items: archiveItems, isLoading: archiveLoading } = storeToRefs(archiveStore)
+
+const isWallMode = computed(() => isWallCountMode(props.taskCountMode))
+
+const wallTasks = computed(() => {
+  if (props.taskCountMode === 'backlog') return backlogItems.value as iTask[]
+  if (props.taskCountMode === 'archive') return archiveItems.value as iTask[]
+  return []
+})
+
+const wallLoading = computed(() => {
+  if (props.taskCountMode === 'backlog') return backlogLoading.value
+  if (props.taskCountMode === 'archive') return archiveLoading.value
+  return false
+})
+
+const wallMode = computed(() =>
+  props.taskCountMode === 'backlog' || props.taskCountMode === 'archive'
+    ? props.taskCountMode
+    : 'backlog',
+)
+
 const agentAuth = useAgentAuth()
 
 // Search composable for this project
@@ -165,13 +193,17 @@ watch(boardData, (newData) => {
     }
     if (projectId.value) {
       backlogStore.fetchBacklogTasks(projectId.value)
+      archiveStore.fetchArchivedTasks(projectId.value)
     }
   }
 }, { immediate: true })
 
 watch(
   () => props.taskCountMode,
-  () => {
+  (mode) => {
+    if (!projectId.value) return
+    if (mode === 'backlog') backlogStore.fetchBacklogTasks(projectId.value)
+    if (mode === 'archive') archiveStore.fetchArchivedTasks(projectId.value)
     if (rawBoardColumns.value.length) syncBoardColumnsFromRaw()
   },
 )
@@ -310,7 +342,7 @@ async function onDnDEnd(evt: any) {
         </div>
       </div>
     </template>
-    <template v-else-if="localColumns && localColumns.length">
+    <template v-else-if="isWallMode || (localColumns && localColumns.length)">
       <!-- Sub-board breadcrumb -->
       <div v-if="workspaceTaskId" class="flex items-center gap-2 px-4 py-2 bg-base-200/50 text-sm">
         <button class="btn btn-ghost btn-xs" @click="$router.push({ name: 'Board', params: { id: $route.params.id } })">
@@ -344,7 +376,15 @@ async function onDnDEnd(evt: any) {
         @open-task="openTaskFromSearch"
       />
 
-      <div class="flex flex-row flex-wrap justify-center gap-x-3 gap-y-8 mt-8 w-full max-w-full">
+      <TaskWall
+        v-if="isWallMode"
+        :tasks="wallTasks"
+        :wall-mode="wallMode"
+        :is-loading="wallLoading"
+        @updated="refetch()"
+      />
+
+      <div v-else class="flex flex-row flex-wrap justify-center gap-x-3 gap-y-8 mt-8 w-full max-w-full">
         <div
           v-for="(column, /* colIdx */) in visibleColumns"
           :key="column.id + '-' + (column.tasks ?? []).map(t => t.id).join(',')"

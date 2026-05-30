@@ -128,6 +128,7 @@ export const patchTaskSchema = z.object({
   planAccepted: z.boolean().optional(),
   subBoardOutlineColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().nullable(),
   parentId: z.number().int().positive().optional().nullable(),
+  archived: z.boolean().optional(),
 })
   .superRefine((data, ctx) => {
     if (data.relationId != null && data.relationMode == null) {
@@ -180,6 +181,8 @@ export const taskQuerySchema = z.object({
   query: z.string().max(100).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
+  archived: z.enum(['true', 'false']).optional(),
+  noColumn: z.enum(['true']).optional(),
 });
 
 export type TaskQueryInput = z.infer<typeof taskQuerySchema>;

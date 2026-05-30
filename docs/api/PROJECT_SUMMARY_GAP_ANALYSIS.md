@@ -333,7 +333,7 @@ After OpenAPI update: prefer **generated** hub-client method for `/summary` inst
 
 ### Validation checklist (every PR touching contract)
 
-Run in order (from [`frontend/docs/DEVELOPER_HELPER_TOOLS.md`](../../frontend/docs/DEVELOPER_HELPER_TOOLS.md)):
+Run in order (from [`docs/developer/DEVELOPER_HELPER_TOOLS.md`](../../docs/developer/DEVELOPER_HELPER_TOOLS.md)):
 
 ```bash
 cd hub && npm run openapi:validate

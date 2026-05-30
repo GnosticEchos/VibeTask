@@ -176,6 +176,7 @@ model Task {
   parentId             Int?
   planAccepted         Boolean            @default(false)
   subBoardOutlineColor String?
+  archivedAt           DateTime?
   assigneeApiKeyId     String?
   assignee             User?              @relation("TaskAssignee", fields: [assigneeId], references: [id])
   createdBy            User               @relation("TaskCreator", fields: [createdById], references: [id])

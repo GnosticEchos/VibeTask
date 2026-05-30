@@ -26,7 +26,15 @@
         @open-task="openTaskFromSearch"
       />
 
-      <div class="card bg-base-100/60 shadow-xl border border-base-200 p-4 flex flex-col min-h-0 mx-4 mb-4 mt-2">
+      <TaskWall
+        v-if="isWallMode"
+        :tasks="wallTasks"
+        :wall-mode="wallMode"
+        :is-loading="wallLoading"
+        @updated="() => { backlogStore.fetchBacklogTasks(projectId); archiveStore.fetchArchivedTasks(projectId) }"
+      />
+
+      <div v-else class="card bg-base-100/60 shadow-xl border border-base-200 p-4 flex flex-col min-h-0 mx-4 mb-4 mt-2">
         <div class="card-body flex flex-col min-h-0 p-4">
           <h2 class="card-title mb-4 flex-none">{{ $t('views.project_grid') }}</h2>
           <div class="flex-1 min-h-0 overflow-auto">
@@ -168,9 +176,13 @@ import type { iColumn } from '@/types/columnTypes'
 import api from '@/api/v1/indexApi'
 import { validateId } from '@/utils/validation'
 import { applyBoardTaskScope } from '@/utils/boardTaskScope'
+import TaskWall from '@/components/dashboard/tasks/TaskWall.vue'
+import type { ProjectBoardCountMode } from '@/types/projectBoardScope'
+import { isWallCountMode } from '@/types/projectBoardScope'
+import { useArchiveStore } from '@/stores/archive'
 
 const props = withDefaults(defineProps<{
-  taskCountMode?: 'main' | 'all'
+  taskCountMode?: ProjectBoardCountMode
 }>(), {
   taskCountMode: 'main',
 })
@@ -179,6 +191,7 @@ const route = useRoute()
 const { t } = useI18n()
 const projectStore = useProjectStore()
 const backlogStore = useBacklogStore()
+const archiveStore = useArchiveStore()
 const membersStore = useMembersStore()
 const tasksStore = useTasksStore()
 const layoutStore = useLayoutStore()
@@ -208,7 +221,7 @@ const scopedBoardColumns = computed(() => {
 })
 
 // Search composable for this project
-const search = useSearch({ projectId })
+const search = useSearch({ projectId: projectId.value })
 
 // Open task dialog from search results
 function openTaskFromSearch(task: iTask) {
@@ -222,15 +235,38 @@ function openTaskFromSearch(task: iTask) {
 }
 
 const { items: backlogItems } = storeToRefs(backlogStore)
+const { items: archiveItems, isLoading: archiveLoading } = storeToRefs(archiveStore)
 const { items: membersRaw } = storeToRefs(membersStore)
 
-const isLoading = computed(
-  () =>
+const isWallMode = computed(() => isWallCountMode(props.taskCountMode))
+
+const wallTasks = computed(() => {
+  if (props.taskCountMode === 'backlog') return backlogItems.value as iTask[]
+  if (props.taskCountMode === 'archive') return archiveItems.value as iTask[]
+  return []
+})
+
+const wallLoading = computed(() => {
+  if (props.taskCountMode === 'backlog') return backlogStore.isLoading
+  if (props.taskCountMode === 'archive') return archiveLoading.value
+  return false
+})
+
+const wallMode = computed(() =>
+  props.taskCountMode === 'backlog' || props.taskCountMode === 'archive'
+    ? props.taskCountMode
+    : 'backlog',
+)
+
+const isLoading = computed(() => {
+  if (isWallMode.value) return wallLoading.value || !membersRaw.value.length
+  return (
     projectStore.loading ||
     backlogStore.isLoading ||
     boardLoading.value ||
-    !membersRaw.value.length,
-)
+    !membersRaw.value.length
+  )
+})
 
 const plainMembers = computed(() => (membersRaw.value || []).map(m => ({ ...m, displayName: getDisplayName(m) })))
 
@@ -447,20 +483,29 @@ onMounted(() => {
   if (!plainMembers.value.length) {
     membersStore.getItems()
   }
-  if (!backlogItems.value.length && projectStore.project.id) {
-    console.log('[ProjectGrid] Triggering backlogStore.fetchBacklogTasks for projectId:', projectStore.project.id)
-    backlogStore.fetchBacklogTasks(projectStore.project.id)
+  if (projectId.value) {
+    backlogStore.fetchBacklogTasks(projectId.value)
+    archiveStore.fetchArchivedTasks(projectId.value)
   }
 })
 
 watch(
-  () => projectStore.project.id,
+  () => projectId.value,
   (newId) => {
-    if (newId && !backlogItems.value.length) {
-      console.log('[ProjectGrid][watcher] Project ID became available, fetching backlog for projectId:', newId)
+    if (newId) {
       backlogStore.fetchBacklogTasks(newId)
+      archiveStore.fetchArchivedTasks(newId)
     }
-  }
+  },
+)
+
+watch(
+  () => props.taskCountMode,
+  (mode) => {
+    if (!projectId.value) return
+    if (mode === 'backlog') backlogStore.fetchBacklogTasks(projectId.value)
+    if (mode === 'archive') archiveStore.fetchArchivedTasks(projectId.value)
+  },
 )
 </script>
 

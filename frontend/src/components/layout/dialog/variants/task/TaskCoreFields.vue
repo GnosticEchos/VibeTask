@@ -1,4 +1,12 @@
 <script setup lang="ts">
+import {
+  TASK_STATUS_ARCHIVE,
+  TASK_STATUS_BACKLOG,
+  taskStatusFromSelectValue,
+  taskStatusToSelectValue,
+  type TaskStatusValue,
+} from '@/utils/taskStatusAssignment'
+
 type SelectOption = {
   value: string
   label: string
@@ -9,21 +17,26 @@ type ColumnOption = {
   name: string
 }
 
-defineProps<{
+const props = defineProps<{
   name: string
   description: string
-  projectColumnId: number | ''
+  taskStatus: TaskStatusValue
   assigneeId: string
   columnOptions: ColumnOption[]
   assigneeOptions: SelectOption[]
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'update:name': [value: string]
   'update:description': [value: string]
-  'update:projectColumnId': [value: number | '']
+  'update:taskStatus': [value: TaskStatusValue]
   'update:assigneeId': [value: string]
 }>()
+
+function onStatusChange(event: Event) {
+  const raw = (event.target as HTMLSelectElement).value
+  emit('update:taskStatus', taskStatusFromSelectValue(raw))
+}
 </script>
 
 <template>
@@ -48,13 +61,16 @@ defineEmits<{
         <label class="form-control">
           <span class="label-text font-medium">{{ $t('tasks.status') }}</span>
           <select
-            :value="projectColumnId"
+            :value="taskStatusToSelectValue(taskStatus)"
             class="select select-bordered select-sm"
             :aria-label="$t('tasks.status')"
-            @change="$emit('update:projectColumnId', ($event.target as HTMLSelectElement).value === '' ? '' : Number(($event.target as HTMLSelectElement).value))"
+            @change="onStatusChange"
           >
-            <option value="">{{ $t('tasks.notAssigned') }}</option>
-            <option v-for="col in columnOptions" :key="col.id" :value="col.id">{{ col.name }}</option>
+            <option :value="TASK_STATUS_BACKLOG">{{ $t('project.backlog') }}</option>
+            <option v-for="col in columnOptions" :key="col.id" :value="String(col.id)">
+              {{ col.name }}
+            </option>
+            <option :value="TASK_STATUS_ARCHIVE">{{ $t('project.archive') }}</option>
           </select>
         </label>
 

@@ -25,7 +25,7 @@ Requires the [hub backend](../hub/) running on :3000.
 
 ## Project Scripts
 
-See [docs/DEVELOPER_HELPER_TOOLS.md](docs/DEVELOPER_HELPER_TOOLS.md) for the full command reference.
+See [docs/developer/DEVELOPER_HELPER_TOOLS.md](../docs/developer/DEVELOPER_HELPER_TOOLS.md) for the full command reference.
 
 Key commands:
 - `npm run dev` â€” Vite dev server
@@ -89,5 +89,5 @@ The frontend includes agent management UI (create, delegate, manage API keys) â€
 | [CQRS Data Flow](docs/CQRS_DATA_FLOW.md) | Query/command boundaries |
 | [Account Settings API](docs/ACCOUNT_SETTINGS_API_V1.md) | Profile/password/sessions API |
 | [Settings Layout Sync](docs/SETTINGS_LAYOUT_SYNC.md) | Settings grid persistence |
-| [Developer Tools](docs/DEVELOPER_HELPER_TOOLS.md) | Command reference |
+| [Developer Tools](../docs/developer/DEVELOPER_HELPER_TOOLS.md) | Command reference |
 | [Type Hardening](docs/HARDENING_STRICT_TYPES_AND_CONTRACTS.md) | Strict typing plan |

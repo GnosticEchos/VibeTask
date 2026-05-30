@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Project" ALTER COLUMN "prefix" SET DATA TYPE VARCHAR(10);

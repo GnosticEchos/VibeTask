@@ -59,12 +59,14 @@ async function generateTaskIdentifier(projectId: number): Promise<string> {
 router.get('/', requireAuth, validateQuery(taskQuerySchema), asyncHandler(async (req, res) => {
   const user = req.user!;
 
-  const query = getValidatedQuery<{ projectId?: number; unassigned?: string; assigneeIds?: string; query?: string; page: number; limit: number }>(req);
+  const query = getValidatedQuery<{ projectId?: number; unassigned?: string; assigneeIds?: string; query?: string; archived?: string; noColumn?: string; page: number; limit: number }>(req);
   
   const projectId = query?.projectId;
   const unassigned = query?.unassigned;
   const assigneeIdsStr = query?.assigneeIds;
   const searchQuery = query?.query;
+  const archived = query?.archived;
+  const noColumn = query?.noColumn;
   
   // Parse pagination params from query (always use pagination)
   const page = parseInt(req.query.page as string) || 1;
@@ -91,6 +93,16 @@ router.get('/', requireAuth, validateQuery(taskQuerySchema), asyncHandler(async 
     }
 
     const where: any = { projectId };
+
+    if (archived === 'true') {
+      where.archivedAt = { not: null };
+    } else if (archived === 'false') {
+      where.archivedAt = null;
+    }
+
+    if (noColumn === 'true') {
+      where.projectColumnId = null;
+    }
 
     if (unassigned === 'true') {
       where.assigneeId = null;
@@ -376,11 +388,11 @@ router.patch('/:id', requireAuth, validateParamsAndBody(taskIdParamSchema, patch
     throw new BadRequestError('Missing or invalid parameters');
   }
   const taskId = params.id;
-  const body = getValidatedBody<{ name?: string; description?: string; assigneeId?: number; assigneeApiKeyId?: string; projectColumnId?: number; relationMode?: string; relationId?: number; isContainer?: boolean; planAccepted?: boolean; subBoardOutlineColor?: string; parentId?: number }>(req);
+  const body = getValidatedBody<{ name?: string; description?: string; assigneeId?: number; assigneeApiKeyId?: string; projectColumnId?: number; relationMode?: string; relationId?: number; isContainer?: boolean; planAccepted?: boolean; subBoardOutlineColor?: string; parentId?: number; archived?: boolean }>(req);
   if (!body) {
     throw new BadRequestError('Missing or invalid body');
   }
-  const { name, description, assigneeId, assigneeApiKeyId, projectColumnId, relationMode, relationId, isContainer, planAccepted, subBoardOutlineColor, parentId } = body;
+  const { name, description, assigneeId, assigneeApiKeyId, projectColumnId, relationMode, relationId, isContainer, planAccepted, subBoardOutlineColor, parentId, archived } = body;
 
   const task = await prisma.task.findUnique({ where: { id: taskId } });
   if (!task) {
@@ -430,6 +442,14 @@ router.patch('/:id', requireAuth, validateParamsAndBody(taskIdParamSchema, patch
     if (subBoardOutlineColor !== undefined) updateData.subBoardOutlineColor = subBoardOutlineColor;
     if (parentId !== undefined) {
       updateData.parent = parentId ? { connect: { id: parentId } } : { disconnect: true };
+    }
+    if (archived === true) {
+      updateData.archivedAt = new Date();
+    } else if (archived === false) {
+      updateData.archivedAt = null;
+    }
+    if (projectColumnId !== undefined && normalizedProjectColumnId !== null && archived === undefined) {
+      updateData.archivedAt = null;
     }
 
     const updated = await (tx.task.update as any)({

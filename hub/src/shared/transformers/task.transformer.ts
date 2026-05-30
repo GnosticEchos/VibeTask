@@ -30,6 +30,7 @@ export interface TaskResponse {
   isContainer: boolean;
   planAccepted: boolean;
   subBoardOutlineColor: string | null;
+  archivedAt: string | null;
   childCount: number;
   createdAt: string;
   updatedAt: string;
@@ -59,6 +60,7 @@ export const transformTask = (task: TaskWithRelations & {
   isContainer: task.isContainer,
   planAccepted: task.planAccepted,
   subBoardOutlineColor: task.subBoardOutlineColor,
+  archivedAt: task.archivedAt ? task.archivedAt.toISOString() : null,
   childCount: task._count?.children ?? 0,
   createdAt: task.createdAt.toISOString(),
   updatedAt: task.updatedAt.toISOString(),

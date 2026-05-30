@@ -12,7 +12,7 @@ import { uiLog } from '@/utils/logger'
 import { resolveWorkspaceOutlineColor } from '@/utils/workspaceOutlineColor'
 import { validateId } from '@/utils/validation'
 import ProjectStatsBar from '@/components/dashboard/project/ProjectStatsBar.vue'
-import type { ProjectBoardCountMode } from '@/components/dashboard/project/ProjectStatsBar.vue'
+import type { ProjectBoardCountMode } from '@/types/projectBoardScope'
 import type { Ref } from 'vue'
 
 const projectStore = useProjectStore()
@@ -35,6 +35,9 @@ const projectId = computed(() => {
 })
 
 const isBoardRoute = computed(() => route.name === 'Board' || route.name === 'SubBoard')
+const showProjectTaskToolbar = computed(
+  () => route.name === 'Board' || route.name === 'SubBoard' || route.name === 'ProjectGrid',
+)
 const isMainBoard = computed(() => route.name === 'Board' && !route.query.workspace)
 
 const activeWorkspaceId = computed(() => {
@@ -385,7 +388,7 @@ onUnmounted(() => {
           Docs
         </router-link>
         <button
-          v-if="isBoardRoute"
+          v-if="showProjectTaskToolbar"
           ref="newWorkspaceTabRef"
           type="button"
           role="tab"
@@ -411,7 +414,7 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <div v-if="isBoardRoute" class="flex items-center gap-3 ml-3 whitespace-nowrap">
+      <div v-if="showProjectTaskToolbar" class="flex items-center gap-3 ml-3 whitespace-nowrap">
         <details ref="subBoardMenuRef" class="dropdown" @toggle="onSubBoardMenuToggle">
           <summary class="btn btn-ghost btn-xs gap-1">
             <span>{{ $t('project.workspaceMenu') }}</span>

@@ -29,6 +29,11 @@ import TaskDialogHeader from './task/TaskDialogHeader.vue'
 import TaskLinkedDocumentsPanel from './task/TaskLinkedDocumentsPanel.vue'
 import TaskRelationField from './task/TaskRelationField.vue'
 import { normalizeHexColor, resolveWorkspaceOutlineColor } from '@/utils/workspaceOutlineColor'
+import {
+  patchPayloadForTaskStatus,
+  taskStatusFromTask,
+  type TaskStatusValue,
+} from '@/utils/taskStatusAssignment'
 
 // --- PROPS AND MERGED TASK (must come first) ---
 const props = defineProps<{ open: boolean; task: iTask }>()
@@ -152,7 +157,7 @@ function onClose() {
 // Local refs for editable fields (typed for iTask)
 const localName = ref<string>('')
 const localDescription = ref<string>('')
-const localProjectColumnId = ref<number | ''>('')
+const localTaskStatus = ref<TaskStatusValue>('backlog')
 const localAssigneeId = ref<string>('')
 // Add missing refs for relation type and related task
 const localRelationType = ref('')
@@ -210,7 +215,10 @@ watch(mergedTask, (task) => {
   if (task) {
     localName.value = task.name || ''
     localDescription.value = task.description || ''
-    localProjectColumnId.value = typeof task.projectColumnId === 'number' ? task.projectColumnId : ''
+    localTaskStatus.value = taskStatusFromTask({
+      projectColumnId: task.projectColumnId,
+      archivedAt: (task as { archivedAt?: string | null }).archivedAt,
+    })
     if ((task as any).assigneeApiKeyId) {
       localAssigneeId.value = `agent:${(task as any).assigneeApiKeyId}`
     } else {
@@ -362,7 +370,7 @@ async function saveTask(): Promise<void> {
     localName: localName.value,
     localDescription: localDescription.value,
     localAssigneeId: localAssigneeId.value,
-    localProjectColumnId: localProjectColumnId.value,
+    localTaskStatus: localTaskStatus.value,
     relationPatch,
     parentPatch,
     containerPatch,
@@ -371,6 +379,13 @@ async function saveTask(): Promise<void> {
   try {
     const assigneeKind = localAssigneeId.value.startsWith('agent:') ? 'agent' : localAssigneeId.value.startsWith('user:') ? 'user' : 'none'
     const assigneeValue = localAssigneeId.value.includes(':') ? localAssigneeId.value.split(':')[1] : ''
+    const statusPatch = patchPayloadForTaskStatus(localTaskStatus.value)
+    const optimisticColumnId =
+      localTaskStatus.value === 'archive'
+        ? tasksStore.item.projectColumnId
+        : localTaskStatus.value === 'backlog'
+          ? null
+          : localTaskStatus.value
     const optimisticTask: iTask = {
       ...tasksStore.item,
       name: localName.value,
@@ -379,13 +394,16 @@ async function saveTask(): Promise<void> {
         ? { id: Number(assigneeValue), avatarUrl: '' }
         : { id: 0, avatarUrl: '' },
       assigneeApiKeyId: assigneeKind === 'agent' ? assigneeValue : null,
-      projectColumnId: localProjectColumnId.value === '' ? 0 : Number(localProjectColumnId.value),
+      projectColumnId: optimisticColumnId,
+      ...(localTaskStatus.value === 'archive'
+        ? { archivedAt: new Date().toISOString() }
+        : { archivedAt: null }),
     }
     tasksStore.item = optimisticTask
     const payload: Record<string, unknown> = {
       name: localName.value,
       description: localDescription.value,
-      projectColumnId: localProjectColumnId.value === '' ? undefined : Number(localProjectColumnId.value),
+      ...statusPatch,
       projectId: mergedTask.value && 'projectId' in mergedTask.value ? (mergedTask.value as TaskWithIds).projectId : undefined,
       ...relationPatch,
       ...parentPatch,
@@ -624,7 +642,10 @@ function refreshTask() {
       } else {
         localAssigneeId.value = tasksStore.item.assignee?.id ? `user:${tasksStore.item.assignee.id}` : ''
       }
-      localProjectColumnId.value = tasksStore.item.projectColumnId ?? ''
+      localTaskStatus.value = taskStatusFromTask({
+        projectColumnId: tasksStore.item.projectColumnId,
+        archivedAt: (tasksStore.item as { archivedAt?: string | null }).archivedAt,
+      })
       // Update relation fields after refresh
       const taskAny = tasksStore.item as { relationId?: number | string | null; relationMode?: string | null; relatedTask?: { id: number; relationMode?: string } | null }
       const relationId = taskAny.relationId ?? taskAny.relatedTask?.id ?? null
@@ -806,13 +827,13 @@ async function handleAcceptPlan() {
         <TaskCoreFields
           :name="localName"
           :description="localDescription"
-          :project-column-id="localProjectColumnId"
+          :task-status="localTaskStatus"
           :assignee-id="localAssigneeId"
           :column-options="columnOptions"
           :assignee-options="assigneeOptions"
           @update:name="localName = $event"
           @update:description="localDescription = $event"
-          @update:project-column-id="localProjectColumnId = $event"
+          @update:task-status="localTaskStatus = $event"
           @update:assignee-id="localAssigneeId = $event"
         />
 

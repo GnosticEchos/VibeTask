@@ -75,7 +75,7 @@ Real-time updates use PostgreSQL `LISTEN/NOTIFY` via the `pg-listen` npm package
 
 ### Database Scripts
 
-See [DEVELOPER_HELPER_TOOLS.md](../frontend/docs/DEVELOPER_HELPER_TOOLS.md) for the full list of `npm run db:*` commands (seed, dump, reset, fix sequences, etc.).
+See [DEVELOPER_HELPER_TOOLS.md](../docs/developer/DEVELOPER_HELPER_TOOLS.md) for the full list of `npm run db:*` commands (seed, dump, reset, fix sequences, etc.).
 
 ## Tech Stack
 

@@ -16,7 +16,7 @@ describe('TaskDialog sections', () => {
       props: {
         name: 'Old task',
         description: 'Existing description',
-        projectColumnId: 1,
+        taskStatus: 1,
         assigneeId: 'user:2',
         columnOptions: [{ id: 1, name: 'Todo' }, { id: 2, name: 'Done' }],
         assigneeOptions: [{ value: 'user:2', label: 'Ada Lovelace' }],
@@ -27,7 +27,7 @@ describe('TaskDialog sections', () => {
     await wrapper.findAll('select')[0].setValue('2')
 
     expect(wrapper.emitted('update:name')?.[0]).toEqual(['Updated task'])
-    expect(wrapper.emitted('update:projectColumnId')?.[0]).toEqual([2])
+    expect(wrapper.emitted('update:taskStatus')?.[0]).toEqual([2])
   })
 
   it('shows linked document count in collapsed header and emits unlink actions', async () => {
