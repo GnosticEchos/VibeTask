@@ -77,8 +77,11 @@ watch(activeWorkspaceId, (workspaceId) => {
   if (workspaceId != null) boardCountMode.value = 'main'
 })
 
-const boardRouteProps = computed(() => {
-  if (route.name === 'Board' && activeWorkspaceId.value == null) {
+const childTaskScopeProps = computed(() => {
+  if (
+    (route.name === 'Board' || route.name === 'ProjectGrid') &&
+    activeWorkspaceId.value == null
+  ) {
     return { taskCountMode: boardCountMode.value }
   }
   return {}
@@ -475,7 +478,7 @@ onUnmounted(() => {
       <component
         :is="Component"
         class="flex-1 min-h-0 w-full min-w-0"
-        v-bind="boardRouteProps"
+        v-bind="childTaskScopeProps"
         v-model:review-drawer-open="reviewDrawerOpen"
         @update:review-count="activeReviewCount = $event"
       />

@@ -1,11 +1,10 @@
 <template>
-  <div class="w-full h-full flex flex-col flex-grow min-h-0 min-w-0 py-2 px-4 bg-gradient-to-br from-primary to-secondary to-80%">
-    <div v-if="isLoading" class="flex justify-center items-center flex-1 min-h-0">
-      <span class="loading loading-spinner loading-lg text-primary"></span>
+  <div class="w-full min-h-screen bg-gradient-to-br from-primary to-secondary to-80%">
+    <div v-if="isLoading" class="flex justify-center items-center p-8">
+      <span class="loading loading-spinner loading-lg text-primary" />
     </div>
-    <div v-else class="flex flex-col flex-1 min-h-0 overflow-hidden">
-      <!-- Search bar -->
-      <div class="px-4 pt-4 pb-2">
+    <template v-else>
+      <div class="px-4 py-2">
         <SearchInput
           v-model="search.searchQuery.value"
           :show-help="true"
@@ -14,7 +13,6 @@
         />
       </div>
 
-      <!-- Search results overlay -->
       <SearchResultsOverlay
         :is-open="search.isOverlayOpen.value"
         :tasks="search.results.value"
@@ -28,7 +26,7 @@
         @open-task="openTaskFromSearch"
       />
 
-      <div class="card bg-base-100/60 shadow-xl border border-base-200 p-4 flex flex-col min-h-0 flex-1 mx-4 mb-4">
+      <div class="card bg-base-100/60 shadow-xl border border-base-200 p-4 flex flex-col min-h-0 mx-4 mb-4 mt-2">
         <div class="card-body flex flex-col min-h-0 p-4">
           <h2 class="card-title mb-4 flex-none">{{ $t('views.project_grid') }}</h2>
           <div class="flex-1 min-h-0 overflow-auto">
@@ -144,12 +142,14 @@
           </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { useQuery } from '@tanstack/vue-query'
 import { useI18n } from 'vue-i18n'
 import { useProjectStore } from '@/stores/project'
 import { useBacklogStore } from '@/stores/backlog'
@@ -164,17 +164,51 @@ import { useSearch } from '@/composables/useSearch'
 import SearchInput from '@/components/search/SearchInput.vue'
 import SearchResultsOverlay from '@/components/search/SearchResultsOverlay.vue'
 import type { iTask } from '@/types/taskTypes'
+import type { iColumn } from '@/types/columnTypes'
+import api from '@/api/v1/indexApi'
+import { validateId } from '@/utils/validation'
+import { applyBoardTaskScope } from '@/utils/boardTaskScope'
 
+const props = withDefaults(defineProps<{
+  taskCountMode?: 'main' | 'all'
+}>(), {
+  taskCountMode: 'main',
+})
+
+const route = useRoute()
 const { t } = useI18n()
-
 const projectStore = useProjectStore()
 const backlogStore = useBacklogStore()
 const membersStore = useMembersStore()
 const tasksStore = useTasksStore()
 const layoutStore = useLayoutStore()
 
+const projectId = computed(() => validateId(route.params.id) ?? 0)
+
+const { data: boardData, isLoading: boardLoading } = useQuery({
+  queryKey: ['board', projectId],
+  queryFn: () => api.getProjectBoard(Number(projectId.value)),
+  enabled: computed(() => projectId.value > 0),
+  refetchOnMount: 'always',
+})
+
+function isReviewColumn(col: iColumn): boolean {
+  const name = String(col.name || '').toLowerCase()
+  const type = String((col as { roleType?: string }).roleType || '').toUpperCase()
+  return name.includes('agent review') || type === 'AGENT_REVIEW'
+}
+
+const scopedBoardColumns = computed(() => {
+  const columns = (boardData.value?.columns || projectStore.project.columns || []) as iColumn[]
+  const scoped =
+    props.taskCountMode === 'all'
+      ? applyBoardTaskScope(columns, null, { includeAllAssignedTasks: true })
+      : applyBoardTaskScope(columns, null, { includeNestedReviewOnMain: true })
+  return scoped.filter((col) => !isReviewColumn(col))
+})
+
 // Search composable for this project
-const search = useSearch({ projectId: projectStore.project?.id })
+const search = useSearch({ projectId })
 
 // Open task dialog from search results
 function openTaskFromSearch(task: iTask) {
@@ -190,7 +224,13 @@ function openTaskFromSearch(task: iTask) {
 const { items: backlogItems } = storeToRefs(backlogStore)
 const { items: membersRaw } = storeToRefs(membersStore)
 
-const isLoading = computed(() => projectStore.loading || backlogStore.isLoading || !membersRaw.value.length)
+const isLoading = computed(
+  () =>
+    projectStore.loading ||
+    backlogStore.isLoading ||
+    boardLoading.value ||
+    !membersRaw.value.length,
+)
 
 const plainMembers = computed(() => (membersRaw.value || []).map(m => ({ ...m, displayName: getDisplayName(m) })))
 
@@ -252,8 +292,8 @@ interface GridRow {
 }
 
 const assignedTasks = computed(() =>
-  (projectStore.project.columns || []).flatMap(col =>
-    (col.tasks || []).map(task => ({
+  scopedBoardColumns.value.flatMap((col) =>
+    (col.tasks || []).map((task) => ({
       identifier: task.identifier ?? '',
       title: (task as { title?: string; name?: string }).title || (task as { name?: string }).name || '',
       description: task.description || '',
@@ -265,8 +305,8 @@ const assignedTasks = computed(() =>
       id: task.id,
       projectId: projectStore.project.id,
       projectColumnId: task.projectColumnId,
-    }))
-  )
+    })),
+  ),
 )
 
 const unassignedTasks = computed(() =>
