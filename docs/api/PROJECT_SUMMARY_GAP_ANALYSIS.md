@@ -1,7 +1,7 @@
 # Project summary API — gap analysis & implementation spec
 
-**Status:** Phases **1–5 shipped** (explore uses `GET /api/projects/summary?scope=main`); Phase **6** docs/platform polish optional  
-**Last updated:** 2026-05-26 (Phase 5 explore migration)  
+**Status:** Phases **1–5 shipped**; Phase **6** polish ongoing (board backlog/archive, OpenAPI for `archivedAt`)  
+**Last updated:** 2026-05-30  
 **Audience:** Hub, frontend, app (MCP/CLI)  
 **Related:** [`frontend/docs/OPENAPI_UI_GAP_ANALYSIS.md`](../../frontend/docs/OPENAPI_UI_GAP_ANALYSIS.md), [`CONTRACT.md`](../../CONTRACT.md)
 
@@ -25,15 +25,15 @@
 |------|------|---------|---------|
 | `GET /api/projects` | User Bearer | Projects + columns + **all tasks** | Settings, TopBar, member pickers (`useProjectsQuery`) |
 | `GET /api/projects/summary` | User Bearer | `{ projects: ProjectStats[] }` — membership fleet | **Explore** (`useProjectsSummaryQuery` → `ProjectSummaryCard`) |
-| `GET /api/projects/{id}/summary` | User Bearer | `{ project: ProjectStats, members: [...] }` | **No SPA consumer yet** (available for project settings modal later) |
+| `GET /api/projects/{id}/summary` | User Bearer | `{ project: ProjectStats, members: [...] }` | **ProjectStatsBar** on Board / Grid / workspace routes (`useProjectDetailSummaryQuery`) |
 | `GET /api/agent/projects/summary` | User Bearer **or** agent API key | `{ projects: ProjectStats[] }` | **`read_project_overview` MCP**, CLI `project overview`, integration tests |
 | `GET /api/agent/projects/{projectId}/summary` | Agent key (+ access) | `{ project: ProjectStats }` | **`read_project_summary` MCP**, CLI `project summary`, integration tests |
 
-Explore builds card UI client-side from heavy list data:
+Explore uses counts-only fleet summary (not heavy `GET /api/projects`):
 
 ```text
-ExploreProjectsView → useProjectsQuery → GET /api/projects?limit=100
-  → hub includes columns.tasks → ProjectSummaryCard counts column.tasks.length
+ExploreProjectsView → useProjectsSummaryQuery → GET /api/projects/summary?scope=main|all
+  → ProjectSummaryCard uses ProjectStats (mainBoardTasks, columns[].taskCountMain)
 ```
 
 Agent overview already does the right thing at the HTTP layer:
@@ -65,7 +65,7 @@ read_project_overview → GET /api/agent/projects/summary
 | Document counts | **Shipped** when `include=documents` |
 | Open help requests | **Shipped** when `include=helpRequests` |
 | Blocked tasks | **Shipped** when `include=blocked` |
-| `scope=workspace:{id}` / `workspace=` query | **Not implemented** — only `main` and `all` today |
+| `scope=workspace:{id}` / `workspace=` query | **Shipped** — hub `buildProjectStatsSummary`; SPA on workspace board via `ProjectStatsBar` |
 
 ### Access model (agents)
 
@@ -180,8 +180,9 @@ When `include=workspaces`: add `workspaces.activeCount` (containers) and optiona
 - [x] Project with accept-plan children: `totalTasks > mainBoardTasks` (covered by stats engine + agent integration tests)
 - [x] `scope=main` vs `scope=all` diverge on column `taskCount` (agent-docs integration tests)
 - [ ] `scope=main` column counts match `applyBoardTaskScope(..., null)` on same seed data (explicit board parity test not added)
-- [ ] `scope=workspace:{id}` counts match sub-board view for that container (**query not implemented**)
-- [ ] `scope=all` matches legacy explore totals (explore now defaults to `scope=main`; no UI toggle)
+- [x] `scope=workspace:{id}` counts match sub-board view for that container (hub + `ProjectStatsBar` on `?workspace=` / SubBoard)
+- [x] Project board **Main board / All tasks / Backlog / Archive** toggles share `boardCountMode`; stats bar + Board/Grid scope aligned
+- [ ] `scope=all` on **Explore fleet** cards (Explore still defaults to `main`; project views have `all` toggle)
 - [x] `summaryLine` states scope, e.g. `… on main board, … total (… in workspaces)` (`buildProjectStatsSummary`)
 
 ---
@@ -327,7 +328,7 @@ After OpenAPI update: prefer **generated** hub-client method for `/summary` inst
 2. [x] Path: `GET /api/agent/projects/{projectId}/summary`
 3. [x] Path: `GET /api/projects/summary` (human fleet)
 4. [x] Schemas: `ProjectStats`, column stats (`taskCountMain`, `taskCountAll`), optional buckets, `HumanProjectDetailSummaryResponse`
-5. [x] Query param `scope` on agent + human summary routes (`main` \| `all` only until workspace scope is built)
+5. [x] Query param `scope` on agent + human summary routes (`main` \| `all` \| `workspace:{id|identifier|title}`; `workspace=` alias)
 6. [x] Human single route uses `ProjectStats` + members; legacy `ProjectSummary` deprecated (unused in paths)
 7. [x] `roleType` on column stats in `ProjectStats`
 
@@ -420,7 +421,8 @@ Platform agent: add `/api/agent/projects/summary` and `/api/agent/projects/:proj
 - [x] `projectId` filter returns one project (agent + human fleet)
 - [x] Human `GET /api/projects/summary` + `GET /api/projects/{id}/summary` (`projects.integration.test.ts`)
 - [x] Workspace regression: `scope=main` vs `scope=all` (agent integration tests)
-- [ ] `scope=workspace:{id}` (**not implemented**)
+- [x] `scope=workspace:{id}` (hub + agent integration tests; SPA workspace board)
+- [x] Human single-project summary in UI (`ProjectStatsBar`, `useProjectDetailSummaryQuery`)
 
 ### MCP / CLI
 
@@ -432,6 +434,7 @@ Platform agent: add `/api/agent/projects/summary` and `/api/agent/projects/:proj
 
 - [x] Explore cards use main-board counts; “+N in workspaces” when `workspaceChildTasks > 0`
 - [x] Explore fleet fetch is counts-only (`useProjectsSummaryQuery`)
+- [x] Per-project stats bar on Board/Grid with **Main board / All tasks / Backlog / Archive** scope toggles
 
 ### Contract
 
@@ -455,7 +458,7 @@ Platform agent: add `/api/agent/projects/summary` and `/api/agent/projects/:proj
 | **5** | **Done** | `useProjectsSummaryQuery`; `ProjectSummaryCard` / `ProjectHierarchy` on `ProjectStats` |
 | **6** | Partial | REST doc human summary rows; platform allowlist / `agents.md` as needed |
 
-**Next (optional):** Single-project human summary in UI; `scope=all` toggle on explore; remove unused `ProjectSummary` OpenAPI schema.
+**Next (optional):** Explore fleet `scope=all` toggle; OpenAPI for `Task.archivedAt` / `PATCH archived`; remove unused `ProjectSummary` OpenAPI schema; monitor pass/reject SPA buttons.
 
 ---
 

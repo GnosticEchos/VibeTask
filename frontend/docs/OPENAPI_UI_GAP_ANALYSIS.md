@@ -4,7 +4,7 @@ This document maps **hub OpenAPI capabilities** to **what the Vue frontend actua
 
 **Spec source:** `hub/src/openapi.json` (canonical), copied to `frontend/openapi.json` via `npm run openapi:sync` from `frontend/` or `npm run openapi:sync-fe` from `hub/`.
 
-**Last reviewed:** 2026-05-28 (Explore summary, workspace scope, Task dialog workspace fields).
+**Last reviewed:** 2026-05-30 (Backlog/archive wall, batch status, per-project stats bar, developer docs move).
 
 ---
 
@@ -74,6 +74,32 @@ flowchart LR
 
 ---
 
+## Backlog, archive, and batch status
+
+### API model (2026-05-30)
+
+| Concept | Implementation |
+|---------|----------------|
+| Backlog | `projectColumnId` null, `archivedAt` null — `GET /api/tasks?noColumn=true&archived=false` |
+| Archive | `Task.archivedAt` set — `GET /api/tasks?archived=true`; board columns exclude archived rows |
+| Restore / assign | `PATCH /api/tasks/{id}` with `projectColumnId` and/or `archived: false` |
+
+**OpenAPI gap:** `archivedAt`, query params `archived` / `noColumn`, and PATCH `archived` are **implemented on hub** but **not yet in `hub/src/openapi.json`** — add in a contract PR before treating as stable for external clients.
+
+### UI coverage
+
+| User intent | API | UI status |
+|-------------|-----|-----------|
+| View backlog tasks (no column) | `GET /api/tasks?…` | **Covered** — stats bar **Backlog** → card wall (`TaskWall`) on Board + Grid |
+| View archived tasks | `GET /api/tasks?archived=true` | **Covered** — stats bar **Archive** → card wall |
+| Batch move backlog/archive tasks to column | `PATCH` per task | **Covered** — multi-select cards + batch status dropdown + **Apply** |
+| Set status from task dialog | `PATCH` | **Covered** — **Backlog** / columns / **Archive** in `TaskCoreFields` |
+| Drag backlog onto board | `POST .../move` | **Gap** — wall view uses PATCH batch only (no DnD columns) |
+
+Project views share **`boardCountMode`**: `main` \| `all` \| `backlog` \| `archive` via `ProjectStatsBar` → `Board` / `ProjectGrid`.
+
+---
+
 ## Gap matrix (OpenAPI → UI)
 
 Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent API](#agent-api-by-design)).
@@ -81,6 +107,8 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 | Method | Path | Summary | Notes |
 |--------|------|---------|-------|
 | `GET` | `/api/projects/{id}/summary` | Project stats + members | **Covered** — `ProjectStatsBar` on project views (`scope=main` or `workspace:{id}`) |
+| `GET` | `/api/tasks` | List/filter tasks | **Partial** — backlog/archive stores use `archived` / `noColumn` query params not in spec |
+| `PATCH` | `/api/tasks/{id}` | Update task | **Partial** — UI uses PATCH; **`archived` / `archivedAt` not in OpenAPI spec yet** |
 | `DELETE` | `/api/tasks/{id}` | Delete task | OpenAPI documented; no delete control in UI |
 | `POST` | `/api/tasks/{id}/monitor-pass/{columnId}` | Record monitor pass | Types only |
 | `DELETE` | `/api/tasks/{id}/monitor-pass/{columnId}` | Clear monitor pass | Types only |
@@ -100,7 +128,7 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 |------|----------------|------------|
 | **Plan / workspace** | `POST .../accept-plan` | Single entry: task dialog after plan doc-link |
 | **Workspaces — UX** | `parentId` | No drag-onto-workspace; dropdown + create-on-workspace-board only |
-| **Project summaries** | `scope=workspace:…` | **Covered** on workspace board routes via `ProjectStatsBar`; fleet Explore still uses `main` / `all` only |
+| **Project summaries** | `scope=workspace:…` | **Covered** on workspace board routes via `ProjectStatsBar`; fleet Explore uses `main` only (project Board/Grid has `main` / `all` / backlog / archive) |
 | **Documents** | CRUD + search | **Covered** — `DocsView` wires `DocumentSearchOverlay` and delete (list + editor) |
 | **Projects — delete** | `DELETE /api/projects/{id}` | Implemented in settings / explore |
 | **Comments** | `PATCH /api/tasks/comment/{id}` vs `POST .../comments` | UI uses legacy PATCH; both routes exist on hub |
@@ -113,7 +141,7 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 |--------|------------|
 | Auth | `LoginView`, `SignUpView`, session restore |
 | Projects | Explore (stats summary), board, settings, create/delete |
-| Tasks | Board, backlog, dialogs, drag → `POST .../move`, relations, workspace fields on PATCH |
+| Tasks | Board, backlog/archive walls, dialogs, drag → `POST .../move`, relations, workspace + archive on PATCH |
 | Columns | Board, workspace settings |
 | Members | Project members, invite, role patch |
 | Search | `SearchInput`, overlays |
@@ -132,6 +160,7 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 | Human `GET /projects/summary` → `ProjectStats` | **Fixed** — legacy `ProjectSummary` removed |
 | Wrong `DELETE /api/tasks/{id}` summary | **Fixed** — “Delete task” |
 | Board payload missing relations | **Fixed** — `GET .../board` includes relation fields |
+| Task archive / backlog filters | **Gap (spec)** — hub shipped; OpenAPI + generated types pending |
 
 ---
 
@@ -162,9 +191,10 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 
 ## Suggested implementation priority (product)
 
-1. **Workspaces:** drag-into-workspace for membership (v1 uses dialog dropdown)
-2. Monitor pass/reject and task delete if review-column workflow needs SPA controls
-3. **Explore:** fleet **`main|all`** toggle; project **`ProjectStatsBar`** matches on non-workspace routes (workspace board stays **`scope=workspace:{id}`**)
+1. **OpenAPI:** document `archivedAt`, `archived` PATCH, and `GET /api/tasks` filter params (`archived`, `noColumn`)
+2. **Workspaces:** drag-into-workspace for membership (v1 uses dialog dropdown)
+3. Monitor pass/reject and task delete if review-column workflow needs SPA controls
+4. **Explore:** fleet **`scope=all`** toggle (project Board/Grid already has main/all/backlog/archive via `ProjectStatsBar`)
 
 ---
 
