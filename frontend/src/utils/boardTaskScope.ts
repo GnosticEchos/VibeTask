@@ -9,7 +9,14 @@ function isReviewColumn(column: iColumn): boolean {
   return name.includes('agent review') || type === 'AGENT_REVIEW'
 }
 
-function matchesScope(task: iTask, scopeParentId: BoardTaskScopeParentId, includeNestedReviewOnMain: boolean, column: iColumn): boolean {
+function matchesScope(
+  task: iTask,
+  scopeParentId: BoardTaskScopeParentId,
+  includeNestedReviewOnMain: boolean,
+  includeAllAssignedTasks: boolean,
+  column: iColumn,
+): boolean {
+  if (includeAllAssignedTasks) return true
   if (scopeParentId === null) {
     if (includeNestedReviewOnMain && isReviewColumn(column)) return true
     return ((task as any).parentId ?? null) === null
@@ -20,13 +27,14 @@ function matchesScope(task: iTask, scopeParentId: BoardTaskScopeParentId, includ
 export function applyBoardTaskScope(
   columns: iColumn[],
   scopeParentId: BoardTaskScopeParentId,
-  options: { includeNestedReviewOnMain?: boolean } = {},
+  options: { includeNestedReviewOnMain?: boolean; includeAllAssignedTasks?: boolean } = {},
 ): iColumn[] {
   const includeNestedReviewOnMain = options.includeNestedReviewOnMain === true
+  const includeAllAssignedTasks = options.includeAllAssignedTasks === true
   return (columns || []).map((column) => {
     const tasks = Array.isArray((column as any).tasks) ? ((column as any).tasks as iTask[]) : []
     const filteredTasks = tasks.filter((task) =>
-      matchesScope(task, scopeParentId, includeNestedReviewOnMain, column),
+      matchesScope(task, scopeParentId, includeNestedReviewOnMain, includeAllAssignedTasks, column),
     )
     return {
       ...(column as any),

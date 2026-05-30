@@ -27,8 +27,11 @@ import SearchResultsOverlay from '@/components/search/SearchResultsOverlay.vue'
 
 const props = withDefaults(defineProps<{
   reviewDrawerOpen?: boolean
+  /** Main board only vs all tasks in columns (includes workspace children). */
+  taskCountMode?: 'main' | 'all'
 }>(), {
   reviewDrawerOpen: false,
+  taskCountMode: 'main',
 })
 
 const emit = defineEmits<{
@@ -38,6 +41,24 @@ const emit = defineEmits<{
 
 // Local, mutable copy for DnD
 const localColumns: Ref<iColumn[]> = ref([])
+const rawBoardColumns: Ref<iColumn[]> = ref([])
+
+function scopeColumnsForBoard(columns: iColumn[]): iColumn[] {
+  if (props.taskCountMode === 'all') {
+    return applyBoardTaskScope(columns, null, { includeAllAssignedTasks: true })
+  }
+  return applyBoardTaskScope(columns, null, { includeNestedReviewOnMain: true })
+}
+
+function syncBoardColumnsFromRaw() {
+  const scoped = scopeColumnsForBoard(rawBoardColumns.value)
+  localColumns.value = deepCloneColumns(scoped)
+  if (Array.isArray(scoped)) {
+    columnsStore.setItems([...scoped])
+    const allTasks = scoped.flatMap((col: iColumn) => (Array.isArray(col.tasks) ? col.tasks : []))
+    items.value = allTasks
+  }
+}
 
 const route = useRoute()
 const projectId = computed(() => validateId(route.params.id) ?? 0)
@@ -137,35 +158,32 @@ watch(boardData, (newData) => {
       ...projectStore.project,
       ...newData,
     })
-    const scopedColumns = applyBoardTaskScope(newData.columns || [], null, {
-      includeNestedReviewOnMain: true,
-    })
-    localColumns.value = deepCloneColumns(scopedColumns)
-    if (Array.isArray(scopedColumns)) {
-      columnsStore.setItems([...scopedColumns])
-      const allTasks = scopedColumns.flatMap((col: iColumn) => Array.isArray(col.tasks) ? col.tasks : [])
-      items.value = allTasks
-    }
+    rawBoardColumns.value = deepCloneColumns(newData.columns || [])
+    syncBoardColumnsFromRaw()
     if (Array.isArray(newData.members)) {
       membersStore.setItems([...newData.members])
     }
-    // Preload backlog store for this project
     if (projectId.value) {
       backlogStore.fetchBacklogTasks(projectId.value)
     }
   }
 }, { immediate: true })
 
-// Keep localColumns in sync with store columns
+watch(
+  () => props.taskCountMode,
+  () => {
+    if (rawBoardColumns.value.length) syncBoardColumnsFromRaw()
+  },
+)
+
+// Keep localColumns in sync with store columns (websocket updates)
 watch(
   () => projectStore.project.columns,
   (newColumns) => {
-    const scopedColumns = applyBoardTaskScope((newColumns || []) as iColumn[], null, {
-      includeNestedReviewOnMain: true,
-    })
-    localColumns.value = deepCloneColumns(scopedColumns)
+    if (!Array.isArray(newColumns) || !newColumns.length) return
+    rawBoardColumns.value = deepCloneColumns(newColumns as iColumn[])
+    syncBoardColumnsFromRaw()
   },
-  { immediate: true }
 )
 
 async function onDnDEnd(evt: any) {

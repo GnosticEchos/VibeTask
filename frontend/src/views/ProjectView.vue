@@ -12,7 +12,7 @@ import { uiLog } from '@/utils/logger'
 import { resolveWorkspaceOutlineColor } from '@/utils/workspaceOutlineColor'
 import { validateId } from '@/utils/validation'
 import ProjectStatsBar from '@/components/dashboard/project/ProjectStatsBar.vue'
-import type { ProjectDetailSummaryScope } from '@/composables/useProjectDetailSummaryQuery'
+import type { ProjectBoardCountMode } from '@/components/dashboard/project/ProjectStatsBar.vue'
 import type { Ref } from 'vue'
 
 const projectStore = useProjectStore()
@@ -49,14 +49,6 @@ const activeWorkspaceId = computed(() => {
   return null
 })
 
-const projectSummaryScope = computed((): ProjectDetailSummaryScope => {
-  const workspaceId = activeWorkspaceId.value
-  if (workspaceId != null) {
-    return { kind: 'workspace', workspaceId }
-  }
-  return { kind: 'main' }
-})
-
 const subBoardMenuRef = ref<HTMLDetailsElement | null>(null)
 const isLoadingWorkspaces = ref(false)
 const activeWorkspaces = ref<Array<{ id: number; name: string; identifier: string; subBoardOutlineColor: string | null; planAccepted: boolean }>>([])
@@ -72,6 +64,25 @@ const workspaceSummaryLabel = computed(() => {
 })
 const reviewDrawerOpen = ref(false)
 const activeReviewCount = ref(0)
+const boardCountMode = ref<ProjectBoardCountMode>('main')
+
+watch(
+  () => projectId.value,
+  () => {
+    boardCountMode.value = 'main'
+  },
+)
+
+watch(activeWorkspaceId, (workspaceId) => {
+  if (workspaceId != null) boardCountMode.value = 'main'
+})
+
+const boardRouteProps = computed(() => {
+  if (route.name === 'Board' && activeWorkspaceId.value == null) {
+    return { taskCountMode: boardCountMode.value }
+  }
+  return {}
+})
 
 watch(
   () => projectId.value,
@@ -453,8 +464,9 @@ onUnmounted(() => {
 
     <ProjectStatsBar
       v-if="projectId"
+      v-model:count-mode="boardCountMode"
       :project-id="projectId"
-      :scope="projectSummaryScope"
+      :workspace-id="activeWorkspaceId"
       :workspace-label="workspaceSummaryLabel"
       @open-members="openMembersDialog"
     />
@@ -463,6 +475,7 @@ onUnmounted(() => {
       <component
         :is="Component"
         class="flex-1 min-h-0 w-full min-w-0"
+        v-bind="boardRouteProps"
         v-model:review-drawer-open="reviewDrawerOpen"
         @update:review-count="activeReviewCount = $event"
       />

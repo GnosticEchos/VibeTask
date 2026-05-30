@@ -69,7 +69,6 @@ export function useProjectDetailSummaryQuery(
     queryFn: () =>
       fetchProjectDetailSummary(normalizedId.value as number, normalizedScope.value),
     enabled: computed(() => normalizedId.value != null),
-    placeholderData: (prev) => prev,
     retry: (failureCount, error: unknown) => {
       const status = (error as { response?: { status?: number } })?.response?.status
       if (status === 401 || status === 403 || status === 404) return false

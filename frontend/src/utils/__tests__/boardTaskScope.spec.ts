@@ -43,4 +43,25 @@ describe('applyBoardTaskScope', () => {
     expect(merged[0].tasks).toHaveLength(2)
     expect(merged[0].tasks?.map((t) => t.id)).toEqual([126, 217])
   })
+
+  it('includeAllAssignedTasks keeps workspace children on main board columns', () => {
+    const columns: iColumn[] = [
+      {
+        id: 50,
+        name: 'Discovery',
+        order: 1,
+        color: '#ccc',
+        tasks: [
+          { id: 1, parentId: null, name: 'Main' } as iTask,
+          { id: 2, parentId: 123, name: 'In workspace' } as iTask,
+        ],
+      } as iColumn,
+    ]
+
+    const mainOnly = applyBoardTaskScope(columns, null, { includeNestedReviewOnMain: true })
+    expect(mainOnly[0].tasks).toHaveLength(1)
+
+    const all = applyBoardTaskScope(columns, null, { includeAllAssignedTasks: true })
+    expect(all[0].tasks).toHaveLength(2)
+  })
 })

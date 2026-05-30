@@ -164,7 +164,7 @@ Operations with **no or minimal UI**. Agent-only routes omitted here (see [Agent
 
 1. **Workspaces:** drag-into-workspace for membership (v1 uses dialog dropdown)
 2. Monitor pass/reject and task delete if review-column workflow needs SPA controls
-3. **Explore:** optional `scope=all` on per-project header (fleet explore already toggles main/all)
+3. **Explore:** fleet **`main|all`** toggle; project **`ProjectStatsBar`** matches on non-workspace routes (workspace board stays **`scope=workspace:{id}`**)
 
 ---
 

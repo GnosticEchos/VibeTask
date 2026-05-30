@@ -50,4 +50,32 @@ describe('useProjectDetailSummaryQuery', () => {
       })
     })
   })
+
+  it('fetches project summary with scope=all', async () => {
+    vi.mocked(axiosApi.get).mockResolvedValue({
+      data: {
+        project: { id: 10, name: 'P', prefix: 'P', columns: [] },
+        members: [],
+      },
+    })
+
+    const AllHost = defineComponent({
+      setup() {
+        useProjectDetailSummaryQuery(10, { kind: 'all' })
+        return {}
+      },
+      template: '<div />',
+    })
+
+    mount(AllHost, {
+      global: { plugins: [[VueQueryPlugin, { queryClient }]] },
+    })
+
+    await flushPromises()
+    await vi.waitFor(() => {
+      expect(axiosApi.get).toHaveBeenCalledWith('/projects/10/summary', {
+        params: { scope: 'all' },
+      })
+    })
+  })
 })
