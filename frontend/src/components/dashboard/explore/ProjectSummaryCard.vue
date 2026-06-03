@@ -40,12 +40,18 @@ const ensureHex = (color: string) => {
   if (color[0] !== '#') return `#${color}`
   return color
 }
+
+/** DaisyUI card surface tokens (avoid inline `style` string for stylelint). */
+const cardSurfaceStyle = {
+  '--depth': '1',
+  '--noise': '1',
+} as const
 </script>
 
 <template>
   <div
     class="card bg-base-100 shadow-md border border-base-300 hover:shadow-lg transform hover:translate-x-2 hover:translate-y-2 transition-all duration-300 hover:scale-105 rounded-box w-[300px] h-[365px]"
-    style="--depth: 1; --noise: 1;"
+    :style="cardSurfaceStyle"
   >
     <div class="card-body p-4">
       <div class="text-center mb-2">

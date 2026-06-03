@@ -128,7 +128,7 @@ export async function buildProjectStatsSummary(
       }
     }
   }
-  const scopedWorkspaceIds = [...new Set([...scopedWorkspaceByProject.values()])];
+  const scopedWorkspaceIds = [...new Set(scopedWorkspaceByProject.values())];
   const scopedWorkspaceTaskRows = scopedWorkspaceIds.length > 0
     ? await prisma.task.findMany({
         where: {
