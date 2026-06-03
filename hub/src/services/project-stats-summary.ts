@@ -373,7 +373,7 @@ export async function buildProjectStatsSummary(
       ? `${project.name}: ${totalTasks} total (${mainBoardTasks} on main board)`
       : `${project.name}: ${mainBoardTasks} on main board, ${totalTasks} total (${workspaceChildTasks} in workspaces)`;
 
-    const projectSummary: Record<string, unknown> = {
+    const projectSummary = {
       id: project.id,
       name: project.name,
       prefix: project.prefix,
@@ -386,6 +386,24 @@ export async function buildProjectStatsSummary(
       columns: columnSummary,
       activeSprints: 0,
       summaryLine,
+    } as {
+      id: number;
+      name: string;
+      prefix: string;
+      description: string | null;
+      formalityLevel: string;
+      totalTasks: number;
+      mainBoardTasks: number;
+      workspaceContainers: number;
+      workspaceChildTasks: number;
+      columns: typeof columnSummary;
+      activeSprints: number;
+      summaryLine: string;
+      documents?: { total: number; byType: Record<string, number> };
+      agentReview?: { taskCount: number; identifiers: string[] };
+      helpRequests?: { open: number };
+      blocked?: { taskCount: number };
+      workspaces?: { activeCount: number; items: unknown[] };
     };
 
     if (include.documents) {
