@@ -4,7 +4,8 @@ export const DEFAULT_WORKSPACE_OUTLINE_COLOR = '#6366f1'
 const HEX_WITH_HASH = /^#[0-9A-Fa-f]{6}$/
 
 /** Normalize user input to `#rrggbb` or null if invalid. */
-export function normalizeHexColor(value: string): string | null {
+export function normalizeHexColor(value: string | null | undefined): string | null {
+  if (value == null || value === '') return null
   const v = value.trim()
   if (HEX_WITH_HASH.test(v)) return v
   if (/^[0-9A-Fa-f]{6}$/.test(v)) return `#${v}`

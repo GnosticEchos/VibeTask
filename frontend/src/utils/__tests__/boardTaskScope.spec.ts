@@ -9,13 +9,14 @@ describe('applyBoardTaskScope', () => {
       {
         id: 1,
         name: 'Agent Review',
-        roleType: 'AGENT_REVIEW',
         color: '#ffa500',
         order: 1,
+        type: null,
+        description: '',
         tasks: [
           { id: 10, parentId: 99, name: 'Nested review' } as iTask,
         ],
-      } as iColumn,
+      },
     ]
 
     const scoped = applyBoardTaskScope(columns, null, { includeNestedReviewOnMain: true })
@@ -29,10 +30,12 @@ describe('applyBoardTaskScope', () => {
         name: 'Discovery',
         order: 1,
         color: '#ccc',
+        type: null,
+        description: '',
         tasks: [
           { id: 126, parentId: 123, name: 'Existing', identifier: 'SPEC-21', order: 1 } as iTask,
         ],
-      } as iColumn,
+      },
     ]
 
     const merged = mergeWorkspaceChildrenIntoBoard(columns, 123, [
@@ -51,11 +54,13 @@ describe('applyBoardTaskScope', () => {
         name: 'Discovery',
         order: 1,
         color: '#ccc',
+        type: null,
+        description: '',
         tasks: [
           { id: 1, parentId: null, name: 'Main' } as iTask,
           { id: 2, parentId: 123, name: 'In workspace' } as iTask,
         ],
-      } as iColumn,
+      },
     ]
 
     const mainOnly = applyBoardTaskScope(columns, null, { includeNestedReviewOnMain: true })

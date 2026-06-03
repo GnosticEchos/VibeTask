@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useBacklogStore } from '../backlog'
+import { REWRITE_MAX_LIST_PAGE_SIZE } from '@/utils/paginatedListResponse'
 
 vi.mock('@/api/axios', () => ({
   axiosApi: {
@@ -37,7 +38,12 @@ describe('BacklogStore', () => {
     await store.fetchBacklogTasks(1)
 
     expect(axiosApi.get).toHaveBeenCalledWith('/tasks', {
-      params: { projectId: 1, limit: 100 },
+      params: {
+        projectId: 1,
+        noColumn: 'true',
+        archived: 'false',
+        limit: REWRITE_MAX_LIST_PAGE_SIZE,
+      },
     })
     expect(store.items).toHaveLength(2)
     expect(store.items.map((t: { id: number }) => t.id)).toEqual([1, 2])

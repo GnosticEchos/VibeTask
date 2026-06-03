@@ -1015,6 +1015,7 @@
           "Projects"
         ],
         "summary": "Get project board",
+        "description": "Returns kanban columns and tasks for the project. Tasks with `archivedAt` set are omitted from column task lists (use `GET /api/tasks?archived=true` for archive views).",
         "security": [
           {
             "bearerAuth": []
@@ -1887,7 +1888,7 @@
           "Tasks"
         ],
         "summary": "Get tasks for project or all accessible tasks",
-        "description": "With projectId: get tasks for a specific project. Without projectId: get all tasks the user has access to (My Tasks). Returns paginated results.",
+        "description": "With projectId: get tasks for a specific project. Without projectId: get all tasks the user has access to (My Tasks). Returns paginated results. Use `noColumn=true` and `archived=false` for backlog lists; `archived=true` for archived tasks. Archived tasks are excluded from `GET /api/projects/{id}/board` column payloads.",
         "security": [
           {
             "bearerAuth": []
@@ -1956,6 +1957,31 @@
               "default": 20
             },
             "description": "Number of items per page"
+          },
+          {
+            "name": "archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "description": "When `true`, return only archived tasks (`archivedAt` set). When `false`, exclude archived tasks."
+          },
+          {
+            "name": "noColumn",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true"
+              ]
+            },
+            "description": "When `true`, return only tasks with no column assignment (`projectColumnId` is null)."
           }
         ],
         "responses": {
@@ -2328,42 +2354,21 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "assigneeId": {
-                    "type": "integer"
-                  },
-                  "projectColumnId": {
-                    "type": "integer"
-                  },
-                  "relationId": {
-                    "type": "integer",
-                    "description": "Related task ID for task relations"
-                  },
-                  "relationMode": {
-                    "type": "string",
-                    "enum": [
-                      "blocks",
-                      "blocked-by",
-                      "relates-to",
-                      "duplicate-of"
-                    ],
-                    "description": "Relation type to related task"
-                  }
-                }
+                "$ref": "#/components/schemas/UpdateTaskRequest"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Task updated"
+            "description": "Task updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskDetail"
+                }
+              }
+            }
           },
           "403": {
             "description": "Access denied"
@@ -7986,7 +7991,18 @@
             "type": "integer"
           },
           "columnId": {
-            "type": "integer"
+            "type": "integer",
+            "deprecated": true,
+            "description": "Legacy alias; prefer projectColumnId"
+          },
+          "projectColumnId": {
+            "type": "integer",
+            "nullable": true
+          },
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           },
           "assigneeId": {
             "type": "integer",
@@ -8165,6 +8181,68 @@
           }
         }
       },
+      "UpdateTaskRequest": {
+        "type": "object",
+        "description": "Partial task update (PATCH). Send `projectColumnId: 0` or omit column to clear assignment (backlog). Setting a column clears archive unless `archived: true`.",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "assigneeId": {
+            "type": "integer",
+            "nullable": true
+          },
+          "assigneeApiKeyId": {
+            "type": "string",
+            "nullable": true
+          },
+          "projectColumnId": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Target column id; use 0 or null to move task to backlog (no column)"
+          },
+          "archived": {
+            "type": "boolean",
+            "description": "When true, sets archivedAt (hidden from board). When false, clears archive."
+          },
+          "relationId": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Related task ID for task relations"
+          },
+          "relationMode": {
+            "type": "string",
+            "enum": [
+              "blocks",
+              "blocked-by",
+              "relates-to",
+              "duplicate-of"
+            ],
+            "nullable": true,
+            "description": "Relation type to related task"
+          },
+          "parentId": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Workspace container task id for child membership"
+          },
+          "isContainer": {
+            "type": "boolean"
+          },
+          "planAccepted": {
+            "type": "boolean"
+          },
+          "subBoardOutlineColor": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          }
+        }
+      },
       "TaskDetail": {
         "type": "object",
         "properties": {
@@ -8235,6 +8313,12 @@
             "type": "string",
             "nullable": true,
             "description": "Hex color code for sub-board outline on card UI"
+          },
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When set, task is archived and excluded from board column payloads"
           },
           "childCount": {
             "type": "integer",

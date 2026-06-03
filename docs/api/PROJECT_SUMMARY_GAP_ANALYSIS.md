@@ -1,6 +1,6 @@
 # Project summary API — gap analysis & implementation spec
 
-**Status:** Phases **1–5 shipped**; Phase **6** polish ongoing (board backlog/archive, OpenAPI for `archivedAt`)  
+**Status:** Phases **1–5 shipped**; Phase **6** polish ongoing (board backlog/archive UI shipped; task archive contract in OpenAPI)  
 **Last updated:** 2026-05-30  
 **Audience:** Hub, frontend, app (MCP/CLI)  
 **Related:** [`frontend/docs/OPENAPI_UI_GAP_ANALYSIS.md`](../../frontend/docs/OPENAPI_UI_GAP_ANALYSIS.md), [`CONTRACT.md`](../../CONTRACT.md)
@@ -182,7 +182,7 @@ When `include=workspaces`: add `workspaces.activeCount` (containers) and optiona
 - [ ] `scope=main` column counts match `applyBoardTaskScope(..., null)` on same seed data (explicit board parity test not added)
 - [x] `scope=workspace:{id}` counts match sub-board view for that container (hub + `ProjectStatsBar` on `?workspace=` / SubBoard)
 - [x] Project board **Main board / All tasks / Backlog / Archive** toggles share `boardCountMode`; stats bar + Board/Grid scope aligned
-- [ ] `scope=all` on **Explore fleet** cards (Explore still defaults to `main`; project views have `all` toggle)
+- [x] `scope=all` on **Explore fleet** cards (`ExploreProjectsView` Main board / All tasks toggle; defaults to `main`)
 - [x] `summaryLine` states scope, e.g. `… on main board, … total (… in workspaces)` (`buildProjectStatsSummary`)
 
 ---
@@ -458,7 +458,7 @@ Platform agent: add `/api/agent/projects/summary` and `/api/agent/projects/:proj
 | **5** | **Done** | `useProjectsSummaryQuery`; `ProjectSummaryCard` / `ProjectHierarchy` on `ProjectStats` |
 | **6** | Partial | REST doc human summary rows; platform allowlist / `agents.md` as needed |
 
-**Next (optional):** Explore fleet `scope=all` toggle; OpenAPI for `Task.archivedAt` / `PATCH archived`; remove unused `ProjectSummary` OpenAPI schema; monitor pass/reject SPA buttons.
+**Next (optional):** remove unused `ProjectSummary` OpenAPI schema; monitor pass/reject SPA buttons; drag backlog onto board (wall uses PATCH batch only).
 
 ---
 

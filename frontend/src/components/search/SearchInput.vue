@@ -19,6 +19,10 @@ const { t } = useI18n()
 const inputRef = ref<HTMLInputElement | null>(null)
 const showHelpTooltip = ref(false)
 
+function collapseHelp() {
+  showHelpTooltip.value = false
+}
+
 const inputValue = computed({
   get: () => props.modelValue ?? '',
   set: (value: string) => emit('update:modelValue', value),
@@ -31,14 +35,18 @@ function handleInput(event: Event) {
 
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Enter' && inputValue.value.trim()) {
+    collapseHelp()
     emit('search', inputValue.value)
   }
   if (event.key === 'Escape') {
+    collapseHelp()
+    emit('update:modelValue', '')
     emit('clear')
   }
 }
 
 function handleClear() {
+  collapseHelp()
   emit('update:modelValue', '')
   emit('clear')
 }
@@ -47,7 +55,7 @@ function focus() {
   inputRef.value?.focus()
 }
 
-defineExpose({ focus })
+defineExpose({ focus, collapseHelp })
 </script>
 
 <template>
@@ -69,6 +77,7 @@ defineExpose({ focus })
           type="button"
           class="btn btn-ghost btn-xs shrink-0"
           :title="t('search.helpTooltip')"
+          @mousedown.prevent
           @click="showHelpTooltip = !showHelpTooltip"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

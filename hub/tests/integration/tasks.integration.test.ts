@@ -466,6 +466,56 @@ describe('Tasks Integration Tests', () => {
       expect(response.body.projectColumnId).toBe(newColumn.id);
     });
 
+    it('should archive and unarchive a task', async () => {
+      const task = await createTestTaskDirect(testProject.id, userId, testColumn.id);
+
+      const archived = await request(testApp)
+        .patch(`/api/tasks/${task.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ archived: true });
+
+      expect(archived.status).toBe(200);
+      expect(archived.body.archivedAt).toBeTruthy();
+
+      const restored = await request(testApp)
+        .patch(`/api/tasks/${task.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ archived: false, projectColumnId: testColumn.id });
+
+      expect(restored.status).toBe(200);
+      expect(restored.body.archivedAt).toBeNull();
+    });
+
+    it('should filter backlog and archived tasks via query params', async () => {
+      const backlogTask = await createTestTaskDirect(testProject.id, userId, undefined, {
+        name: 'Backlog task',
+      });
+      const columnTask = await createTestTaskDirect(testProject.id, userId, testColumn.id, {
+        name: 'Column task',
+      });
+
+      await request(testApp)
+        .patch(`/api/tasks/${columnTask.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ archived: true });
+
+      const backlogRes = await request(testApp)
+        .get(`/api/tasks?projectId=${testProject.id}&noColumn=true&archived=false`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(backlogRes.status).toBe(200);
+      expect(backlogRes.body.data.some((t: { id: number }) => t.id === backlogTask.id)).toBe(true);
+      expect(backlogRes.body.data.every((t: { projectColumnId: number | null }) => t.projectColumnId == null)).toBe(true);
+
+      const archivedRes = await request(testApp)
+        .get(`/api/tasks?projectId=${testProject.id}&archived=true`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(archivedRes.status).toBe(200);
+      expect(archivedRes.body.data.some((t: { id: number }) => t.id === columnTask.id)).toBe(true);
+      expect(archivedRes.body.data.every((t: { archivedAt: string | null }) => t.archivedAt != null)).toBe(true);
+    });
+
     it('should return 403 for non-member', async () => {
       // Create another user's project and task
       const otherUser = await createTestUser({ name: 'Owner' });

@@ -210,7 +210,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get project board */
+        /**
+         * Get project board
+         * @description Returns kanban columns and tasks for the project. Tasks with `archivedAt` set are omitted from column task lists (use `GET /api/tasks?archived=true` for archive views).
+         */
         get: operations["listProjectsBoard"];
         put?: never;
         post?: never;
@@ -395,7 +398,7 @@ export interface paths {
         };
         /**
          * Get tasks for project or all accessible tasks
-         * @description With projectId: get tasks for a specific project. Without projectId: get all tasks the user has access to (My Tasks). Returns paginated results.
+         * @description With projectId: get tasks for a specific project. Without projectId: get all tasks the user has access to (My Tasks). Returns paginated results. Use `noColumn=true` and `archived=false` for backlog lists; `archived=true` for archived tasks. Archived tasks are excluded from `GET /api/projects/{id}/board` column payloads.
          */
         get: operations["listTasks"];
         put?: never;
@@ -1873,7 +1876,14 @@ export interface components {
             identifier?: string;
             order?: number;
             projectId?: number;
+            /**
+             * @deprecated
+             * @description Legacy alias; prefer projectColumnId
+             */
             columnId?: number;
+            projectColumnId?: number | null;
+            /** Format: date-time */
+            archivedAt?: string | null;
             assigneeId?: number | null;
             /** @description Task assignee (null if unassigned) */
             assignee?: components["schemas"]["Member"] | null;
@@ -1945,6 +1955,29 @@ export interface components {
                 version?: number;
             };
         };
+        /** @description Partial task update (PATCH). Send `projectColumnId: 0` or omit column to clear assignment (backlog). Setting a column clears archive unless `archived: true`. */
+        UpdateTaskRequest: {
+            name?: string;
+            description?: string | null;
+            assigneeId?: number | null;
+            assigneeApiKeyId?: string | null;
+            /** @description Target column id; use 0 or null to move task to backlog (no column) */
+            projectColumnId?: number | null;
+            /** @description When true, sets archivedAt (hidden from board). When false, clears archive. */
+            archived?: boolean;
+            /** @description Related task ID for task relations */
+            relationId?: number | null;
+            /**
+             * @description Relation type to related task
+             * @enum {string|null}
+             */
+            relationMode?: "blocks" | "blocked-by" | "relates-to" | "duplicate-of" | null;
+            /** @description Workspace container task id for child membership */
+            parentId?: number | null;
+            isContainer?: boolean;
+            planAccepted?: boolean;
+            subBoardOutlineColor?: string | null;
+        };
         TaskDetail: {
             id?: number;
             name?: string;
@@ -1967,6 +2000,11 @@ export interface components {
             planAccepted?: boolean;
             /** @description Hex color code for sub-board outline on card UI */
             subBoardOutlineColor?: string | null;
+            /**
+             * Format: date-time
+             * @description When set, task is archived and excluded from board column payloads
+             */
+            archivedAt?: string | null;
             /** @description Number of child tasks (for container tasks) */
             childCount?: number;
             /** Format: date-time */
@@ -3541,6 +3579,10 @@ export interface operations {
                 page?: number;
                 /** @description Number of items per page */
                 limit?: number;
+                /** @description When `true`, return only archived tasks (`archivedAt` set). When `false`, exclude archived tasks. */
+                archived?: "true" | "false";
+                /** @description When `true`, return only tasks with no column assignment (`projectColumnId` is null). */
+                noColumn?: "true";
             };
             header?: never;
             path?: never;
@@ -3834,19 +3876,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    name?: string;
-                    description?: string;
-                    assigneeId?: number;
-                    projectColumnId?: number;
-                    /** @description Related task ID for task relations */
-                    relationId?: number;
-                    /**
-                     * @description Relation type to related task
-                     * @enum {string}
-                     */
-                    relationMode?: "blocks" | "blocked-by" | "relates-to" | "duplicate-of";
-                };
+                "application/json": components["schemas"]["UpdateTaskRequest"];
             };
         };
         responses: {
@@ -3855,7 +3885,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["TaskDetail"];
+                };
             };
             /** @description Access denied */
             403: {
