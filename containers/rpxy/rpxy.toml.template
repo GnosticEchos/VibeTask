@@ -1,0 +1,30 @@
+listen_port = ${RPXY_HTTP_PORT}
+listen_port_tls = ${RPXY_HTTPS_PORT}
+https_redirection_port = ${RPXY_HTTPS_PORT}
+
+default_app = 'vibetask'
+
+[experimental]
+connection_handling_timeout = 0
+
+[apps.vibetask]
+server_name = '${VT_DOMAIN}'
+tls = {
+  https_redirection = true,
+  tls_cert_path = '/certs/${VT_DOMAIN}.pem',
+  tls_cert_key_path = '/certs/${VT_DOMAIN}-key.pem',
+}
+
+[[apps.vibetask.reverse_proxy]]
+path = '/api'
+upstream = [{ location = 'hub:${HUB_HTTP_PORT}' }]
+upstream_options = ['forwarded_header', 'force_http11_upstream']
+
+[[apps.vibetask.reverse_proxy]]
+path = '/socket.io'
+upstream = [{ location = 'hub:${HUB_WS_PORT}' }]
+upstream_options = ['forwarded_header', 'force_http11_upstream']
+
+[[apps.vibetask.reverse_proxy]]
+upstream = [{ location = 'frontend:${FRONTEND_PORT}' }]
+upstream_options = ['forwarded_header']

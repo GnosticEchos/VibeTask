@@ -1,0 +1,27 @@
+# Use a locally built rpxy binary. From containers/:
+#   ./scripts/copy-rpxy-binary.sh
+#   podman compose -f compose.yaml -f compose.rpxy-local.yaml --profile dev up -d --build rpxy
+FROM docker.io/alpine:3
+
+RUN apk add --no-cache ca-certificates \
+  && mkdir -p /rpxy/bin /rpxy/log /rpxy/cache /rpxy/config
+
+COPY bin/rpxy /rpxy/bin/rpxy
+RUN chmod +x /rpxy/bin/rpxy
+
+RUN printf '%s\n' \
+  '#!/bin/sh' \
+  'set -e' \
+  'CONFIG_FILE=/etc/rpxy.toml' \
+  'CONFIG_DIR=/rpxy/config' \
+  'CONFIG_FILE_IN_DIR=${CONFIG_FILENAME:-rpxy.toml}' \
+  'if [ ! -f "${CONFIG_FILE}" ]; then' \
+  '  ln -sf "${CONFIG_DIR}/${CONFIG_FILE_IN_DIR}" "${CONFIG_FILE}"' \
+  'fi' \
+  'cd /rpxy' \
+  'exec /rpxy/bin/rpxy --config "${CONFIG_FILE}"' \
+  > /rpxy/run.sh && chmod +x /rpxy/run.sh
+
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+WORKDIR /rpxy
+ENTRYPOINT ["/rpxy/run.sh"]

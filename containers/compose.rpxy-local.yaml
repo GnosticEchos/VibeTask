@@ -1,0 +1,8 @@
+# Optional override: use your locally built rpxy instead of jqtype/rpxy:latest
+#   podman compose -f compose.yaml -f compose.rpxy-local.yaml --profile dev up -d --build
+services:
+  rpxy:
+    image: localhost/vibetask-rpxy-local:latest
+    build:
+      context: ./rpxy
+      dockerfile: Containerfile.local

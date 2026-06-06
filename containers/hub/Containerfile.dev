@@ -1,0 +1,11 @@
+# Development hub — bind-mount ../hub to /app
+FROM node:24-alpine
+
+WORKDIR /app
+
+COPY containers/hub/entrypoint.dev.sh /entrypoint.dev.sh
+RUN chmod +x /entrypoint.dev.sh
+
+EXPOSE 11700 11701
+
+ENTRYPOINT ["/entrypoint.dev.sh"]

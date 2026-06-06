@@ -1,0 +1,37 @@
+# Production hub image — build from repo root:
+#   podman build -f containers/hub/Containerfile .
+FROM node:24-alpine AS builder
+
+WORKDIR /app/hub
+
+COPY hub/package.json hub/package-lock.json ./
+RUN npm ci
+
+COPY hub/prisma ./prisma
+COPY hub/prisma.config.ts hub/tsconfig.json ./
+RUN npx prisma generate
+
+COPY hub/src ./src
+RUN npm run build
+
+FROM node:24-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY hub/package.json hub/package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY --from=builder /app/hub/dist ./dist
+COPY --from=builder /app/hub/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/hub/node_modules/@prisma ./node_modules/@prisma
+COPY hub/prisma ./prisma
+COPY hub/prisma.config.ts ./
+
+COPY containers/hub/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 11700 11701
+
+ENTRYPOINT ["/entrypoint.sh"]

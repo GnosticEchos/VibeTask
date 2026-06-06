@@ -1,0 +1,8 @@
+# Development frontend — bind-mount ../frontend to /app
+FROM node:24-alpine
+
+WORKDIR /app
+
+EXPOSE 11740
+
+CMD ["sh", "-c", "if [ ! -x node_modules/.bin/vite ]; then npm ci; fi && npm run dev -- --host 0.0.0.0 --port ${FRONTEND_PORT}"]

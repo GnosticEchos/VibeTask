@@ -1,0 +1,123 @@
+name: vibetask-containers
+
+x-hub-env: &hub-env
+  DATABASE_URL: ${DATABASE_URL}
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+  PLATFORM_SESSION_SECRET: ${PLATFORM_SESSION_SECRET}
+  BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+  DEVELOPMENT_FE_ORIGIN: ${DEVELOPMENT_FE_ORIGIN}
+  PORT: ${HUB_HTTP_PORT}
+  WS_PORT: ${HUB_WS_PORT}
+  NODE_ENV: ${NODE_ENV:-development}
+
+services:
+  postgres:
+    image: docker.io/postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  hub:
+    profiles: [prod]
+    build:
+      context: ..
+      dockerfile: containers/hub/Containerfile
+    environment:
+      <<: *hub-env
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vibetask
+
+  hub-dev:
+    profiles: [dev]
+    build:
+      context: ..
+      dockerfile: containers/hub/Containerfile.dev
+    environment:
+      <<: *hub-env
+    volumes:
+      - ../hub:/app
+      - hub-dev-node-modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      vibetask:
+        aliases:
+          - hub
+
+  frontend:
+    profiles: [prod]
+    build:
+      context: ..
+      dockerfile: containers/frontend/Containerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_WS_BASE_URL: ${VITE_WS_BASE_URL}
+        FRONTEND_PORT: ${FRONTEND_PORT}
+    environment:
+      FRONTEND_PORT: ${FRONTEND_PORT}
+    networks:
+      - vibetask
+
+  frontend-dev:
+    profiles: [dev]
+    build:
+      context: ..
+      dockerfile: containers/frontend/Containerfile.dev
+    environment:
+      FRONTEND_PORT: ${FRONTEND_PORT}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+      VITE_WS_BASE_URL: ${VITE_WS_BASE_URL}
+    volumes:
+      - ../frontend:/app
+      - frontend-dev-node-modules:/app/node_modules
+    networks:
+      vibetask:
+        aliases:
+          - frontend
+
+  rpxy:
+    profiles: [dev, prod]
+    # Prebuilt image (default). To build from your rust-rpxy clone instead, replace `image` with:
+    #   build: { context: ${RPXY_BUILD_CONTEXT}, dockerfile: docker/Dockerfile-slim }
+    # Set RPXY_BUILD_CONTEXT in .env to the root of your clone.
+    image: docker.io/jqtype/rpxy:latest
+    environment:
+      LOG_LEVEL: info
+      CONFIG_FILENAME: rpxy.toml
+    volumes:
+      - ./rpxy:/rpxy/config:ro
+      - ./certs:/certs:ro
+    ports:
+      - "127.0.0.1:${RPXY_HTTP_PORT}:${RPXY_HTTP_PORT}"
+      - "127.0.0.1:${RPXY_HTTPS_PORT}:${RPXY_HTTPS_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - vibetask
+
+networks:
+  vibetask:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  hub-dev-node-modules:
+  frontend-dev-node-modules:

@@ -1,0 +1,4 @@
+# Snippet for app TOML configs — prefer `source containers/app-hub.env` instead
+# so port changes only require editing containers/.env + ./scripts/setup.sh
+[server]
+hub_url = "https://vibetask.local:11743"
