@@ -176,6 +176,8 @@ npm run openapi:gen-types         # refresh src/api/generated/openapi-types.ts
 
 Use `openapi:validate:strict` when you want zero warnings (today the spec still has legacy Redocly warnings).
 
+For what the SPA exposes vs the contract (gaps, workspace scope semantics, summary routes), see [API_UI_COVERAGE.md](API_UI_COVERAGE.md).
+
 ## Frontend Common Scripts
 
 - `npm run dev` — start Vite dev server on :5173.

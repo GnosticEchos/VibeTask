@@ -84,7 +84,7 @@ The frontend includes agent management UI (create, delegate, manage API keys) �
 
 | Document | Purpose |
 |----------|---------|
-| [OpenAPI ↔ UI gap analysis](docs/OPENAPI_UI_GAP_ANALYSIS.md) | Feature coverage vs hub OpenAPI |
+| [API & UI coverage](../docs/developer/API_UI_COVERAGE.md) | OpenAPI vs SPA — developer reference |
 | [WebSocket Contract](docs/WEBSOCKET_CONTRACT_REVIEW.md) | Socket.IO channel contracts |
 | [CQRS Data Flow](docs/CQRS_DATA_FLOW.md) | Query/command boundaries |
 | [Account Settings API](docs/ACCOUNT_SETTINGS_API_V1.md) | Profile/password/sessions API |

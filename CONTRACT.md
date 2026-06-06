@@ -28,4 +28,4 @@ See [`docs/developer/DEVELOPER_HELPER_TOOLS.md`](docs/developer/DEVELOPER_HELPER
 
 ### Repo-root OpenAPI
 
-Keep the **editable** spec in `hub/src/openapi.json`. A repo-root `openapi.json` is optional later (symlink or bundled publish artifact only)—not a second source of truth. See `docs/api/PROJECT_SUMMARY_GAP_ANALYSIS.md` for contract governance and planned summary API work.
+Keep the **editable** spec in `hub/src/openapi.json`. A repo-root `openapi.json` is optional later (symlink or bundled publish artifact only)—not a second source of truth. For SPA coverage vs the contract, see [`docs/developer/API_UI_COVERAGE.md`](docs/developer/API_UI_COVERAGE.md).

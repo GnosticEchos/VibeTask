@@ -83,7 +83,7 @@ cd frontend && npm run openapi:check-sync
 | **Web / hub developers** | [`hub/README.md`](hub/README.md), [`hub/docs/REST_API_DOCUMENTATION.md`](hub/docs/REST_API_DOCUMENTATION.md) |
 | **Frontend developers** | [`frontend/README.md`](frontend/README.md), [`docs/developer/DEVELOPER_HELPER_TOOLS.md`](docs/developer/DEVELOPER_HELPER_TOOLS.md) |
 | **Agent / CLI / MCP** | [`app/README.md`](app/README.md), [`app/DEVELOPMENT.md`](app/DEVELOPMENT.md) |
-| **API contract** | [`CONTRACT.md`](CONTRACT.md), [`frontend/docs/OPENAPI_UI_GAP_ANALYSIS.md`](frontend/docs/OPENAPI_UI_GAP_ANALYSIS.md) |
+| **API contract** | [`CONTRACT.md`](CONTRACT.md), [`docs/developer/API_UI_COVERAGE.md`](docs/developer/API_UI_COVERAGE.md) |
 
 ## CI
 
