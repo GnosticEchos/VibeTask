@@ -1,4 +1,5 @@
 use super::*;
+use crate::agent_detector::ensure_platform_session;
 
 #[mcp_tool(
     name = "create_draft_project",
@@ -26,6 +27,9 @@ pub struct CreateDraftProjectTool {
 impl CreateDraftProjectTool {
     pub async fn call_tool(&self, ctx: &ToolContext) -> Result<CallToolResult, CallToolError> {
         let active = ctx.resolve_active_agent().await?;
+        ensure_platform_session(&ctx.config_path, &active.config, &ctx.api_client)
+            .await
+            .map_err(|e| tool_error("auth_error", format!("Platform session required: {}", e)))?;
         let api_key = &active.api_key;
 
         let mut body = serde_json::json!({
@@ -108,6 +112,9 @@ pub struct RequestProjectAcceptTool {
 impl RequestProjectAcceptTool {
     pub async fn call_tool(&self, ctx: &ToolContext) -> Result<CallToolResult, CallToolError> {
         let active = ctx.resolve_active_agent().await?;
+        ensure_platform_session(&ctx.config_path, &active.config, &ctx.api_client)
+            .await
+            .map_err(|e| tool_error("auth_error", format!("Platform session required: {}", e)))?;
         let api_key = &active.api_key;
 
         let raw = ctx
@@ -171,6 +178,9 @@ pub struct ConfirmProjectAcceptTool {
 impl ConfirmProjectAcceptTool {
     pub async fn call_tool(&self, ctx: &ToolContext) -> Result<CallToolResult, CallToolError> {
         let active = ctx.resolve_active_agent().await?;
+        ensure_platform_session(&ctx.config_path, &active.config, &ctx.api_client)
+            .await
+            .map_err(|e| tool_error("auth_error", format!("Platform session required: {}", e)))?;
         let api_key = &active.api_key;
 
         let raw = ctx

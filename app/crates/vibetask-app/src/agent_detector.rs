@@ -58,9 +58,9 @@ impl AgentTypeDetector {
 
         let active_name = active_agent_entry.name.clone();
 
-        if active_agent_entry.agent_type == "ProjectDelegated" {
-            ensure_platform_session(&self.config_path, &config, &self.api_client).await?;
-        }
+        // Attach or refresh x-platform-session for platform-agent writes (draft create/accept)
+        // and for delegated agents that mint session via the platform roster.
+        ensure_platform_session(&self.config_path, &config, &self.api_client).await?;
 
         let key = self.get_agent_key(&active_name).await?;
         debug!("Agent key retrieved from secure storage");
