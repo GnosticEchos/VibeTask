@@ -13,6 +13,8 @@ export interface iProject {
   columns: iColumn[]
   tasks: iTask[]
   settings?: ProjectSettings
+  lifecycleStatus?: 'DRAFT' | 'ACTIVE' | string
+  status?: string
 }
 
 export type iSimplifiedProject = Pick<

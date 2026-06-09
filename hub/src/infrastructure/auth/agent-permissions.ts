@@ -69,11 +69,11 @@ export interface AgentRequest extends Request {
  * @returns Express middleware function
  */
 export function requireAgentProjectAccess(action: ProjectAction) {
-  return (
+  return async (
     req: Request,
     res: Response,
     next: NextFunction
-  ): void | Response => {
+  ): Promise<void | Response> => {
     const auth = (req as any).auth;
 
     // If no auth context, reject
@@ -101,6 +101,13 @@ export function requireAgentProjectAccess(action: ProjectAction) {
 
     if (!projectId || isNaN(projectId)) {
       return res.status(400).json({ error: 'Invalid project ID' });
+    }
+
+    try {
+      const { assertDelegateAccessToProject } = await import('../../services/project-lifecycle.js');
+      await assertDelegateAccessToProject(projectId);
+    } catch (err) {
+      return next(err);
     }
 
     // Find delegation for this project

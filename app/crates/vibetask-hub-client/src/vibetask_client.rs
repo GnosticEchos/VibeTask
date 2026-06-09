@@ -1538,6 +1538,75 @@ impl VibeTaskClient {
         self.execute_request(request).await
     }
 
+    /// POST /api/agent/projects/draft — create DRAFT project (platform session required)
+    pub async fn post_agent_draft_project(
+        &self,
+        api_key: &str,
+        body: &serde_json::Value,
+    ) -> Result<serde_json::Value, ApiError> {
+        let url = self.build_url("/api/agent/projects/draft")?;
+        let request = self
+            .authenticated_request(reqwest::Method::POST, url, api_key)
+            .json(body);
+        debug!("Creating draft project");
+        self.execute_request(request).await
+    }
+
+    /// GET /api/agent/planning/projects/{id}/preview
+    pub async fn get_agent_planning_preview(
+        &self,
+        api_key: &str,
+        project_id: i32,
+    ) -> Result<serde_json::Value, ApiError> {
+        let endpoint = format!("/api/agent/planning/projects/{}/preview", project_id);
+        let url = self.build_url(&endpoint)?;
+        let request = self.authenticated_request(reqwest::Method::GET, url, api_key);
+        self.execute_request(request).await
+    }
+
+    /// POST /api/agent/planning/projects/{id}/accept/init
+    pub async fn post_agent_accept_init(
+        &self,
+        api_key: &str,
+        project_id: i32,
+    ) -> Result<serde_json::Value, ApiError> {
+        let endpoint = format!("/api/agent/planning/projects/{}/accept/init", project_id);
+        let url = self.build_url(&endpoint)?;
+        let request = self.authenticated_request(reqwest::Method::POST, url, api_key);
+        self.execute_request(request).await
+    }
+
+    /// POST /api/agent/planning/projects/{id}/accept/confirm
+    pub async fn post_agent_accept_confirm(
+        &self,
+        api_key: &str,
+        project_id: i32,
+        user_code: &str,
+    ) -> Result<serde_json::Value, ApiError> {
+        let endpoint = format!("/api/agent/planning/projects/{}/accept/confirm", project_id);
+        let url = self.build_url(&endpoint)?;
+        let request = self
+            .authenticated_request(reqwest::Method::POST, url, api_key)
+            .json(&serde_json::json!({ "userCode": user_code }));
+        self.execute_request(request).await
+    }
+
+    /// GET /api/agent/planning/skills/{slug}
+    pub async fn get_agent_planning_skill(
+        &self,
+        api_key: &str,
+        slug: &str,
+        project_id: Option<i32>,
+    ) -> Result<serde_json::Value, ApiError> {
+        let mut endpoint = format!("/api/agent/planning/skills/{}", slug);
+        if let Some(pid) = project_id {
+            endpoint.push_str(&format!("?projectId={}", pid));
+        }
+        let url = self.build_url(&endpoint)?;
+        let request = self.authenticated_request(reqwest::Method::GET, url, api_key);
+        self.execute_request(request).await
+    }
+
     /// Get base URL as string for external API calls
     pub fn base_url_string(&self) -> String {
         self.base_url.to_string().trim_end_matches('/').to_string()

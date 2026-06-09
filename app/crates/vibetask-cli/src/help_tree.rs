@@ -4,6 +4,7 @@ use clap::{Arg, Command, CommandFactory};
 use serde_json::{json, Value};
 use std::collections::HashSet;
 use std::io::IsTerminal;
+use vibetask_tool_catalog::cli_mcp_tools_for_path;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize, clap::ValueEnum)]
 #[serde(rename_all = "lowercase")]
@@ -98,6 +99,7 @@ pub fn run_for_path<CF: CommandFactory>(
     match opts.output {
         HelpTreeOutputFormat::Json => {
             let omit_help_tree_discovery_flags = !requested_path.is_empty();
+            let mut path = requested_path.to_vec();
             let value = command_to_json(
                 selected,
                 &ignore,
@@ -105,6 +107,7 @@ pub fn run_for_path<CF: CommandFactory>(
                 opts.depth_limit,
                 0,
                 omit_help_tree_discovery_flags,
+                &mut path,
             )?;
             println!("{}", serde_json::to_string_pretty(&value)?);
         }
@@ -438,7 +441,12 @@ fn command_to_json(
     depth_limit: Option<usize>,
     depth: usize,
     omit_help_tree_discovery_flags: bool,
+    path: &mut Vec<String>,
 ) -> Result<Value, Box<dyn std::error::Error>> {
+    if path.last().map(|s| s.as_str()) != Some(cmd.get_name()) {
+        path.push(cmd.get_name().to_string());
+    }
+
     let mut root = serde_json::Map::new();
     root.insert("type".to_string(), json!("command"));
     root.insert("name".to_string(), json!(cmd.get_name()));
@@ -488,14 +496,31 @@ fn command_to_json(
                 depth_limit,
                 depth + 1,
                 omit_help_tree_discovery_flags,
+                path,
             )?);
         }
     }
 
+    let visible_subcommands = cmd
+        .get_subcommands()
+        .filter(|sub| !should_skip_subcommand(sub, ignore, tree_all))
+        .count();
+    let is_leaf = children.is_empty() && visible_subcommands == 0;
     if !children.is_empty() {
         root.insert("subcommands".to_string(), Value::Array(children));
     }
+    if is_leaf {
+        let path_refs: Vec<&str> = path.iter().map(String::as_str).collect();
+        let mcp_tools: Vec<&str> = cli_mcp_tools_for_path(&path_refs);
+        if !mcp_tools.is_empty() {
+            root.insert(
+                "mcp_tools".to_string(),
+                Value::Array(mcp_tools.into_iter().map(|t| json!(t)).collect()),
+            );
+        }
+    }
 
+    path.pop();
     Ok(Value::Object(root))
 }
 
@@ -602,4 +627,30 @@ fn command_to_text(
     write_command_tree_lines(cmd, "", 0, &ctx, &mut out);
 
     Ok(out.trim_end().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Cli;
+
+    #[test]
+    fn json_leaf_includes_mcp_tools_for_draft_create() {
+        let mut cmd = Cli::command();
+        cmd.build();
+        let (selected, _) = select_command_by_path(&cmd, &["project".into(), "draft".into()]);
+        let mut path = vec!["project".into(), "draft".into()];
+        let value = command_to_json(selected, &HashSet::new(), false, None, 0, true, &mut path)
+            .expect("command_to_json");
+        let create = value
+            .get("subcommands")
+            .and_then(|v| v.as_array())
+            .and_then(|subs| subs.iter().find(|s| s.get("name") == Some(&json!("create"))))
+            .expect("create subcommand");
+        let mcp_tools = create
+            .get("mcp_tools")
+            .and_then(|v| v.as_array())
+            .expect("mcp_tools on create leaf");
+        assert_eq!(mcp_tools[0], json!("create_draft_project"));
+    }
 }

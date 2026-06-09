@@ -41,6 +41,16 @@ import {
   parseSummaryScope,
   parseWorkspaceScopeSelector,
 } from '../../services/project-stats-summary.js';
+import { createProjectRecord } from '../../services/project-create.js';
+
+function parseIncludeDraft(query: Record<string, unknown>): boolean {
+  const includeRaw = String(query.include ?? '');
+  const tokens = includeRaw.split(',').map((t) => t.trim().toLowerCase());
+  return (
+    tokens.includes('draft') ||
+    String(query.includeDraft ?? 'false').toLowerCase() === 'true'
+  );
+}
 
 const router = Router();
 
@@ -77,15 +87,33 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
   const skip = (page - 1) * limit;
+  const lifecycleStatus = typeof req.query.lifecycleStatus === 'string'
+    ? req.query.lifecycleStatus.toUpperCase()
+    : undefined;
+  const includeDraft = String(req.query.includeDraft ?? 'false').toLowerCase() === 'true';
+
+  const lifecycleFilter =
+    lifecycleStatus === 'DRAFT' || lifecycleStatus === 'ACTIVE'
+      ? { lifecycleStatus: lifecycleStatus as 'DRAFT' | 'ACTIVE' }
+      : includeDraft
+        ? {}
+        : { lifecycleStatus: 'ACTIVE' as const };
 
   // Get total count first
   const total = await prisma.project.count({
-    where: baseQuery.where,
+    where: {
+      ...baseQuery.where,
+      ...lifecycleFilter,
+    },
   });
 
   // Get paginated projects
   const projects = await prisma.project.findMany({
     ...baseQuery,
+    where: {
+      ...baseQuery.where,
+      ...lifecycleFilter,
+    },
     skip,
     take: limit,
   });
@@ -96,6 +124,7 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
     name: project.name,
     description: project.description,
     prefix: project.prefix,
+    lifecycleStatus: project.lifecycleStatus,
     ownerId: user.id,
     columns: project.columns.map(col => ({
       id: col.id,
@@ -122,81 +151,22 @@ router.get('/templates', requireAuth, asyncHandler(async (req, res) => {
 router.post('/', requireAuth, validateBody(createProjectSchema), sanitize(['name', 'description']), asyncHandler(async (req, res) => {
   const user = req.user!;
 
-  const body = getValidatedBody<{ name: string; prefix: string; description?: string; columns?: Array<{ name: string; order?: number; color?: string; type?: string; description?: string }>; template?: string; settings?: Record<string, unknown> }>(req);
+  const body = getValidatedBody<{ name: string; prefix: string; description?: string; columns?: Array<{ name: string; order?: number; color?: string; type?: string; description?: string; roleType?: string }>; template?: string; settings?: Record<string, unknown> }>(req);
   if (!body) {
     return res.status(400).json({ error: 'Missing or invalid body' });
   }
   const { name, prefix, description, columns, template, settings } = body;
-  const columnsSpecified = columns !== undefined;
 
-  // Resolve template or use explicit columns
-  let resolvedColumns = columns;
-  let resolvedSettings = settings;
-
-  if (template) {
-    const tmpl = getTemplateById(template);
-    if (!tmpl) {
-      return res.status(400).json({ error: `Unknown template: ${template}` });
-    }
-    // Template columns when the client did not send a columns array
-    if (!columnsSpecified) {
-      resolvedColumns = tmpl.columns.map((col: any) => ({
-        name: col.name,
-        order: col.order,
-        color: col.color,
-        type: col.type as string | undefined,
-        description: col.description,
-      }));
-    }
-    // Merge template settings with any provided settings (provided wins)
-    resolvedSettings = { ...tmpl.settings, ...settings };
-  }
-
-  // Default board only when columns were omitted (not when explicitly empty)
-  if (!columnsSpecified && (!resolvedColumns || resolvedColumns.length === 0)) {
-    const defaultTmpl = getTemplateById('ADHOC_OPS');
-    if (defaultTmpl) {
-      resolvedColumns = defaultTmpl.columns.map((col: any) => ({
-        name: col.name,
-        order: col.order,
-        color: col.color,
-        type: col.type as string | undefined,
-        description: col.description,
-      }));
-      if (!resolvedSettings) {
-        resolvedSettings = { ...defaultTmpl.settings };
-      }
-    }
-  }
-
-  // Use the user's UUID directly (Better Auth compatible)
-  const ownerId = user.id;
-
-  // Create project with owner as member
-  const project = await prisma.project.create({
-    data: {
-      name,
-      prefix,
-      description,
-      ownerId,
-      settings: resolvedSettings as any,
-      members: {
-        create: {
-          userId: user.id,
-          role: 'Owner',
-        },
-      },
-      columns: resolvedColumns && resolvedColumns.length > 0 ? {
-        create: resolvedColumns.map((col: any, index: number) => ({
-          name: col.name,
-          order: col.order ?? index,
-          color: col.color || '#6366f1',
-          type: col.type || null,
-          description: col.description || null,
-          roleType: col.roleType || 'STANDARD',
-        })),
-      } : undefined,
-    },
+  const project = await createProjectRecord({
+    name,
+    prefix,
+    description,
+    columns,
+    columnsSpecified: columns !== undefined,
+    template,
+    settings,
+    lifecycleStatus: 'ACTIVE',
+    ownerId: user.id,
   });
 
   res.status(201).json(transformProject(project));
@@ -206,6 +176,8 @@ router.post('/', requireAuth, validateBody(createProjectSchema), sanitize(['name
 // NOTE: Must be registered before /:id so "summary" is not captured as a project id.
 router.get('/summary', requireAuth, asyncHandler(async (req, res) => {
   const user = req.user!;
+  const query = req.query as Record<string, unknown>;
+  const includeDraft = parseIncludeDraft(query);
 
   const memberships = await prisma.projectUser.findMany({
     where: { userId: user.id },
@@ -216,19 +188,22 @@ router.get('/summary', requireAuth, asyncHandler(async (req, res) => {
           name: true,
           prefix: true,
           description: true,
+          lifecycleStatus: true,
         },
       },
     },
   });
 
-  const projects = memberships.map((m) => ({
-    id: m.project.id,
-    name: m.project.name,
-    prefix: m.project.prefix,
-    description: m.project.description,
-  }));
+  const projects = memberships
+    .map((m) => m.project)
+    .filter((p) => includeDraft || p.lifecycleStatus !== 'DRAFT')
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      prefix: p.prefix,
+      description: p.description,
+    }));
 
-  const query = req.query as Record<string, unknown>;
   const scope = parseSummaryScope(query);
   const workspaceScopeSelector = parseWorkspaceScopeSelector(query);
   const include = parseSummaryIncludeOptions(query);

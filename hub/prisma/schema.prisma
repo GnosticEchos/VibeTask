@@ -126,21 +126,30 @@ model apikey {
   @@index([configId])
 }
 
+enum ProjectLifecycleStatus {
+  DRAFT
+  ACTIVE
+}
+
 model Project {
-  id               Int               @id @default(autoincrement())
+  id               Int                    @id @default(autoincrement())
   name             String
   description      String?
-  prefix           String            @db.VarChar(10)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  prefix           String                 @unique @db.VarChar(10)
+  lifecycleStatus  ProjectLifecycleStatus @default(ACTIVE)
+  planningMeta     Json?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
   ownerId          Int
   settings         Json?
   agentDelegations AgentDelegation[]
-  owner            User              @relation("ProjectOwner", fields: [ownerId], references: [id])
+  owner            User                   @relation("ProjectOwner", fields: [ownerId], references: [id])
   columns          ProjectColumn[]
   documents        ProjectDocument[]
   members          ProjectUser[]
   tasks            Task[]
+  acceptSessions   ProjectAcceptSession[]
+  skillOverrides   ProjectPlanningSkillOverride[]
 }
 
 model ProjectColumn {
@@ -398,4 +407,53 @@ enum DocLinkRole {
 enum DelegationMode {
   FULL
   COLUMN_BOUND
+}
+
+model ProjectAcceptSession {
+  id         String    @id @default(cuid())
+  projectId  Int
+  userId     Int
+  userCode   String    @unique @db.VarChar(16)
+  challenge  String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId])
+}
+
+model PlanningSkill {
+  id          Int                     @id @default(autoincrement())
+  slug        String                  @unique @db.VarChar(64)
+  content     String                  @db.Text
+  contentHash String?                 @db.VarChar(64)
+  updatedAt   DateTime                @updatedAt
+  createdAt   DateTime                @default(now())
+  revisions   PlanningSkillRevision[]
+}
+
+model PlanningSkillRevision {
+  id               String        @id @default(cuid())
+  skillId          Int
+  content          String        @db.Text
+  authorId         Int?
+  parentRevisionId String?
+  createdAt        DateTime      @default(now())
+  skill            PlanningSkill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@index([skillId])
+}
+
+model ProjectPlanningSkillOverride {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  slug      String   @db.VarChar(64)
+  content   String   @db.Text
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, slug])
 }

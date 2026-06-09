@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, /* watch, */ onMounted, onUnmounted } from 'vue'
+import { ref, /* watch, */ onMounted, onUnmounted, computed } from 'vue'
 import ProjectHierarchy from '../components/dashboard/explore/ProjectHierarchy.vue'
+import PlanningDraftsDrawer from '../components/dashboard/explore/PlanningDraftsDrawer.vue'
 import { useProjectsSummaryQuery, type ProjectsSummaryScope } from '@/composables/useProjectsSummaryQuery'
+import { useDraftProjectsQuery } from '@/composables/useDraftProjectsQuery'
 import { useSearch } from '@/composables/useSearch'
 import { useLayoutStore } from '@/stores/layout'
 import SearchInput from '@/components/search/SearchInput.vue'
@@ -11,6 +13,9 @@ import type { iTask } from '@/types/taskTypes'
 
 const summaryScope = ref<ProjectsSummaryScope>('main')
 const { data: projects, isLoading, isError } = useProjectsSummaryQuery(summaryScope)
+const { data: draftProjects } = useDraftProjectsQuery()
+const draftsDrawerOpen = ref(false)
+const draftCount = computed(() => draftProjects.value?.length ?? 0)
 const layoutStore = useLayoutStore()
 
 // Search composable for cross-project search (no projectId filter)
@@ -76,8 +81,19 @@ onUnmounted(() => {
         >
           All tasks
         </button>
+        <button
+          type="button"
+          class="btn btn-xs ml-auto"
+          :class="draftCount > 0 ? 'btn-warning' : 'btn-ghost'"
+          @click="draftsDrawerOpen = !draftsDrawerOpen"
+        >
+          Drafts
+          <span class="badge badge-xs">{{ draftCount }}</span>
+        </button>
       </div>
     </div>
+
+    <PlanningDraftsDrawer v-model:open="draftsDrawerOpen" />
 
     <!-- Search results overlay -->
     <SearchResultsOverlay

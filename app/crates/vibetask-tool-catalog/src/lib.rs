@@ -16,6 +16,11 @@ pub const FIND_TOOLS: &str = "find_tools";
 pub const READ_PROJECT_STATE: &str = "read_project_state";
 pub const READ_PROJECT_OVERVIEW: &str = "read_project_overview";
 pub const READ_PROJECT_SUMMARY: &str = "read_project_summary";
+pub const CREATE_DRAFT_PROJECT: &str = "create_draft_project";
+pub const LOAD_PLANNING_SKILL: &str = "load_planning_skill";
+pub const REQUEST_PROJECT_ACCEPT: &str = "request_project_accept";
+pub const PREVIEW_DRAFT_PROJECT: &str = "preview_draft_project";
+pub const CONFIRM_PROJECT_ACCEPT: &str = "confirm_project_accept";
 
 pub fn platform_tools() -> HashSet<String> {
     [
@@ -34,10 +39,96 @@ pub fn platform_tools() -> HashSet<String> {
         READ_PROJECT_STATE,
         READ_PROJECT_OVERVIEW,
         READ_PROJECT_SUMMARY,
+        CREATE_DRAFT_PROJECT,
+        LOAD_PLANNING_SKILL,
+        REQUEST_PROJECT_ACCEPT,
+        PREVIEW_DRAFT_PROJECT,
+        CONFIRM_PROJECT_ACCEPT,
     ]
     .iter()
     .map(|s| s.to_string())
     .collect()
+}
+
+/// Required read endpoint for a platform MCP tool, if any.
+///
+/// `None` means the tool is always listed for platform agents (agent mgmt, planning/draft writes
+/// are hub-gated by platform session rather than read-endpoint allowance).
+pub fn platform_tool_required_endpoint(tool: &str) -> Option<&'static str> {
+    match tool {
+        QUERY_PROJECTS | READ_PROJECT_STATE | READ_PROJECT_OVERVIEW | READ_PROJECT_SUMMARY => {
+            Some("/api/agent/projects")
+        }
+        QUERY_TASKS | GET_CONTEXT => Some("/api/agent/projects/:projectId/tasks"),
+        READ_DOCUMENTS | READ_DOCUMENT => Some("/api/agent/projects/:projectId/docs"),
+        _ => None,
+    }
+}
+
+/// Match platform agent read-endpoint templates (supports `:param` suffixes).
+pub fn platform_agent_has_endpoint_access(allowed_endpoints: &[String], target_endpoint: &str) -> bool {
+    allowed_endpoints.iter().any(|endpoint| {
+        if endpoint.contains(':') && target_endpoint.contains(':') {
+            let endpoint_base = endpoint.split(':').next().unwrap_or(endpoint);
+            let target_base = target_endpoint.split(':').next().unwrap_or(target_endpoint);
+            endpoint_base == target_base
+        } else {
+            endpoint == target_endpoint
+        }
+    })
+}
+
+/// MCP tool names mapped to a CLI command path (clap subcommand names, e.g. `["project", "list"]`).
+pub fn cli_mcp_tools_for_path(path: &[&str]) -> Vec<&'static str> {
+    let path = if path.first() == Some(&"vibetask-cli") {
+        &path[1..]
+    } else {
+        path
+    };
+    match path {
+        ["agent", "enlist"] => vec![REGISTER_AGENT],
+        ["agent", "list"] => vec![LIST_AGENTS],
+        ["agent", "status"] => vec![AGENT_STATUS],
+        ["agent", "switch"] => vec![SWITCH_AGENT],
+        ["health"] => vec![QUERY_HEALTH],
+        ["project", "list"] => vec![QUERY_PROJECTS],
+        ["project", "tasks"] => vec![QUERY_TASKS],
+        ["project", "docs"] => vec![READ_DOCUMENTS],
+        ["project", "read-doc"] => vec![READ_DOCUMENT],
+        ["project", "create-doc"] => vec!["create_knowledge_document"],
+        ["project", "context"] => vec![GET_CONTEXT],
+        ["project", "state"] => vec![READ_PROJECT_STATE],
+        ["project", "overview"] => vec![READ_PROJECT_OVERVIEW],
+        ["project", "summary"] => vec![READ_PROJECT_SUMMARY],
+        ["project", "draft", "create"] => vec![CREATE_DRAFT_PROJECT],
+        ["project", "draft", "preview"] => vec![PREVIEW_DRAFT_PROJECT],
+        ["project", "accept"] => vec![REQUEST_PROJECT_ACCEPT, CONFIRM_PROJECT_ACCEPT],
+        ["task", "create"] => vec![CREATE_TASK],
+        ["tools", "list"] => vec![FIND_TOOLS],
+        ["tools", "describe"] => vec![FIND_TOOLS],
+        ["tools", "call"] => vec![],
+        ["search", "tools"] => vec![FIND_TOOLS],
+        ["search", "aggregate"] => vec!["query_aggregate"],
+        ["document", "create"] => vec!["create_knowledge_document"],
+        ["document", "annotate"] => vec!["annotate_document"],
+        ["document", "pin"] => vec!["pin_document_version"],
+        ["document", "similar"] => vec!["query_similar_documents"],
+        ["workflow", "commit"] => vec!["commit_artifact"],
+        ["workflow", "spawn"] => vec!["spawn_sub_board"],
+        ["workflow", "estimate"] => vec!["estimate_complexity"],
+        ["workflow", "move"] => vec!["move_task"],
+        ["workflow", "progress"] => vec!["update_task_progress"],
+        ["workflow", "link"] => vec!["link_document"],
+        ["workflow", "help"] => vec!["request_help"],
+        ["workflow", "reflect"] => vec!["reflect_on_work"],
+        ["workflow", "approve"] => vec!["approve_completion"],
+        ["workflow", "reject"] => vec!["reject_to_execute"],
+        ["governance", "review"] => vec!["request_architecture_review"],
+        ["governance", "propose"] => vec!["propose_constitution_amendment"],
+        ["governance", "confirm"] => vec!["confirm_constitution_amendment"],
+        ["agent", "delegate"] => vec![DELEGATE_AGENT],
+        _ => vec![],
+    }
 }
 
 /// Full MCP tool name list for project-delegated agents (discovery parity with CLI).
@@ -145,7 +236,18 @@ pub fn tool_keywords() -> Vec<(String, Vec<String>)> {
             vec![
                 "create_task".to_string(),
                 "create_knowledge_document".to_string(),
+                "create_draft_project".to_string(),
                 "commit_artifact".to_string(),
+            ],
+        ),
+        (
+            "draft".to_string(),
+            vec![
+                "create_draft_project".to_string(),
+                "preview_draft_project".to_string(),
+                "load_planning_skill".to_string(),
+                "request_project_accept".to_string(),
+                "confirm_project_accept".to_string(),
             ],
         ),
         (
@@ -227,4 +329,46 @@ pub fn tool_keywords() -> Vec<(String, Vec<String>)> {
         ),
         ("state".to_string(), vec!["read_project_state".to_string()]),
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn platform_tools_include_draft_planning_pair() {
+        let tools = platform_tools();
+        assert!(tools.contains(CREATE_DRAFT_PROJECT));
+        assert!(tools.contains(PREVIEW_DRAFT_PROJECT));
+        assert!(tools.contains(CONFIRM_PROJECT_ACCEPT));
+    }
+
+    #[test]
+    fn draft_planning_tools_are_not_endpoint_gated() {
+        for tool in [
+            CREATE_DRAFT_PROJECT,
+            PREVIEW_DRAFT_PROJECT,
+            REQUEST_PROJECT_ACCEPT,
+            CONFIRM_PROJECT_ACCEPT,
+            LOAD_PLANNING_SKILL,
+        ] {
+            assert_eq!(
+                platform_tool_required_endpoint(tool),
+                None,
+                "{tool} should list without read-endpoint allowance"
+            );
+        }
+    }
+
+    #[test]
+    fn cli_path_maps_draft_preview_and_accept() {
+        assert_eq!(
+            cli_mcp_tools_for_path(&["project", "draft", "preview"]),
+            vec![PREVIEW_DRAFT_PROJECT]
+        );
+        assert_eq!(
+            cli_mcp_tools_for_path(&["project", "accept"]),
+            vec![REQUEST_PROJECT_ACCEPT, CONFIRM_PROJECT_ACCEPT]
+        );
+    }
 }

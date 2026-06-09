@@ -18,19 +18,21 @@ export interface ProjectResponse {
   startDate: string | null;
   endDate: string | null;
   status: string;
+  lifecycleStatus: string;
   createdAt: string;
   updatedAt: string;
   memberCount?: number;
 }
 
-export const transformProject = (project: ProjectWithRelations): ProjectResponse => ({
+export const transformProject = (project: ProjectWithRelations & { lifecycleStatus?: string }): ProjectResponse => ({
   id: project.id,
   name: project.name,
   description: project.description,
   prefix: project.prefix,
   startDate: null,
   endDate: null,
-  status: 'ACTIVE',
+  status: project.lifecycleStatus === 'DRAFT' ? 'DRAFT' : 'ACTIVE',
+  lifecycleStatus: project.lifecycleStatus ?? 'ACTIVE',
   createdAt: project.createdAt.toISOString(),
   updatedAt: project.updatedAt.toISOString(),
   ...(project.members && { memberCount: project.members.length }),

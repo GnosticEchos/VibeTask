@@ -8,7 +8,8 @@ import { useProjectStore } from '@/stores/project'
 import { useProjectMutations } from '@/composables/useProjectMutations'
 import api from '@/api/v1/indexApi'
 import projectsApi from '@/api/v1/projectApi'
-import { computed, reactive, ref, watch, watchEffect } from 'vue'
+import { computed, reactive, ref, watch, watchEffect, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import type { iColumn, iUpdateColumn } from '@/types/columnTypes'
 import { UpdateColumn } from '@/types/columnTypes'
@@ -35,6 +36,7 @@ import {
 } from '@/utils/workspaceOutlineColor'
 import { randomPastelColor } from '@/utils/functions'
 import ProjectColumnsTableInput from '@/components/dashboard/project/settings/inputs/ProjectColumnsTableInput.vue'
+import ProjectPlanningAcceptCard from '@/components/settings/project/ProjectPlanningAcceptCard.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import { Form } from 'vee-validate'
 
@@ -46,6 +48,7 @@ const settingsLayoutStore = useSettingsLayoutStore()
 const authStore = useAuthStore()
 const queryClient = useQueryClient()
 const { t } = useI18n()
+const route = useRoute()
 const { createProject, updateProject } = useProjectMutations()
 watchEffect(() => {
   settingsLayoutStore.setUserId(String(authStore.user?.id || 'anonymous'))
@@ -489,6 +492,14 @@ function scrollToWorkspaceCard(cardId: string) {
   const id = `workspace-card-${cardId.replace(/\./g, '-')}`
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
+
+onMounted(() => {
+  const acceptRaw = route.query.acceptProject
+  const acceptId = typeof acceptRaw === 'string' ? parseInt(acceptRaw, 10) : NaN
+  if (isValidId(acceptId)) {
+    selectWorkspaceProject(acceptId)
+  }
+})
 </script>
 
 <template>
@@ -562,6 +573,12 @@ function scrollToWorkspaceCard(cardId: string) {
       {{ $t('settingsHub.workspace.activeProjectLabel') }}:
       <span class="font-medium text-base-content/90">{{ displayWorkspaceProjectName }}</span>
     </p>
+
+    <ProjectPlanningAcceptCard
+      v-if="hasProjectSelected"
+      :project-id="projectId"
+      class="mx-0"
+    />
 
     <DraggableSettingsGrid
       :layout="layout"
@@ -946,6 +963,12 @@ function scrollToWorkspaceCard(cardId: string) {
               @click="selectWorkspaceProject(p.id)"
             >
               <span class="font-medium line-clamp-2">{{ p.name || '—' }}</span>
+              <span
+                v-if="p.lifecycleStatus === 'DRAFT' || p.status === 'DRAFT'"
+                class="badge badge-warning badge-xs"
+              >
+                DRAFT
+              </span>
               <span
                 v-if="recentlyCreatedProjectId === p.id"
                 class="badge badge-success badge-xs sm:badge-sm"

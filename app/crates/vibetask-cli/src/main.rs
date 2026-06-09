@@ -18,6 +18,8 @@ use vibetask_app::tools::{
     AgentStatusTool, ApproveCompletionTool, CreateKnowledgeDocumentTool, CreateTaskTool,
     GetContextTool, LinkDocumentTool, ListAgentsTool, QueryProjectsTool, QueryTasksTool,
     ReadDocumentsTool, ReadProjectOverviewTool, ReadProjectStateTool, ReadProjectSummaryTool,
+    ConfirmProjectAcceptTool, CreateDraftProjectTool, PreviewDraftProjectTool,
+    RequestProjectAcceptTool,
     ReflectOnWorkTool, RejectToExecuteTool, RequestHelpTool, SwitchAgentTool,
     UpdateTaskProgressTool, VibeTaskMcpTools,
 };
@@ -238,6 +240,38 @@ enum ProjectCommands {
         include: Option<String>,
         #[arg(long, default_value_t = false)]
         list_workspaces: bool,
+    },
+    /// Draft project planning (platform session).
+    Draft {
+        #[command(subcommand)]
+        command: DraftProjectCommands,
+    },
+    /// Accept a DRAFT project (device-code flow).
+    Accept {
+        project_id: i32,
+        #[arg(long)]
+        init: bool,
+        #[arg(long)]
+        code: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum DraftProjectCommands {
+    /// Create a DRAFT project for agent-guided planning.
+    Create {
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        prefix: String,
+        #[arg(long)]
+        description: Option<String>,
+        #[arg(long, default_value = "ADHOC_OPS")]
+        template: String,
+    },
+    /// Preview planning checklist for a DRAFT project.
+    Preview {
+        project_id: i32,
     },
 }
 
@@ -648,6 +682,58 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await
             .map(|r| json!(r.content))
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error>),
+            ProjectCommands::Draft { command } => match command {
+                DraftProjectCommands::Create {
+                    name,
+                    prefix,
+                    description,
+                    template,
+                } => CreateDraftProjectTool {
+                    name: name.clone(),
+                    prefix: prefix.clone(),
+                    description: description.clone(),
+                    template: Some(template.clone()),
+                    documents: None,
+                    backlog_tasks: None,
+                }
+                .call_tool(&ctx)
+                .await
+                .map(|r| json!(r.content))
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>),
+                DraftProjectCommands::Preview { project_id } => PreviewDraftProjectTool {
+                    project_id,
+                }
+                .call_tool(&ctx)
+                .await
+                .map(|r| json!(r.content))
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>),
+            },
+            ProjectCommands::Accept {
+                project_id,
+                init,
+                code,
+            } => {
+                if init {
+                    RequestProjectAcceptTool { project_id }
+                    .call_tool(&ctx)
+                    .await
+                    .map(|r| json!(r.content))
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+                } else if let Some(user_code) = code {
+                    ConfirmProjectAcceptTool {
+                        project_id,
+                        user_code: user_code.clone(),
+                    }
+                    .call_tool(&ctx)
+                    .await
+                    .map(|r| json!(r.content))
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+                } else {
+                    Err(Box::new(std::io::Error::other(
+                        "use --init or --code <userCode>",
+                    )) as Box<dyn std::error::Error>)
+                }
+            }
         },
         Commands::Task { command } => match command {
             TaskCommands::Create {
@@ -1359,6 +1445,8 @@ fn help_tree_path_from_command(command: &Commands) -> Vec<String> {
                 ProjectCommands::State { .. } => "state",
                 ProjectCommands::Overview => "overview",
                 ProjectCommands::Summary { .. } => "summary",
+                ProjectCommands::Draft { .. } => "draft",
+                ProjectCommands::Accept { .. } => "accept",
             }
             .to_string(),
         ],
@@ -2670,6 +2758,35 @@ fn extract_cli_dimensions(
                 Some(*project_id),
                 None,
             ),
+            ProjectCommands::Draft { command } => match command {
+                DraftProjectCommands::Create { .. } => (
+                    "project.draft.create".to_string(),
+                    Some("create_draft_project".to_string()),
+                    None,
+                    None,
+                ),
+                DraftProjectCommands::Preview { project_id } => (
+                    "project.draft.preview".to_string(),
+                    Some("preview_draft_project".to_string()),
+                    Some(*project_id),
+                    None,
+                ),
+            },
+            ProjectCommands::Accept { project_id, init, code } => {
+                let tool = if *init {
+                    Some("request_project_accept".to_string())
+                } else if code.is_some() {
+                    Some("confirm_project_accept".to_string())
+                } else {
+                    None
+                };
+                (
+                    "project.accept".to_string(),
+                    tool,
+                    Some(*project_id),
+                    None,
+                )
+            }
         },
         Commands::Task { command } => match command {
             TaskCommands::Create { project_id, .. } => (

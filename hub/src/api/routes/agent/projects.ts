@@ -77,8 +77,14 @@ router.get('/summary', asyncHandler(async (req, res) => {
       return res.json({ projects: [] });
     }
 
+    const includeDraft = String(req.query.includeDraft ?? 'false').toLowerCase() === 'true'
+      || String(req.query.include ?? '').split(',').map((t) => t.trim().toLowerCase()).includes('draft');
+
     const projects = await prisma.project.findMany({
-      where: { id: { in: projectIds } },
+      where: {
+        id: { in: projectIds },
+        ...(includeDraft ? {} : { lifecycleStatus: 'ACTIVE' }),
+      },
       select: { id: true, name: true, prefix: true, description: true },
     });
     const query = req.query as Record<string, unknown>;
@@ -100,17 +106,24 @@ router.get('/summary', asyncHandler(async (req, res) => {
           name: true,
           prefix: true,
           description: true,
+          lifecycleStatus: true,
         },
       },
     },
   });
 
-  const projects = memberships.map((membership) => ({
-    id: membership.project.id,
-    name: membership.project.name,
-    prefix: membership.project.prefix,
-    description: membership.project.description,
-  }));
+  const includeDraft = String(req.query.includeDraft ?? 'false').toLowerCase() === 'true'
+    || String(req.query.include ?? '').split(',').map((t) => t.trim().toLowerCase()).includes('draft');
+
+  const projects = memberships
+    .map((membership) => membership.project)
+    .filter((p) => includeDraft || p.lifecycleStatus !== 'DRAFT')
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      prefix: p.prefix,
+      description: p.description,
+    }));
 
   const query = req.query as Record<string, unknown>;
   const scope = parseSummaryScope(query);

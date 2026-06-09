@@ -90,6 +90,7 @@ mod governance;
 mod read_project_overview;
 mod read_project_state;
 mod read_project_summary;
+mod project_planning;
 mod runtime;
 mod workflow;
 
@@ -103,6 +104,7 @@ pub use governance::*;
 pub use read_project_overview::*;
 pub use read_project_state::*;
 pub use read_project_summary::*;
+pub use project_planning::*;
 pub use runtime::*;
 pub use workflow::*;
 
@@ -146,6 +148,11 @@ tool_box!(
         ReadProjectStateTool,
         ReadProjectOverviewTool,
         ReadProjectSummaryTool,
+        CreateDraftProjectTool,
+        LoadPlanningSkillTool,
+        RequestProjectAcceptTool,
+        PreviewDraftProjectTool,
+        ConfirmProjectAcceptTool,
         RemoveAgentTool,
     ]
 );
@@ -190,6 +197,11 @@ impl VibeTaskMcpTools {
             VibeTaskMcpTools::ReadProjectStateTool(t) => t.call_tool(ctx).await,
             VibeTaskMcpTools::ReadProjectOverviewTool(t) => t.call_tool(ctx).await,
             VibeTaskMcpTools::ReadProjectSummaryTool(t) => t.call_tool(ctx).await,
+            VibeTaskMcpTools::CreateDraftProjectTool(t) => t.call_tool(ctx).await,
+            VibeTaskMcpTools::LoadPlanningSkillTool(t) => t.call_tool(ctx).await,
+            VibeTaskMcpTools::RequestProjectAcceptTool(t) => t.call_tool(ctx).await,
+            VibeTaskMcpTools::PreviewDraftProjectTool(t) => t.call_tool(ctx).await,
+            VibeTaskMcpTools::ConfirmProjectAcceptTool(t) => t.call_tool(ctx).await,
             VibeTaskMcpTools::RemoveAgentTool(t) => t.call_tool(ctx).await,
         }
     }

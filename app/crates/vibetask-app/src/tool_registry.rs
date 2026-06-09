@@ -2,9 +2,11 @@ use crate::agent_detector::AgentType;
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 use vibetask_tool_catalog::{
-    column_tools as catalog_column_tools, platform_tools as catalog_platform_tools,
-    project_delegated_full_catalog, AGENT_STATUS, DELEGATE_AGENT, GET_CONTEXT, LIST_AGENTS,
-    QUERY_HEALTH, QUERY_PROJECTS, QUERY_TASKS, READ_DOCUMENTS, REGISTER_AGENT, SWITCH_AGENT,
+    column_tools as catalog_column_tools,
+    platform_agent_has_endpoint_access,
+    platform_tool_required_endpoint,
+    platform_tools as catalog_platform_tools,
+    project_delegated_full_catalog,
 };
 
 /// Tool Registry with explicit tool-column mapping and agent type filtering
@@ -36,35 +38,18 @@ impl ToolRegistry {
             AgentType::Platform {
                 allowed_endpoints, ..
             } => {
-                // Platform agents: filter by endpoint permissions
-                let mut tools = vec![QUERY_HEALTH.to_string(), REGISTER_AGENT.to_string()];
-
-                // Always available agent management tools
-                tools.extend([
-                    SWITCH_AGENT.to_string(),
-                    LIST_AGENTS.to_string(),
-                    AGENT_STATUS.to_string(),
-                    DELEGATE_AGENT.to_string(),
-                ]);
-
-                // Endpoint-based tool availability
-                if self.has_endpoint_access(allowed_endpoints, "/api/agent/projects") {
-                    tools.push(QUERY_PROJECTS.to_string());
-                }
-
-                if self
-                    .has_endpoint_access(allowed_endpoints, "/api/agent/projects/:projectId/docs")
-                {
-                    tools.push(READ_DOCUMENTS.to_string());
-                }
-
-                if self
-                    .has_endpoint_access(allowed_endpoints, "/api/agent/projects/:projectId/tasks")
-                {
-                    tools.push(QUERY_TASKS.to_string());
-                    tools.push(GET_CONTEXT.to_string());
-                }
-
+                let mut tools: Vec<String> = self
+                    .platform_tools
+                    .iter()
+                    .filter(|tool| match platform_tool_required_endpoint(tool) {
+                        None => true,
+                        Some(endpoint) => {
+                            platform_agent_has_endpoint_access(allowed_endpoints, endpoint)
+                        }
+                    })
+                    .cloned()
+                    .collect();
+                tools.sort();
                 tools
             }
             AgentType::ProjectDelegated { .. } => {
@@ -95,20 +80,6 @@ impl ToolRegistry {
         self.agent_type = new_agent_type;
     }
 
-    /// Check if agent has access to specific endpoint
-    fn has_endpoint_access(&self, allowed_endpoints: &[String], target_endpoint: &str) -> bool {
-        allowed_endpoints.iter().any(|endpoint| {
-            // Handle parameterized endpoints like /api/agent/projects/:projectId/tasks
-            if endpoint.contains(':') && target_endpoint.contains(':') {
-                // Extract base path before parameters
-                let endpoint_base = endpoint.split(':').next().unwrap_or(endpoint);
-                let target_base = target_endpoint.split(':').next().unwrap_or(target_endpoint);
-                endpoint_base == target_base
-            } else {
-                endpoint == target_endpoint
-            }
-        })
-    }
 
     /// Create detailed validation error with context
     fn create_validation_error(
@@ -157,13 +128,9 @@ impl ToolRegistry {
 
     /// Get required endpoint for a platform tool
     fn get_required_endpoint_for_tool(&self, tool_name: &str) -> String {
-        match tool_name {
-            "query_projects" => "/api/agent/projects".to_string(),
-            "query_tasks" => "/api/agent/projects/:projectId/tasks".to_string(),
-            "read_documents" => "/api/agent/projects/:projectId/docs".to_string(),
-            "get_context" => "/api/agent/projects/:projectId/tasks/:taskId".to_string(),
-            _ => "unknown".to_string(),
-        }
+        platform_tool_required_endpoint(tool_name)
+            .unwrap_or("none (always listed for platform agents)")
+            .to_string()
     }
 
     /// Get all tools for a specific column (for debugging/introspection)
@@ -317,6 +284,10 @@ mod tests {
         assert!(!available_tools.contains(&"commit_artifact".to_string()));
         assert!(!available_tools.contains(&"spawn_sub_board".to_string()));
         assert!(!available_tools.contains(&"reflect_on_work".to_string()));
+
+        // Draft/planning tools list without read-endpoint allowance (hub gates platform session)
+        assert!(available_tools.contains(&"create_draft_project".to_string()));
+        assert!(available_tools.contains(&"preview_draft_project".to_string()));
     }
 
     #[test]
@@ -406,10 +377,10 @@ mod tests {
             effective_endpoints: vec!["/api/agent/projects/:projectId/docs".to_string()],
         };
 
-        let registry = ToolRegistry::new(agent_type);
+        let _registry = ToolRegistry::new(agent_type);
 
         // Should match parameterized endpoints
-        assert!(registry.has_endpoint_access(
+        assert!(platform_agent_has_endpoint_access(
             &["/api/agent/projects/:projectId/docs".to_string()],
             "/api/agent/projects/:projectId/docs"
         ));

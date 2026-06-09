@@ -75,6 +75,22 @@ const patchProjectSettings = async (id: number, settings: ProjectSettings) => {
   return response.data.settings
 }
 
+const getPlanningPreview = async (id: number) => {
+  if (!isValidId(id)) {
+    return Promise.reject(new Error('Invalid project ID'))
+  }
+  const response = await axiosApi.get(`/projects/${Number(id)}/planning/preview`)
+  return response.data
+}
+
+const acceptDraftProject = async (id: number) => {
+  if (!isValidId(id)) {
+    return Promise.reject(new Error('Invalid project ID'))
+  }
+  const response = await axiosApi.post(`/projects/${Number(id)}/planning/accept`)
+  return response.data
+}
+
 export default {
   updateProject,
   getSingleProject,
@@ -85,4 +101,6 @@ export default {
   getProjectDelegates,
   getProjectTemplates,
   patchProjectSettings,
+  getPlanningPreview,
+  acceptDraftProject,
 }

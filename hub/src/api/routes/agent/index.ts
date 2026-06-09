@@ -11,6 +11,9 @@ import { prisma } from '../../../infrastructure/auth/prisma.js';
 import { requireAgentProjectAccess, ProjectAction } from '../../../infrastructure/auth/agent-permissions.js';
 import { requirePlatformSession } from '../../../infrastructure/http/middleware/platform-session.js';
 import projectsRouter from './projects.js';
+import projectDraftRouter from './project-draft.js';
+import agentPlanningSkillsRouter from './planning-skills.js';
+import agentProjectPlanningRouter from './project-planning.js';
 import tasksRouter from './tasks.js';
 import commentsRouter from './comments.js';
 import documentsRouter from './documents.js';
@@ -61,6 +64,17 @@ router.use(async (req, res, next) => {
 
   // Allow session endpoint for platform agents (POST to create JWT)
   if (req.path === '/session' || req.path === '/session/') {
+    return next();
+  }
+
+  // Platform agent draft create + planning accept/preview (requires platform session on route)
+  if (
+    req.method === 'POST' &&
+    (req.path === '/projects/draft' || req.path === '/projects/draft/')
+  ) {
+    return next();
+  }
+  if (req.path.startsWith('/planning/')) {
     return next();
   }
 
@@ -244,6 +258,9 @@ export async function ensureAgentReviewColumn(projectId: number) {
 // Register sub-routers
 router.use('/session', sessionRouter);
 router.use('/my-agents', myAgentsRouter);
+router.use('/planning', agentPlanningSkillsRouter);
+router.use('/planning', agentProjectPlanningRouter);
+router.use('/projects', projectDraftRouter);
 router.use('/projects', projectsRouter);
 router.use('/projects/:projectId/tasks', tasksRouter);
 router.use('/projects/:projectId/tasks/:taskId/comments', commentsRouter);

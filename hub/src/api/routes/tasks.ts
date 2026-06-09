@@ -312,7 +312,8 @@ router.post('/', requireAuth, validateBody(createTaskSchema), sanitize(['name', 
     throw new BadRequestError('Child tasks cannot be marked as workspace containers');
   }
 
-  // Check membership and permissions
+  const { assertDraftAllowsTaskCreate } = await import('../../services/project-lifecycle.js');
+  await assertDraftAllowsTaskCreate(projectId, projectColumnId);
   const membership = await prisma.projectUser.findFirst({
     where: { projectId, userId: user.id },
   });

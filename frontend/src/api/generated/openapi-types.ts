@@ -1724,6 +1724,8 @@ export interface components {
             name?: string;
             description?: string | null;
             prefix?: string;
+            /** @enum {string} */
+            lifecycleStatus?: "DRAFT" | "ACTIVE";
             ownerId?: number;
             /** Format: date-time */
             createdAt?: string;
@@ -2540,6 +2542,9 @@ export interface operations {
                 page?: number;
                 /** @description Number of items per page */
                 limit?: number;
+                /** @description Filter projects by lifecycle status (default list excludes DRAFT) */
+                lifecycleStatus?: "DRAFT" | "ACTIVE";
+                includeDraft?: boolean;
             };
             header?: never;
             path?: never;

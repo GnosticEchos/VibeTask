@@ -41,6 +41,9 @@ import adminPlatformAgentsRoutes from './api/routes/admin/platform-agents.js';
 import documentsRoutes from './api/routes/documents.js';
 import taskDocLinksRoutes from './api/routes/task-doc-links.js';
 import planAcceptanceRoutes from './api/routes/plan-acceptance.js';
+import projectPlanningRoutes from './api/routes/project-planning.js';
+import projectPlanningSkillsRoutes from './api/routes/project-planning-skills.js';
+import adminPlanningSkillsRoutes from './api/routes/admin/planning-skills.js';
 import monitorPassRoutes from './api/routes/monitor-pass.js';
 import { runSystemHealthCheck } from './infrastructure/http/system-health.js';
 import { setSocketIOServer } from './infrastructure/websocket/io-registry.js';
@@ -219,10 +222,13 @@ app.use('/api/admin/users', adminUsersRoutes);
 app.use('/api/admin/health', adminHealthRoutes);
 app.use('/api/admin/audit-log', adminAuditLogRoutes);
 app.use('/api/admin/platform-agents', adminPlatformAgentsRoutes);
+app.use('/api/admin/planning-skills', adminPlanningSkillsRoutes);
 
 app.use('/api/agent', agentRouter);
 
 // Documents (Knowledge Hub)
+app.use('/api/projects/:projectId/planning', projectPlanningRoutes);
+app.use('/api/projects/:projectId/planning/skills', projectPlanningSkillsRoutes);
 app.use('/api/projects/:projectId/docs', documentsRoutes);
 app.use('/api/projects/:projectId/tasks/:taskId/doc-links', taskDocLinksRoutes);
 app.use('/api/projects/:projectId/accept-plan/:taskId', planAcceptanceRoutes);

@@ -403,6 +403,25 @@
               "default": 20
             },
             "description": "Number of items per page"
+          },
+          {
+            "name": "lifecycleStatus",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["DRAFT", "ACTIVE"]
+            },
+            "description": "Filter projects by lifecycle status (default list excludes DRAFT)"
+          },
+          {
+            "name": "includeDraft",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
           }
         ],
         "responses": {
@@ -7524,6 +7543,10 @@
           },
           "prefix": {
             "type": "string"
+          },
+          "lifecycleStatus": {
+            "type": "string",
+            "enum": ["DRAFT", "ACTIVE"]
           },
           "ownerId": {
             "type": "integer"
