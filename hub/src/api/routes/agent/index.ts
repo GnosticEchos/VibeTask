@@ -39,13 +39,6 @@ const PLATFORM_AGENT_ALWAYS_ALLOWED_READ_ENDPOINTS = ['/api/agent/health', '/api
 router.use(unifiedAuthMiddleware);
 router.use(attachOptionalPlatformSession);
 
-function matchesTemplatePath(template: string, actualPath: string): boolean {
-  const templateParts = template.split('/').filter(Boolean);
-  const actualParts = actualPath.split('/').filter(Boolean);
-  if (templateParts.length !== actualParts.length) return false;
-  return templateParts.every((part, index) => part.startsWith(':') || part === actualParts[index]);
-}
-
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', scope: 'agent' });
 });

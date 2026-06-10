@@ -74,6 +74,9 @@ mod tests {
             "text": "{\"projectId\":21,\"lifecycleStatus\":\"DRAFT\"}"
         }]);
         let normalized = normalize_payload(&wrapped);
-        assert_eq!(normalized.get("projectId").and_then(|v| v.as_i64()), Some(21));
+        assert_eq!(
+            normalized.get("projectId").and_then(|v| v.as_i64()),
+            Some(21)
+        );
     }
 }

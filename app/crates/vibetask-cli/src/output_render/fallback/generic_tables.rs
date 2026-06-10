@@ -131,7 +131,6 @@ pub(crate) fn render_comfy_tables(payload: &Value) -> bool {
     false
 }
 
-
 pub(crate) fn render_markdown_sections(payload: &Value) -> Option<String> {
     let mut markdown = String::new();
 
@@ -171,31 +170,31 @@ pub(crate) fn render_markdown_sections(payload: &Value) -> Option<String> {
 
     if let Some(documents) = payload.get("documents").and_then(|v| v.as_array()) {
         if !is_planning_preview_payload(payload) {
-        markdown.push_str("## Documents\n\n");
-        for row in documents {
-            let rank = row
-                .get("rank")
-                .or_else(|| row.get("similarity_score"))
-                .and_then(|v| v.as_f64())
-                .map(|v| format!("{v:.3}"))
-                .unwrap_or_else(|| "-".to_string());
-            let snippet = row
-                .get("snippet")
-                .and_then(|v| v.as_str())
-                .map(|v| v.replace('\n', " "))
-                .unwrap_or_else(|| "-".to_string());
-            markdown.push_str(&format!(
-                "- `{}` {} (project `{}` rank `{}`)\n  - snippet: {}\n",
-                row.get("id").and_then(|v| v.as_i64()).unwrap_or_default(),
-                row.get("title").and_then(|v| v.as_str()).unwrap_or("-"),
-                row.get("projectId")
-                    .and_then(|v| v.as_i64())
-                    .unwrap_or_default(),
-                rank,
-                snippet
-            ));
-        }
-        markdown.push('\n');
+            markdown.push_str("## Documents\n\n");
+            for row in documents {
+                let rank = row
+                    .get("rank")
+                    .or_else(|| row.get("similarity_score"))
+                    .and_then(|v| v.as_f64())
+                    .map(|v| format!("{v:.3}"))
+                    .unwrap_or_else(|| "-".to_string());
+                let snippet = row
+                    .get("snippet")
+                    .and_then(|v| v.as_str())
+                    .map(|v| v.replace('\n', " "))
+                    .unwrap_or_else(|| "-".to_string());
+                markdown.push_str(&format!(
+                    "- `{}` {} (project `{}` rank `{}`)\n  - snippet: {}\n",
+                    row.get("id").and_then(|v| v.as_i64()).unwrap_or_default(),
+                    row.get("title").and_then(|v| v.as_str()).unwrap_or("-"),
+                    row.get("projectId")
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or_default(),
+                    rank,
+                    snippet
+                ));
+            }
+            markdown.push('\n');
         }
     }
 
@@ -205,4 +204,3 @@ pub(crate) fn render_markdown_sections(payload: &Value) -> Option<String> {
         Some(markdown)
     }
 }
-

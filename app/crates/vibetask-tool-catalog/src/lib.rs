@@ -66,7 +66,10 @@ pub fn platform_tool_required_endpoint(tool: &str) -> Option<&'static str> {
 }
 
 /// Match platform agent read-endpoint templates (supports `:param` suffixes).
-pub fn platform_agent_has_endpoint_access(allowed_endpoints: &[String], target_endpoint: &str) -> bool {
+pub fn platform_agent_has_endpoint_access(
+    allowed_endpoints: &[String],
+    target_endpoint: &str,
+) -> bool {
     allowed_endpoints.iter().any(|endpoint| {
         if endpoint.contains(':') && target_endpoint.contains(':') {
             let endpoint_base = endpoint.split(':').next().unwrap_or(endpoint);

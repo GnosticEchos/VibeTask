@@ -14,9 +14,15 @@ fn project_label(project: &Value) -> String {
 }
 
 fn project_has_include_buckets(project: &Value) -> bool {
-    ["documents", "workspaces", "agentReview", "helpRequests", "blocked"]
-        .iter()
-        .any(|key| project.get(*key).is_some())
+    [
+        "documents",
+        "workspaces",
+        "agentReview",
+        "helpRequests",
+        "blocked",
+    ]
+    .iter()
+    .any(|key| project.get(*key).is_some())
 }
 
 fn fleet_projects_have_bucket(projects: &[Value], key: &str) -> bool {
@@ -145,11 +151,7 @@ impl FleetIncludeColumns {
     }
 
     fn any(&self) -> bool {
-        self.documents
-            || self.workspaces
-            || self.agent_review
-            || self.help_requests
-            || self.blocked
+        self.documents || self.workspaces || self.agent_review || self.help_requests || self.blocked
     }
 }
 
@@ -247,10 +249,7 @@ fn render_comfy_fleet_table(projects: &[Value], scope: &str) {
     }
 }
 
-fn project_stats_summary_line(
-    payload: &Value,
-    project: &Value,
-) -> Option<String> {
+fn project_stats_summary_line(payload: &Value, project: &Value) -> Option<String> {
     payload
         .get("summary_line")
         .or_else(|| payload.get("summaryLine"))
@@ -627,7 +626,6 @@ fn render_project_stats_markdown(payload: &Value) -> Option<String> {
 
     None
 }
-
 
 pub struct ProjectStatsRenderer;
 

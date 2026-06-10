@@ -87,10 +87,10 @@ mod core;
 mod discovery;
 mod find_tools;
 mod governance;
+mod project_planning;
 mod read_project_overview;
 mod read_project_state;
 mod read_project_summary;
-mod project_planning;
 mod runtime;
 mod workflow;
 
@@ -101,10 +101,10 @@ pub use core::*;
 pub use discovery::*;
 pub use find_tools::*;
 pub use governance::*;
+pub use project_planning::*;
 pub use read_project_overview::*;
 pub use read_project_state::*;
 pub use read_project_summary::*;
-pub use project_planning::*;
 pub use runtime::*;
 pub use workflow::*;
 

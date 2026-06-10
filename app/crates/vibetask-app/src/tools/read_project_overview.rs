@@ -35,7 +35,12 @@ impl ReadProjectOverviewTool {
         let active = ctx.resolve_active_agent().await?;
         ensure_platform_session(&ctx.config_path, &active.config, &ctx.api_client)
             .await
-            .map_err(|e| tool_error("runtime", format!("Failed to ensure platform session: {}", e)))?;
+            .map_err(|e| {
+                tool_error(
+                    "runtime",
+                    format!("Failed to ensure platform session: {}", e),
+                )
+            })?;
 
         let api_key = &active.api_key;
         let scope = self.scope.clone().unwrap_or_else(|| "main".to_string());

@@ -158,7 +158,9 @@ impl PreviewDraftProjectTool {
             .api_client
             .get_agent_planning_preview(api_key, self.project_id)
             .await
-            .map_err(|e| tool_error("runtime", format!("Failed to preview draft project: {}", e)))?;
+            .map_err(|e| {
+                tool_error("runtime", format!("Failed to preview draft project: {}", e))
+            })?;
 
         Ok(ResponseBuilder::text(
             serde_json::to_string_pretty(&raw).unwrap_or_else(|_| "{}".to_string()),
@@ -193,7 +195,12 @@ impl ConfirmProjectAcceptTool {
             .api_client
             .post_agent_accept_confirm(api_key, self.project_id, self.user_code.as_str())
             .await
-            .map_err(|e| tool_error("runtime", format!("Failed to confirm project accept: {}", e)))?;
+            .map_err(|e| {
+                tool_error(
+                    "runtime",
+                    format!("Failed to confirm project accept: {}", e),
+                )
+            })?;
 
         Ok(ResponseBuilder::text(
             serde_json::to_string_pretty(&raw).unwrap_or_else(|_| "{}".to_string()),

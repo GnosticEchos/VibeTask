@@ -13,12 +13,11 @@ use vibetask_app::telemetry::{classify_error, TelemetryEvent, TelemetryRecorder}
 use vibetask_app::tools::IntegrityCheckInput;
 use vibetask_app::tools::ToolContext;
 use vibetask_app::tools::{
-    AgentStatusTool, ApproveCompletionTool, CreateKnowledgeDocumentTool, CreateTaskTool,
-    GetContextTool, LinkDocumentTool, ListAgentsTool, QueryProjectsTool, QueryTasksTool,
-    ReadDocumentsTool, ReadProjectOverviewTool, ReadProjectStateTool, ReadProjectSummaryTool,
-    ConfirmProjectAcceptTool, CreateDraftProjectTool, PreviewDraftProjectTool,
-    RequestProjectAcceptTool,
-    ReflectOnWorkTool, RejectToExecuteTool, RequestHelpTool, SwitchAgentTool,
+    AgentStatusTool, ApproveCompletionTool, ConfirmProjectAcceptTool, CreateDraftProjectTool,
+    CreateKnowledgeDocumentTool, CreateTaskTool, GetContextTool, LinkDocumentTool, ListAgentsTool,
+    PreviewDraftProjectTool, QueryProjectsTool, QueryTasksTool, ReadDocumentsTool,
+    ReadProjectOverviewTool, ReadProjectStateTool, ReadProjectSummaryTool, ReflectOnWorkTool,
+    RejectToExecuteTool, RequestHelpTool, RequestProjectAcceptTool, SwitchAgentTool,
     UpdateTaskProgressTool, VibeTaskMcpTools,
 };
 use vibetask_app::vibetask_client::VibeTaskClient;
@@ -286,9 +285,7 @@ enum DraftProjectCommands {
         template: String,
     },
     /// Preview planning checklist for a DRAFT project.
-    Preview {
-        project_id: i32,
-    },
+    Preview { project_id: i32 },
 }
 
 #[derive(Subcommand)]
@@ -691,10 +688,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 include_draft,
                 list_workspaces,
             }
-                .call_tool(&ctx)
-                .await
-                .map(|r| json!(r.content))
-                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>),
+            .call_tool(&ctx)
+            .await
+            .map(|r| json!(r.content))
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>),
             ProjectCommands::Summary {
                 project_id,
                 scope,
@@ -728,13 +725,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await
                 .map(|r| json!(r.content))
                 .map_err(|e| Box::new(e) as Box<dyn std::error::Error>),
-                DraftProjectCommands::Preview { project_id } => PreviewDraftProjectTool {
-                    project_id,
+                DraftProjectCommands::Preview { project_id } => {
+                    PreviewDraftProjectTool { project_id }
+                        .call_tool(&ctx)
+                        .await
+                        .map(|r| json!(r.content))
+                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
                 }
-                .call_tool(&ctx)
-                .await
-                .map(|r| json!(r.content))
-                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>),
             },
             ProjectCommands::Accept {
                 project_id,
@@ -743,10 +740,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             } => {
                 if init {
                     RequestProjectAcceptTool { project_id }
-                    .call_tool(&ctx)
-                    .await
-                    .map(|r| json!(r.content))
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+                        .call_tool(&ctx)
+                        .await
+                        .map(|r| json!(r.content))
+                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
                 } else if let Some(user_code) = code {
                     ConfirmProjectAcceptTool {
                         project_id,
@@ -1965,7 +1962,11 @@ fn extract_cli_dimensions(
                     None,
                 ),
             },
-            ProjectCommands::Accept { project_id, init, code } => {
+            ProjectCommands::Accept {
+                project_id,
+                init,
+                code,
+            } => {
                 let tool = if *init {
                     Some("request_project_accept".to_string())
                 } else if code.is_some() {
@@ -1973,12 +1974,7 @@ fn extract_cli_dimensions(
                 } else {
                     None
                 };
-                (
-                    "project.accept".to_string(),
-                    tool,
-                    Some(*project_id),
-                    None,
-                )
+                ("project.accept".to_string(), tool, Some(*project_id), None)
             }
         },
         Commands::Task { command } => match command {

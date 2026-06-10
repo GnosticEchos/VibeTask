@@ -645,7 +645,10 @@ mod tests {
         let create = value
             .get("subcommands")
             .and_then(|v| v.as_array())
-            .and_then(|subs| subs.iter().find(|s| s.get("name") == Some(&json!("create"))))
+            .and_then(|subs| {
+                subs.iter()
+                    .find(|s| s.get("name") == Some(&json!("create")))
+            })
             .expect("create subcommand");
         let mcp_tools = create
             .get("mcp_tools")

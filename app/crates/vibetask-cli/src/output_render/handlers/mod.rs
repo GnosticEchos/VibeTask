@@ -7,8 +7,5 @@ pub use planning_preview::PlanningPreviewRenderer;
 pub use project_stats::ProjectStatsRenderer;
 
 pub fn all_handlers() -> [&'static dyn StructuredRenderer; 2] {
-    [
-        &PlanningPreviewRenderer,
-        &ProjectStatsRenderer,
-    ]
+    [&PlanningPreviewRenderer, &ProjectStatsRenderer]
 }

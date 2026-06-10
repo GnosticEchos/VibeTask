@@ -115,8 +115,10 @@ function validateField(value: any) {
   return true;
 }
 
+const fieldText = computed(() => String(useFieldValue.value ?? ''))
+
 const valueLeftLength = computed<number>(() => {
-  return Math.max(props.maxLength - stripHTML(useFieldValue.value).length, 0)
+  return Math.max(props.maxLength - stripHTML(fieldText.value).length, 0)
 })
 </script>
 
@@ -146,7 +148,7 @@ const valueLeftLength = computed<number>(() => {
       <slot name="append" />
       <small
         v-if="!$slots.append && maxLength"
-        :class="{ 'text-error': errorMessage && maxLength - useFieldValue?.length < 0 }"
+        :class="{ 'text-error': errorMessage && maxLength - fieldText.length < 0 }"
       >{{ $t('tasks.left', { number: valueLeftLength }) }}</small>
     </div>
     <div v-if="errorMessage && !hideDetails" class="text-error text-xs mt-1">{{ errorMessage }}</div>

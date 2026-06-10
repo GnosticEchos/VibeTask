@@ -57,7 +57,10 @@ fn render_comfy_planning_preview(payload: &Value) {
             .set_content_arrangement(ContentArrangement::Dynamic)
             .set_header(vec!["Checklist", "Status"]);
         for item in checklist {
-            let passed = item.get("passed").and_then(|v| v.as_bool()).unwrap_or(false);
+            let passed = item
+                .get("passed")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             table.add_row(vec![
                 Cell::new(json_str(item, "label")),
                 Cell::new(if passed { "pass" } else { "FAIL" }),
@@ -156,7 +159,10 @@ fn render_markdown_planning_preview(payload: &Value) -> String {
     if let Some(checklist) = payload.get("checklist").and_then(|v| v.as_array()) {
         md.push_str("### Acceptance checklist\n\n");
         for item in checklist {
-            let passed = item.get("passed").and_then(|v| v.as_bool()).unwrap_or(false);
+            let passed = item
+                .get("passed")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             md.push_str(&format!(
                 "- [{}] {}\n",
                 if passed { "x" } else { " " },
@@ -215,7 +221,6 @@ fn render_markdown_planning_preview(payload: &Value) -> String {
 
     md
 }
-
 
 pub struct PlanningPreviewRenderer;
 

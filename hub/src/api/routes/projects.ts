@@ -31,7 +31,7 @@ import { sanitize } from '../../infrastructure/http/middleware/sanitize.js';
 import { transformProject } from '../../shared/transformers/index.js';
 import { paginatedResponse } from '../../validation/schemas/common.schemas.js';
 import { checkProjectMembership } from '../../infrastructure/auth/project-role-check.js';
-import { getTemplateById, listTemplates } from '../../config/project-templates.js';
+import { listTemplates } from '../../config/project-templates.js';
 import { readDefaultWorkspaceOutlineColor } from '../../services/workspace-outline-color.js';
 import {
   buildProjectStatsSummary,

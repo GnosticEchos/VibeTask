@@ -2,10 +2,8 @@ use crate::agent_detector::AgentType;
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 use vibetask_tool_catalog::{
-    column_tools as catalog_column_tools,
-    platform_agent_has_endpoint_access,
-    platform_tool_required_endpoint,
-    platform_tools as catalog_platform_tools,
+    column_tools as catalog_column_tools, platform_agent_has_endpoint_access,
+    platform_tool_required_endpoint, platform_tools as catalog_platform_tools,
     project_delegated_full_catalog,
 };
 
@@ -79,7 +77,6 @@ impl ToolRegistry {
     pub fn update_agent_type(&mut self, new_agent_type: AgentType) {
         self.agent_type = new_agent_type;
     }
-
 
     /// Create detailed validation error with context
     fn create_validation_error(
