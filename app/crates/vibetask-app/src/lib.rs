@@ -4,6 +4,7 @@ pub mod config;
 pub mod context_assembler;
 pub mod error;
 pub mod orchestrator_error;
+pub mod project_fleet_stats;
 pub mod task_ref;
 pub mod telemetry;
 pub mod tool_registry;

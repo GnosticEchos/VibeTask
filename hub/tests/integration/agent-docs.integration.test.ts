@@ -84,6 +84,57 @@ describe('Agent docs/doc-links/summary endpoints', () => {
       expect(typeof summary.totalTasks).toBe('number');
     });
 
+    it('returns membership fleet summary for platform agent with platform session', async () => {
+      const projectA = await createTestProject(userId, { name: 'Fleet Alpha', prefix: 'FLA' });
+      const projectB = await createTestProject(userId, { name: 'Fleet Beta', prefix: 'FLB' });
+
+      const createAgent = await request(testApp)
+        .post('/api/agents')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: 'PlatformOverviewAgent', description: 'integration' });
+
+      expect(createAgent.status).toBe(201);
+      const agentId = createAgent.body.agent.id as string;
+      const rawKey = createAgent.body.apiKey as string;
+
+      await testPrisma.apikey.update({
+        where: { id: agentId },
+        data: {
+          referenceId: String(userId),
+          metadata: {
+            isAgent: true,
+            isPlatformAgent: true,
+            allowedReadEndpoints: [],
+            sessionExpirySeconds: 86400,
+          },
+        },
+      });
+
+      const withoutSession = await request(testApp)
+        .get('/api/agent/projects/summary')
+        .set('x-agent-api-key', rawKey);
+
+      expect(withoutSession.status).toBe(200);
+      expect(withoutSession.body.projects).toEqual([]);
+
+      const sessionRes = await request(testApp)
+        .post('/api/agent/session')
+        .set('x-agent-api-key', rawKey);
+
+      expect(sessionRes.status).toBe(200);
+      const platformJwt = sessionRes.body.token as string;
+      expect(typeof platformJwt).toBe('string');
+
+      const withSession = await request(testApp)
+        .get('/api/agent/projects/summary')
+        .set('x-agent-api-key', rawKey)
+        .set('x-platform-session', platformJwt);
+
+      expect(withSession.status).toBe(200);
+      const ids = (withSession.body.projects as Array<{ id: number }>).map((p) => p.id);
+      expect(ids).toEqual(expect.arrayContaining([projectA.id, projectB.id]));
+    });
+
     it('filters summaries by projectId query param', async () => {
       const project = await createTestProject(userId, { name: 'Filtered Summary', prefix: 'FSM' });
       await createTestProject(userId, { name: 'Other Summary', prefix: 'OTH' });

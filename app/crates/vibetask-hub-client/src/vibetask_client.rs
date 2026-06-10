@@ -532,9 +532,24 @@ impl VibeTaskClient {
     }
 
     /// Get project overview summary (lightweight stats per project)
-    pub async fn get_project_summary(&self, api_key: &str) -> Result<serde_json::Value, ApiError> {
-        let endpoint = "/api/agent/projects/summary";
-        let url = self.build_url(endpoint)?;
+    pub async fn get_project_summary(
+        &self,
+        api_key: &str,
+        project_id_filter: Option<i32>,
+        scope: Option<&str>,
+        include: Option<&str>,
+        list_workspaces: bool,
+        include_draft: bool,
+    ) -> Result<serde_json::Value, ApiError> {
+        let mut url = self.build_url("/api/agent/projects/summary")?;
+        Self::append_project_summary_query(
+            &mut url,
+            project_id_filter,
+            scope,
+            include,
+            list_workspaces,
+            include_draft,
+        );
         let request = self.authenticated_request(reqwest::Method::GET, url, api_key);
 
         debug!("Fetching project overview summary");
@@ -555,7 +570,7 @@ impl VibeTaskClient {
     ) -> Result<serde_json::Value, ApiError> {
         let endpoint = format!("/api/agent/projects/{}/summary", project_id);
         let mut url = self.build_url(&endpoint)?;
-        Self::append_project_summary_query(&mut url, None, scope, include, list_workspaces);
+        Self::append_project_summary_query(&mut url, None, scope, include, list_workspaces, false);
 
         let request = self.authenticated_request(reqwest::Method::GET, url, api_key);
         debug!("Fetching single project summary for {}", project_id);
@@ -577,6 +592,7 @@ impl VibeTaskClient {
             scope,
             include,
             list_workspaces,
+            false,
         );
         let request = self.authenticated_request(reqwest::Method::GET, fleet_url, api_key);
         let fleet: serde_json::Value = self.execute_request(request).await?;
@@ -595,6 +611,7 @@ impl VibeTaskClient {
         scope: Option<&str>,
         include: Option<&str>,
         list_workspaces: bool,
+        include_draft: bool,
     ) {
         let mut qp = url.query_pairs_mut();
         if let Some(pid) = project_id_filter {
@@ -608,6 +625,9 @@ impl VibeTaskClient {
         }
         if list_workspaces {
             qp.append_pair("listWorkspaces", "true");
+        }
+        if include_draft {
+            qp.append_pair("includeDraft", "true");
         }
     }
 

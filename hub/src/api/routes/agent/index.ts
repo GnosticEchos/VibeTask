@@ -9,7 +9,7 @@ import { Router } from 'express';
 import { unifiedAuthMiddleware } from '../../../infrastructure/auth/unified-auth.js';
 import { prisma } from '../../../infrastructure/auth/prisma.js';
 import { requireAgentProjectAccess, ProjectAction } from '../../../infrastructure/auth/agent-permissions.js';
-import { requirePlatformSession } from '../../../infrastructure/http/middleware/platform-session.js';
+import { attachOptionalPlatformSession, requirePlatformSession } from '../../../infrastructure/http/middleware/platform-session.js';
 import projectsRouter from './projects.js';
 import projectDraftRouter from './project-draft.js';
 import agentPlanningSkillsRouter from './planning-skills.js';
@@ -21,7 +21,13 @@ import docLinksRouter from './doc-links.js';
 import helpRequestsRouter from './help-requests.js';
 import sessionRouter from './session.js';
 import myAgentsRouter from './my-agents.js';
-import { getAllowedReadEndpoints, isPlatformAgentMetadata, parseAgentKeyMetadata } from '../../../infrastructure/auth/agent-key-metadata.js';
+import {
+  getAllowedReadEndpoints,
+  getEffectiveAllowedReadEndpoints,
+  isPlatformAgentMetadata,
+  parseAgentKeyMetadata,
+  platformAgentReadEndpointAllowed,
+} from '../../../infrastructure/auth/agent-key-metadata.js';
 import { transformTasks } from '../../../shared/transformers/index.js';
 import { asyncHandler, BadRequestError, NotFoundError } from '../../../infrastructure/http/middleware/error-handler.js';
 
@@ -31,6 +37,7 @@ const PLATFORM_AGENT_ALWAYS_ALLOWED_READ_ENDPOINTS = ['/api/agent/health', '/api
 
 // All agent routes require authentication
 router.use(unifiedAuthMiddleware);
+router.use(attachOptionalPlatformSession);
 
 function matchesTemplatePath(template: string, actualPath: string): boolean {
   const templateParts = template.split('/').filter(Boolean);
@@ -87,8 +94,8 @@ router.use(async (req, res, next) => {
     return next();
   }
 
-  const allowed = getAllowedReadEndpoints(key.metadata);
-  const allowedMatch = allowed.some((template) => matchesTemplatePath(template, requestPath));
+  const allowed = getEffectiveAllowedReadEndpoints(key.metadata);
+  const allowedMatch = platformAgentReadEndpointAllowed(allowed, requestPath);
   if (!allowedMatch) {
     return res.status(403).json({ error: 'Endpoint not allowed for this platform agent' });
   }
@@ -175,8 +182,11 @@ router.get('/me', async (req, res, next) => {
       configuredReadEndpoints,
       effectiveReadEndpoints: Array.from(new Set([
         ...alwaysAllowedReadEndpoints,
-        ...configuredReadEndpoints,
+        ...(isPlatformAgent
+          ? getEffectiveAllowedReadEndpoints(key.metadata)
+          : configuredReadEndpoints),
       ])),
+      usesDefaultScoutReadEndpoints: isPlatformAgent && configuredReadEndpoints.length === 0,
     },
   });
   } catch (err) {
