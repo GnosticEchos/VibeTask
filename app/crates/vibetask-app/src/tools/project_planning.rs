@@ -78,6 +78,9 @@ pub struct LoadPlanningSkillTool {
 impl LoadPlanningSkillTool {
     pub async fn call_tool(&self, ctx: &ToolContext) -> Result<CallToolResult, CallToolError> {
         let active = ctx.resolve_active_agent().await?;
+        ensure_platform_session(&ctx.config_path, &active.config, &ctx.api_client)
+            .await
+            .map_err(|e| tool_error("auth_error", format!("Platform session required: {}", e)))?;
         let api_key = &active.api_key;
 
         let raw = ctx
@@ -146,6 +149,9 @@ pub struct PreviewDraftProjectTool {
 impl PreviewDraftProjectTool {
     pub async fn call_tool(&self, ctx: &ToolContext) -> Result<CallToolResult, CallToolError> {
         let active = ctx.resolve_active_agent().await?;
+        ensure_platform_session(&ctx.config_path, &active.config, &ctx.api_client)
+            .await
+            .map_err(|e| tool_error("auth_error", format!("Platform session required: {}", e)))?;
         let api_key = &active.api_key;
 
         let raw = ctx

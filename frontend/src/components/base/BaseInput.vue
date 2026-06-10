@@ -60,13 +60,25 @@ const {
   value: useFieldValue,
   errorMessage,
   errors,
-} = useField(props.name, validateField)
+} = useField(props.name, validateField, {
+  initialValue: props.modelValue,
+})
+
+watch(
+  () => props.modelValue,
+  (next) => {
+    if (next !== useFieldValue.value) {
+      useFieldValue.value = next
+    }
+  },
+  { immediate: true },
+)
+
+watch(useFieldValue, (newValue) => {
+  emit('update:modelValue', newValue)
+})
 
 onMounted(() => {
-  watch(useFieldValue, (newValue) => {
-    emit('update:modelValue', newValue)
-  })
-
   if (props.validateOnCreate && props.emitErrors && !useFieldValue.value) {
     emit('onErrorChange', { key: props.name, value: '' })
   }

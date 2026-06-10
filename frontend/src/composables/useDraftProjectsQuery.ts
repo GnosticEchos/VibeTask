@@ -1,6 +1,13 @@
 import { useQuery } from '@tanstack/vue-query'
 import { axiosApi } from '@/api/axios'
 
+export type DraftProjectColumn = {
+  id: number
+  name: string
+  order: number
+  description?: string | null
+}
+
 export type DraftProjectRow = {
   id: number
   name: string
@@ -8,6 +15,7 @@ export type DraftProjectRow = {
   description?: string | null
   lifecycleStatus?: string
   status?: string
+  columns?: DraftProjectColumn[]
 }
 
 async function fetchDraftProjects(): Promise<DraftProjectRow[]> {
@@ -22,6 +30,7 @@ export function useDraftProjectsQuery() {
     queryKey: ['projects', 'drafts'],
     queryFn: fetchDraftProjects,
     refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   })
 }
 

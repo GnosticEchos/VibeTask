@@ -26,6 +26,7 @@ import {
 } from '../../infrastructure/http/middleware/error-handler.js';
 import { sanitize } from '../../infrastructure/http/middleware/sanitize.js';
 import { transformColumn, transformColumns } from '../../shared/transformers/index.js';
+import { backfillMissingColumnDescriptionsFromTemplate } from '../../services/project-planning.js';
 import { paginatedResponse } from '../../validation/schemas/common.schemas.js';
 
 const router = Router();
@@ -50,6 +51,14 @@ router.get('/', requireAuth, validateQuery(projectIdQuerySchema), asyncHandler(a
 
   if (!membership) {
     throw new ForbiddenError('Access denied');
+  }
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { lifecycleStatus: true },
+  });
+  if (project?.lifecycleStatus === 'DRAFT') {
+    await backfillMissingColumnDescriptionsFromTemplate(projectId);
   }
 
   // Parse pagination params from query (always use pagination)

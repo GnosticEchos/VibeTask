@@ -27,10 +27,6 @@ export async function requirePlatformSession(
     return next();
   }
 
-  if (req.method === 'GET') {
-    return next();
-  }
-
   const headerVal = req.headers[PLATFORM_SESSION_HEADER];
   const token = Array.isArray(headerVal) ? headerVal[0] : headerVal;
 

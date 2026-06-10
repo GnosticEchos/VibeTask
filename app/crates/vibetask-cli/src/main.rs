@@ -246,12 +246,14 @@ enum ProjectCommands {
         #[command(subcommand)]
         command: DraftProjectCommands,
     },
-    /// Accept a DRAFT project (device-code flow).
+    /// Accept a DRAFT project (device-code flow). Requires exactly one of `--init` or `--code`.
     Accept {
         project_id: i32,
-        #[arg(long)]
+        /// Start the device-code flow: prints a Settings verification URL and user code.
+        #[arg(long, conflicts_with = "code")]
         init: bool,
-        #[arg(long)]
+        /// Confirm acceptance with the user code shown in Settings (run after `--init`).
+        #[arg(long, conflicts_with = "init")]
         code: Option<String>,
     },
 }
@@ -730,7 +732,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
                 } else {
                     Err(Box::new(std::io::Error::other(
-                        "use --init or --code <userCode>",
+                        "project accept requires --init (start device-code flow) or --code <CODE> (confirm with code from Settings)",
                     )) as Box<dyn std::error::Error>)
                 }
             }

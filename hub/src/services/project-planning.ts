@@ -8,6 +8,7 @@ import {
   ForbiddenError,
   NotFoundError,
 } from '../infrastructure/http/middleware/error-handler.js';
+import { getTemplateById } from '../config/project-templates.js';
 import { getPlanningTemplateId, getProjectLifecycle, isDraftProject } from './project-lifecycle.js';
 
 const ACCEPT_SESSION_TTL_MS = 15 * 60 * 1000;
@@ -31,7 +32,50 @@ function contentPreview(content: string, max = 120): string {
   return flat.length <= max ? flat : `${flat.slice(0, max)}…`;
 }
 
+/** Fill null column descriptions from the planning template (draft projects only). */
+export async function backfillMissingColumnDescriptionsFromTemplate(projectId: number): Promise<void> {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: { columns: true },
+  });
+  if (!project || project.lifecycleStatus !== 'DRAFT') {
+    return;
+  }
+
+  const templateId = getPlanningTemplateId(project.planningMeta);
+  if (!templateId) {
+    return;
+  }
+  const template = getTemplateById(templateId);
+  if (!template) {
+    return;
+  }
+
+  const updates = project.columns
+    .filter((col) => !col.description?.trim())
+    .map((col) => {
+      const templateColumn =
+        template.columns.find((t) => t.name === col.name) ??
+        template.columns.find((t) => t.order === col.order);
+      const description = templateColumn?.description?.trim();
+      if (!description) {
+        return null;
+      }
+      return prisma.projectColumn.update({
+        where: { id: col.id },
+        data: { description },
+      });
+    })
+    .filter((op): op is ReturnType<typeof prisma.projectColumn.update> => op != null);
+
+  if (updates.length > 0) {
+    await prisma.$transaction(updates);
+  }
+}
+
 export async function buildPlanningPreview(projectId: number): Promise<PlanningPreview> {
+  await backfillMissingColumnDescriptionsFromTemplate(projectId);
+
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: {
@@ -59,15 +103,30 @@ export async function buildPlanningPreview(projectId: number): Promise<PlanningP
   }
 
   const requireSpec = templateId !== 'ADHOC_OPS';
+  const columnsHaveDescriptions =
+    project.columns.length > 0 &&
+    project.columns.every((col) => Boolean(col.description?.trim()));
   const checklist = [
     { id: 'owner', label: 'Project has a name and prefix', passed: Boolean(project.name && project.prefix) },
     { id: 'columns', label: 'At least one board column', passed: project.columns.length > 0 },
+    {
+      id: 'column-descriptions',
+      label: 'Column descriptions set (agent persona context)',
+      passed: columnsHaveDescriptions,
+    },
     {
       id: 'spec',
       label: requireSpec ? 'Specification document present' : 'Specification optional (ad-hoc template)',
       passed: requireSpec ? Boolean(specDoc) : true,
     },
   ];
+
+  const missingDescriptionCount = project.columns.filter((col) => !col.description?.trim()).length;
+  if (missingDescriptionCount > 0) {
+    warnings.push(
+      `${missingDescriptionCount} column(s) missing descriptions — column-gated agents use these for persona context`,
+    );
+  }
 
   return {
     projectId: project.id,

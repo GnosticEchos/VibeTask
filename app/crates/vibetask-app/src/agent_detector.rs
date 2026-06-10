@@ -138,8 +138,9 @@ impl AgentTypeDetector {
     }
 }
 
-/// Load config and, when the active agent is project-delegated, ensure a platform session
-/// JWT is attached on `api_client` for Hub write routes.
+/// Load config and attach a valid platform session JWT on `api_client` when configured.
+///
+/// Required for platform-agent planning routes (draft preview/accept) and delegated writes.
 pub async fn ensure_platform_session_for_delegated_agent(
     config_path: &str,
     api_client: &Arc<crate::vibetask_client::VibeTaskClient>,
@@ -148,17 +149,7 @@ pub async fn ensure_platform_session_for_delegated_agent(
         .await
         .map_err(|e| DetectionError::ConfigLoad(e.to_string()))?;
 
-    let active_agent_entry = config
-        .agents
-        .iter()
-        .find(|a| a.name == config.server.active_agent)
-        .ok_or_else(|| DetectionError::AgentNotFound(config.server.active_agent.clone()))?;
-
-    if active_agent_entry.agent_type == "ProjectDelegated" {
-        ensure_platform_session(config_path, &config, api_client).await?;
-    }
-
-    Ok(())
+    ensure_platform_session(config_path, &config, api_client).await
 }
 
 /// Result of creating or reusing a platform session JWT.
