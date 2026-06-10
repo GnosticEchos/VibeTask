@@ -2,6 +2,8 @@
 
 *An expression of ideas—for builders, product leaders, and curious engineers. Not a pitch deck; a thought experiment in progress.*
 
+**Repository:** [github.com/GnosticEchos/VibeTask](https://github.com/GnosticEchos/VibeTask) *(public)*
+
 ---
 
 ## What is VibeTask?
@@ -218,7 +220,7 @@ Discovery flags are **global**—depth limit (`--tree-depth` / `-L`), ignore sub
 
 We leaned on **clap’s recursive command reflection** (`CommandFactory`, subcommand walks) so every new subcommand we add to the Rust CLI automatically appears in the tree—and in the JSON agents should read **before** improvising syntax. MCP `find_tools` helps keyword search; HelpTree is the structural map.
 
-The pattern generalizes beyond VibeTask: we spun up a small **multi-language example repo**—[github.com/james4j/HelpTree](https://github.com/james4j/HelpTree)—showing how to introspect CLI frameworks and render the same nested graph for humans and agents. VibeTask’s Rust implementation is the production instance; the repo is the portable sketch.
+The pattern generalizes beyond VibeTask: we spun up a small **multi-language example repo**—[github.com/james4j/HelpTree](https://github.com/james4j/HelpTree)—showing how to introspect CLI frameworks and render the same nested graph for humans and agents. VibeTask’s Rust implementation lives in [github.com/GnosticEchos/VibeTask](https://github.com/GnosticEchos/VibeTask) (`app/`); HelpTree is the portable sketch.
 
 ---
 

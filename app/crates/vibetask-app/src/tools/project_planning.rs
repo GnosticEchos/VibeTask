@@ -1,6 +1,33 @@
 use super::*;
 use crate::agent_detector::ensure_platform_session;
 
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum DraftDocumentType {
+    Constitution,
+    Specification,
+    Brainstorm,
+    PostMortem,
+    ImplementationPlan,
+    Other,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct DraftDocumentInput {
+    pub title: String,
+    #[serde(default)]
+    pub content: String,
+    #[serde(rename = "docType")]
+    pub doc_type: DraftDocumentType,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct DraftBacklogTaskInput {
+    pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
 #[mcp_tool(
     name = "create_draft_project",
     description = "Create a DRAFT project for agent-guided planning. Requires platform session. Default template ADHOC_OPS.",
@@ -19,9 +46,9 @@ pub struct CreateDraftProjectTool {
     #[serde(default)]
     pub template: Option<String>,
     #[serde(default)]
-    pub documents: Option<Vec<serde_json::Value>>,
+    pub documents: Option<Vec<DraftDocumentInput>>,
     #[serde(default)]
-    pub backlog_tasks: Option<Vec<serde_json::Value>>,
+    pub backlog_tasks: Option<Vec<DraftBacklogTaskInput>>,
 }
 
 impl CreateDraftProjectTool {
@@ -41,10 +68,13 @@ impl CreateDraftProjectTool {
             body["description"] = serde_json::json!(desc);
         }
         if let Some(docs) = &self.documents {
-            body["documents"] = serde_json::json!(docs);
+            body["documents"] = serde_json::to_value(docs)
+                .map_err(|e| tool_error("runtime", format!("Invalid documents payload: {}", e)))?;
         }
         if let Some(tasks) = &self.backlog_tasks {
-            body["backlogTasks"] = serde_json::json!(tasks);
+            body["backlogTasks"] = serde_json::to_value(tasks).map_err(|e| {
+                tool_error("runtime", format!("Invalid backlog_tasks payload: {}", e))
+            })?;
         }
 
         let raw = ctx
