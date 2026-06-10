@@ -173,6 +173,35 @@ The **grill** pattern—borrowed from [mattpocock/skills](https://github.com/mat
 
 We’re interested in whether this split keeps agents **cheaper, faster, and more auditable** while reserving expensive reasoning for moments that actually need it.
 
+### Column descriptions as agent personas
+
+Kanban columns are not just status labels—they can carry a **persona brief** for whoever executes work in that lane.
+
+Each column has an optional **description** humans edit under **Settings → Project Settings → Columns & descriptions**. Project templates seed these up front. On a lifecycle board, for example:
+
+| Column | Description (persona sketch) |
+|--------|------------------------------|
+| **1. Specify** | Clarify requirements and acceptance criteria; **do not implement production code**. |
+| **2. Plan** | Decompose into tasks and work packages; prepare implementation plans. |
+| **3. Implement** | Write code, tests, and docs per the approved plan. |
+| **4. Review** | Critically assess correctness and spec alignment; **avoid scope creep**. |
+
+That text is not tooltip fluff for humans alone. When a delegate agent opens a task, MCP **`get_context`** surfaces the current column’s description as **Column Context**—the lane’s perspective before linked docs, comments, or tool gates. Column-bound delegates get the same brief **and** the lattice restriction: they see one column, with instructions that say how to behave inside it.
+
+Draft projects treat missing descriptions as a planning gap. The acceptance preview checklist includes **“Column descriptions set (agent persona context)”**—because an agent moving a card into **Review** should not guess whether it is supposed to implement, critique, or triage.
+
+```
+Task lands in "4. Review"
+        │
+        ▼
+  get_context  ──►  Column Context: "Critically assess… avoid scope creep"
+        │
+        ▼
+  Agent executes with review hat on—not implementer hat
+```
+
+We like this pattern because it keeps persona **local and auditable**: change the column description in Settings and every future pick-up in that lane inherits the new stance—no redeploying a monolithic system prompt. It pairs with context economics above: the board supplies the **role**, task research supplies the **facts**, frontier models supply **judgment** when the lane actually needs it.
+
 ### No agent delete—hand off to human review instead
 
 From a **human** perspective, agents don’t get a delete button. Destructive intent is reframed as **escalation**.
