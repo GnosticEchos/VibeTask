@@ -35,11 +35,24 @@ VibeTask distinguishes three practical agent personas—not three different prod
 
 #### 1. Platform agent (scout / orchestrator)
 
-Platform agents are **admin-provisioned**. They are intentionally **read-only** on the agent API: health checks, metadata, fleet summaries, draft creation—not arbitrary writes under their own key.
+Platform agents are **admin-provisioned only**—created in **Settings → Administration**, not by every project owner. They are intentionally **read-only** on the agent API: health checks, metadata, fleet summaries, draft creation—not arbitrary writes under their own key.
 
-Their superpower is the **platform session**: a short-lived JWT the platform agent mints (`POST /api/agent/session`) so a **delegate** can act on behalf of a real user with that user’s membership context. With a platform session attached, a platform agent can also see **fleet-wide project stats** across every project the target user belongs to—not just projects where someone delegated access.
+Their superpower is **acting context**: the host attaches a short-lived platform session (via MCP `delegate_agent` / CLI `agent session`) so a **delegate** can work on behalf of a real user with that user’s membership. With that context, a platform agent can also see **fleet-wide project stats** across every project the target user belongs to—not just delegated projects.
 
-Think: *“The agent that sees the whole portfolio and helps spin up the next project, but doesn’t mutate tasks until a human delegates execution.”*
+**Why admins gate the platform agent separately**
+
+We wanted a clean split of responsibility:
+
+| Who | Owns what |
+|-----|-----------|
+| **Administrator** | One (or few) **platform agents** per deployment—the MCP host, CI runner, or shared automation surface |
+| **End users** | Their own **delegate agents** and per-project delegations in **Settings → AI Agents** |
+
+Without that split, every new automation would look like an **admin ticket**: “please provision another agent for my project.” Instead, admins bless the **primary delegate path** (the platform agent on the trusted host). Users then spin up **project delegates** themselves—scoped keys, revocable per automation—without flooding the admin team with project-level churn.
+
+The operational win is a **single upstream kill switch**: disable or revoke the platform agent and session minting stops for that deployment. Every delegate agent that depends on `x-platform-session` for writes goes quiet together—no scavenger hunt across ten projects to revoke individual delegations. Admins stay out of day-to-day project delegate management; users retain fine-grained control until something needs to stop **now**.
+
+Think: *“The deployment the admin trusts to mint sessions—not every bot key in the building.”*
 
 #### 2. Project delegate (full board)
 
@@ -91,6 +104,51 @@ Humans use normal **bearer sessions** in the web app—same projects, same board
 
 **Why this matters:** you can register multiple delegate agents per person (isolation, revocation, different scopes) without sharing one mega-key. Platform agents stay read-only scouts; execution always traces back to a delegated identity plus an explicit user session.
 
+From the **agent’s perspective**, none of this is HTTP. The model sees **MCP tool names** and **CLI subcommands**; the Rust layer attaches keys and sessions. We deliberately avoid teaching agents our REST paths.
+
+---
+
+### Why `/api/agent` exists (parallel surface, narrower gate)
+
+The hub serves **two router families** for similar nouns—projects, tasks, documents—but not the same front door:
+
+| Consumer | Typical routes | Auth model |
+|----------|----------------|------------|
+| **Web app (humans)** | `/api/projects`, `/api/tasks`, … | Bearer session, full membership roles (Owner → Viewer) |
+| **Agents (MCP / CLI)** | `/api/agent/projects`, `/api/agent/.../tasks`, … | Agent API key + delegation lattice + platform session for writes |
+
+The shapes look alike on purpose—agents and humans operate on **one Kanban truth**—but the **agent router is a separate interface** with its own middleware stack: delegation mode (`FULL` vs `COLUMN_BOUND`), `VIEWER` vs `USER`, platform-session requirements, draft-vs-active guards, and scout read-endpoint allowlists for platform agents.
+
+**Why split routers instead of one mega-API?**
+
+1. **Privilege containment** — even a capable agent should not inherit every human capability (invite members, change global settings, delete projects, admin paths). Gating at the **router boundary** keeps escalation logic localized instead of sprinkled through shared handlers.
+2. **Simpler agent mental model** — MCP tools map to a smaller, auditable verb set; we don’t ask the model to reason about which human endpoint it might abuse.
+3. **Defense in depth** — stolen delegate keys still hit delegation scope, column bounds, and session requirements before a write lands.
+
+Humans stay on the full membership API; agents stay on the **agent-scoped** subset. MCP and CLI are thin translators—agents name tools; Rust names routes.
+
+---
+
+### A pseudo mono-repo bound by OpenAPI
+
+VibeTask’s repo layout is a **pseudo mono-repo**: `hub/`, `frontend/`, and `app/` (Rust CLI + MCP) live at one commit, but each package is a distinct “project” in the organizational sense. What binds them is not shared runtime code—it’s the **OpenAPI contract** at `hub/src/openapi.json`.
+
+```
+hub/src/openapi.json  ──►  frontend (sync + TypeScript types)
+                        ──►  app/vibetask-hub-client (Progenitor Rust client)
+                        ──►  CI validation matrix (validate → sync → gen-types → cargo build)
+```
+
+| Package | Role | Contract relationship |
+|---------|------|-------------------------|
+| **hub** | Source of truth for API behavior + spec | Owns and edits OpenAPI |
+| **frontend** | Human thin UI over hub | Consumes synced spec; no second editable copy |
+| **app** | Agent/human thin UI (MCP + CLI) | Same spec for generated client; ToolRegistry maps tools → agent routes |
+
+We treat contract drift as a build failure, not a documentation nag. That discipline is how three teams-in-one-repo evolve without silent skew: **if it isn’t in the published contract, it isn’t a cross-package promise.**
+
+Agents and humans ultimately talk to the same hub—but humans through membership routes in the SPA, agents through tool names that compile down to `/api/agent/*`. OpenAPI is the seam.
+
 ---
 
 ## Design threads we’re exploring
@@ -117,13 +175,13 @@ We’re interested in whether this split keeps agents **cheaper, faster, and mor
 
 From a **human** perspective, agents don’t get a delete button. Destructive intent is reframed as **escalation**.
 
-When an agent “deletes” a task via the agent API, the hub **moves the card to the Agent Review column** and leaves an audit comment—not a silent wipe. On the web board, that lane is tucked behind **Review Inbox**: a drawer humans open when the badge lights up, pass or reject what the agent flagged, and keep the main columns clean.
+When an agent requests removal, the hub **moves the card to the Agent Review column** and leaves an audit comment—not a silent wipe. On the web board, that lane is tucked behind **Review Inbox**: a drawer humans open when the badge lights up, pass or reject what the agent flagged, and keep the main columns clean.
 
 ```
 Agent: "This task is obsolete"
         │
         ▼
-  DELETE (agent API)  ──►  Move to Agent Review + comment
+  Escalation (agent tool path)  ──►  Move to Agent Review + comment
         │
         ▼
   Human: Review Inbox  ──►  Pass · Reject · Edit · Actually delete
@@ -142,6 +200,25 @@ End-users shouldn’t be locked into one host. VibeTask exposes the same capabil
 | **CLI** | Scripts, terminals, CI, humans who prefer `vibetask-cli` |
 
 MCP and CLI are intentionally **thin UIs** over shared Rust tooling and the hub OpenAPI contract—not parallel products with divergent behavior. Choose MCP in the editor or CLI in the shell; the **hub** stays authoritative. We’re exploring whether that symmetry makes agent integrations feel boring in the best way: predictable, testable, swappable.
+
+### HelpTree: see the whole CLI before you guess
+
+Nested subcommands are ergonomic for humans and miserable for agents. We kept watching models **invent** flags (`project create-draft`, `draft new`, `accept --force`) and burn turns on 404s before ever reading help. Deep trees (`project` → `draft` → `create`) make that worse—the correct path is three levels down, but the model’s prior is flat.
+
+**HelpTree** is our answer: a recursive **command map** derived from **clap** metadata—no hand-maintained string lists that drift from the binary.
+
+| Audience | How to invoke | What you get |
+|----------|---------------|--------------|
+| **Human (terminal)** | `vibetask-cli --help-tree` or `vibetask-cli project draft --help-tree` | UTF-8 tree (`tree`-style), optional rich ANSI styling |
+| **Agent (host / script)** | Same flags with `-f json` or `--tree-output json` | Machine-readable nested JSON; leaf nodes include **`mcp_tools`** arrays (CLI ↔ MCP parity) |
+
+Discovery flags are **global**—depth limit (`--tree-depth` / `-L`), ignore subtrees (`--tree-ignore`), include hidden commands (`--tree-all`)—so you can skim the surface or drill into one branch without dumping the entire CLI into context.
+
+**Fun fact:** help-tree colors and emphasis are user-tweakable in settings TOML (`vibe-cli.toml` / MCP config), under `[cli.help_tree.command]`, `[cli.help_tree.options]`, and `[cli.help_tree.description]`—style (`normal`, `bold`, `italic`, `bold_italic`) and hex colors per token class. Your tree, your terminal aesthetic.
+
+We leaned on **clap’s recursive command reflection** (`CommandFactory`, subcommand walks) so every new subcommand we add to the Rust CLI automatically appears in the tree—and in the JSON agents should read **before** improvising syntax. MCP `find_tools` helps keyword search; HelpTree is the structural map.
+
+The pattern generalizes beyond VibeTask: we spun up a small **multi-language example repo**—[github.com/james4j/HelpTree](https://github.com/james4j/HelpTree)—showing how to introspect CLI frameworks and render the same nested graph for humans and agents. VibeTask’s Rust implementation is the production instance; the repo is the portable sketch.
 
 ---
 
@@ -164,10 +241,13 @@ Explore and Settings offer **Create project** for instant ACTIVE projects. For a
 ### Scene 2 — Platform agent opens a draft
 
 **Scout (Platform agent):**  
-*Calls hub with platform credentials, mints platform session for Jordan, creates draft.*
+*Host attaches Jordan’s acting context; Scout invokes planning tools—not REST paths.*
 
-> `POST /api/agent/projects/draft`  
-> Template: **ADHOC_OPS** (ticket-queue shape; **LIFECYCLE_EPIC** when a full product spec is required before go-live)
+| Surface | What Scout runs |
+|---------|-----------------|
+| **MCP** | `create_draft_project` (template **ADHOC_OPS**; use **LIFECYCLE_EPIC** when a full product spec is required before go-live) |
+| **CLI** | `vibetask-cli project draft create --name "Ops Queue" --prefix OPSQ --template ADHOC_OPS` |
+| **MCP** | `load_planning_skill` → `project-planning-grill` (grill playbook) |
 
 **Scout (to Jordan):**  
 “I created **Ops Queue** (`OPSQ`) as a **DRAFT**. No column-assigned tasks yet—that unlocks after you accept. First question: **Who submits tickets—only engineering, or the whole company?**”
@@ -188,25 +268,37 @@ Explore and Settings offer **Create project** for instant ACTIVE projects. For a
 “24h first response for P1; best-effort otherwise.”
 
 **Scout:**  
-*Persists answers into a living `SPECIFICATION` document and a backlog task `Define intake SLA`—backlog only, no column assignment while DRAFT.*
+*Persists answers via MCP `create_task` and document tools into a living **SPECIFICATION** doc and backlog task `Define intake SLA`—backlog only, no column assignment while DRAFT.*
 
-> After 3–4 answers: “Here’s what I captured. Continue grilling, or move to **preview**?”
+> After 3–4 answers: “Here’s what I captured. Continue grilling, or move to **preview**?” (`preview_draft_project` / `vibetask-cli project draft preview`)
 
 ---
 
 ### Scene 4 — Preview and accept (human gate)
 
+**Scout (optional, before Jordan opens Settings):**  
+*Runs preview tools only—no accept without a human.*
+
+| Surface | Scout |
+|---------|-------|
+| **MCP** | `preview_draft_project` |
+| **CLI** | `vibetask-cli project draft preview <project-id>` |
+
 **Jordan (Settings → Project acceptance):**  
-Opens planning preview—name, prefix, template checklist, draft docs, backlog tasks.
+Opens the same planning preview in the browser—name, prefix, template checklist, draft docs, backlog tasks.
 
 **Jordan:**  
-“This looks right. **Accept.**”
+“This looks right. **Accept.**” *(human-only path—Settings UI or CLI device-code, not an agent tool that silently goes live)*
 
-> `POST /api/projects/{id}/planning/accept`  
-> Lifecycle: **DRAFT → ACTIVE**. Default columns materialize; `accept-plan` can expand workspace containers from an implementation plan doc.
+| Surface | Jordan |
+|---------|--------|
+| **Web** | Settings → Project acceptance → **Accept** |
+| **CLI** | `vibetask-cli project accept <id> --init` → user code in Settings → `vibetask-cli project accept <id> --code <CODE>` |
+
+Lifecycle: **DRAFT → ACTIVE**. Default columns materialize; accepting an implementation plan can expand workspace containers from linked docs.
 
 **Jordan (Settings → AI Agents):**  
-Creates **OpsBot** (delegate), copies API key once, assigns **Ops Queue** with **USER** + **FULL** delegation.
+Creates **OpsBot** (delegate), copies API key once, assigns **Ops Queue** with **USER** + **FULL** delegation. OpsBot later joins via MCP `register_agent` / CLI `agent enlist`—still no raw HTTP in the agent’s head.
 
 ---
 
@@ -215,7 +307,7 @@ Creates **OpsBot** (delegate), copies API key once, assigns **Ops Queue** with *
 | Participant | What they see | What they can do |
 |-------------|---------------|------------------|
 | **Jordan (human, Owner)** | Full board, all columns, Settings | Everything—membership, columns, accept plans, delete project |
-| **Scout (platform agent)** | Fleet summary across Jordan’s memberships; draft tools; read APIs | Read/scout; mint sessions; create drafts—not arbitrary task writes under platform key alone |
+| **Scout (platform agent)** | Fleet overview tools; draft planning tools | `read_project_overview`, `create_draft_project`, `load_planning_skill`—scout reads, not arbitrary task writes under platform key alone |
 | **OpsBot (project delegate, USER / FULL)** | All columns on Ops Queue | Create/update tasks, comments, docs **when host attaches platform session** |
 | **ReviewBot (column-gated delegate)** | Primarily **Agent Review** column | Move/review cards in that lane only; cannot freely reprioritize the whole board |
 
@@ -226,7 +318,7 @@ Creates **OpsBot** (delegate), copies API key once, assigns **Ops Queue** with *
 “I see three cards awaiting review. I’ll comment and move approved work toward **Done**—I can’t pull new work from **Inbox**.”
 
 **OpsBot (later, stuck on a bad task):**  
-*Calls agent DELETE—not a wipe, but escalation.*
+*Requests removal through the agent escalation path—not a wipe.*
 
 > Task lands in **Agent Review**. Jordan’s **Review Inbox** badge ticks up.
 
@@ -234,10 +326,10 @@ Creates **OpsBot** (delegate), copies API key once, assigns **Ops Queue** with *
 “OpsBot flagged **OPSQ-9** as obsolete. Fair—I’ll reject and close it myself.”
 
 **Jordan (on Explore):**  
-Project card shows **Main board** vs **All tasks** counts—the same scope toggle agents use in `project overview`—so portfolio stats match what the Kanban shows.
+Project card shows **Main board** vs **All tasks** counts—the same scope toggle agents drive via MCP `read_project_overview` / CLI `vibetask-cli project overview --scope main`.
 
 **Jordan (choosing an interface):**  
-Morning standup in the browser; afternoon agent work in Cursor via **MCP**; a cron job uses the **CLI** for fleet overview. Same hub, three thin surfaces.
+Morning standup in the browser; afternoon agent work in Cursor via **MCP**; a cron job uses the **CLI** for fleet overview. Same hub, three thin surfaces—none of them require the model to memorize URLs.
 
 ---
 
@@ -245,7 +337,7 @@ Morning standup in the browser; afternoon agent work in Cursor via **MCP**; a cr
 
 Tasks get identifiers humans quote in standup (`OPSQ-12`). Relations show **blocked-by** on the board. Workspaces nest larger efforts without losing the main board’s clarity. Documents hold constitution, spec, and implementation plan—linked from tasks when plans expand into workspace containers.
 
-Humans drag cards; agents call APIs. WebSocket updates keep the UI honest. The story stays coherent because **every actor’s permissions were chosen on purpose**, not inferred from a single API key.
+Humans drag cards; agents invoke **tools**. WebSocket updates keep the UI honest. The story stays coherent because **every actor’s permissions were chosen on purpose**—human routes vs `/api/agent` gates—not inferred from a single key with god-mode HTTP.
 
 ---
 
