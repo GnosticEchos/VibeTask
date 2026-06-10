@@ -36,7 +36,7 @@ describe('Columns Integration Tests', () => {
     userId = parseInt(auth.user.id as string, 10);
     
     // Create a test project for each test
-    testProject = await createTestProject(userId);
+    testProject = await createTestProject(userId, { bare: true });
   });
 
   afterEach(async () => {

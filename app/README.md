@@ -19,7 +19,7 @@ Rust workspace for VibeTask agent orchestration: MCP and CLI adapters over share
 
 2. **Clone and build** (from monorepo root):
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/GnosticEchos/VibeTask.git
    cd VibeTask/app
    cargo build --release
    ```

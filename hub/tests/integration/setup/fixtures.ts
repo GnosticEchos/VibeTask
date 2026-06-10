@@ -183,8 +183,9 @@ export interface TestProjectData {
   description?: string;
   prefix: string;
   ownerId: number;
-  /** Pass [] to create a project with no columns (skips ADHOC default board). */
+  /** Explicit columns for POST /api/projects; omit for template default board. */
   columns?: Array<{ name: string; order?: number; color?: string; type?: string; description?: string }>;
+  template?: string;
 }
 
 /**

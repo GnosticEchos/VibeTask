@@ -20,7 +20,7 @@ Some shells export **`ARGV0`** as the name of the program that launched the shel
 
 1. **Clone and setup**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/GnosticEchos/VibeTask.git
    cd VibeTask/app
    make dev-setup
    ```

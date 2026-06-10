@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "VibeTask Agent Orchestrator - Stateless Rust MCP sidecar for intelligent Kanban workflows"
 license = "MIT"
-repository = "https://github.com/vibetask/vibetask-mcp"
+repository = "https://github.com/GnosticEchos/VibeTask"
 keywords = ["mcp", "kanban", "agent", "orchestrator", "rust"]
 categories = ["development-tools", "api-bindings"]
 

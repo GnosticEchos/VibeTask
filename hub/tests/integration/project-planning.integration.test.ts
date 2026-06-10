@@ -9,6 +9,7 @@ import {
   authenticateExistingUser,
   cleanupTestData,
   createTestProject,
+  generateUniquePrefix,
 } from '../helpers/integration-helpers.js';
 import { createProjectRecord } from '../../src/services/project-create.js';
 
@@ -27,34 +28,38 @@ describe('Project planning lifecycle', () => {
   });
 
   it('rejects duplicate prefix on create', async () => {
-    await createTestProject(userId, { name: 'First', prefix: 'DUP1' });
+    const prefix = generateUniquePrefix();
+    await createTestProject(userId, { name: 'First', prefix, bare: true });
 
     const response = await request(testApp)
       .post('/api/projects')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Second', prefix: 'DUP1', template: 'ADHOC_OPS' });
+      .send({ name: 'Second', prefix, template: 'ADHOC_OPS' });
 
     expect(response.status).toBe(409);
   });
 
   it('persists template roleType on LIFECYCLE_EPIC create', async () => {
+    const prefix = generateUniquePrefix();
     const response = await request(testApp)
       .post('/api/projects')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Epic Template', prefix: 'EPC1', template: 'LIFECYCLE_EPIC' });
+      .send({ name: 'Epic Template', prefix, template: 'LIFECYCLE_EPIC' });
 
     expect(response.status).toBe(201);
     const projectId = response.body.id;
-    const reviewCol = await testPrisma.projectColumn.findFirst({
-      where: { projectId, roleType: 'AGENT_REVIEW' },
+    const completeCol = await testPrisma.projectColumn.findFirst({
+      where: { projectId, roleType: 'COMPLETE' },
     });
-    expect(reviewCol).toBeTruthy();
+    expect(completeCol).toBeTruthy();
+    expect(completeCol?.name).toBe('5. Finalized');
   });
 
   it('preview, accept, and exclude draft from default list', async () => {
+    const prefix = generateUniquePrefix();
     const draft = await createProjectRecord({
       name: 'Draft Planning',
-      prefix: 'DRF1',
+      prefix,
       template: 'ADHOC_OPS',
       columnsSpecified: false,
       lifecycleStatus: 'DRAFT',
@@ -91,9 +96,10 @@ describe('Project planning lifecycle', () => {
   });
 
   it('blocks column-assigned tasks on DRAFT projects', async () => {
+    const prefix = generateUniquePrefix();
     const draft = await createProjectRecord({
       name: 'Draft Tasks',
-      prefix: 'DRF2',
+      prefix,
       template: 'ADHOC_OPS',
       columnsSpecified: false,
       lifecycleStatus: 'DRAFT',

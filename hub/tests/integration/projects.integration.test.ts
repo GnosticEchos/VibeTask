@@ -96,9 +96,10 @@ describe('Projects Integration Tests', () => {
 
     it('should include columns in project response', async () => {
       // Create project with columns
-      const project = await createTestProject(userId, { 
+      const project = await createTestProject(userId, {
         name: 'Project With Columns',
-        prefix: 'PWC' 
+        prefix: 'PWC',
+        bare: true,
       });
       
       // Add columns
@@ -280,6 +281,7 @@ describe('Projects Integration Tests', () => {
       const project = await createTestProject(userId, {
         name: 'Project With Tasks',
         prefix: 'PWT',
+        bare: true,
       });
       
       const column = await createTestColumn(project.id, 1, { name: 'To Do' });
@@ -337,7 +339,7 @@ describe('Projects Integration Tests', () => {
     });
 
     it('should support workspace scoped counts via scope and workspace selector', async () => {
-      const project = await createTestProject(userId, { name: 'Workspace Scope Fleet', prefix: 'WSF' });
+      const project = await createTestProject(userId, { name: 'Workspace Scope Fleet', prefix: 'WSF', bare: true });
       const todo = await createTestColumn(project.id, 1, { name: 'To Do' });
       const done = await createTestColumn(project.id, 2, { name: 'Done' });
       const workspace = await createTestTaskDirect(project.id, userId, todo.id, { name: 'Workspace Container' });
@@ -383,6 +385,7 @@ describe('Projects Integration Tests', () => {
       const project = await createTestProject(userId, {
         name: 'Summary Test Project',
         prefix: 'STP',
+        bare: true,
       });
       
       await createTestColumn(project.id, 1, { name: 'To Do' });
@@ -543,6 +546,7 @@ describe('Projects Integration Tests', () => {
       const project = await createTestProject(userId, {
         name: 'Cascade Delete Test',
         prefix: 'CDT',
+        bare: true,
       });
       
       const column = await createTestColumn(project.id, 1);
@@ -577,6 +581,7 @@ describe('Projects Integration Tests', () => {
       const project = await createTestProject(userId, {
         name: 'Board Test Project',
         prefix: 'BTP',
+        bare: true,
       });
       
       await createTestColumn(project.id, 1, { name: 'To Do' });

@@ -343,10 +343,20 @@ export async function createTestUser(
  */
 export async function createTestProject(
   userId: number,
-  overrides: Partial<TestProjectData> = {}
+  overrides: Partial<TestProjectData> & { bare?: boolean } = {}
 ): Promise<ApiProjectResponse & { id: number }> {
-  const projectData = createTestProjectData(userId, { columns: [], ...overrides });
-  
+  const { bare, ...rest } = overrides;
+  if (bare) {
+    const direct = await createTestProjectDirect(userId, rest);
+    return {
+      ...direct,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  const projectData = createTestProjectData(userId, rest);
+
   // Get auth token for the user
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user) {
@@ -356,15 +366,22 @@ export async function createTestProject(
   // Create project via API - use existing user's password
   const { token } = await authenticateUser(user.email, 'admin1234');
 
+  const payload: Record<string, unknown> = {
+    name: projectData.name,
+    description: projectData.description,
+    prefix: projectData.prefix,
+  };
+  if (rest.columns !== undefined) {
+    payload.columns = projectData.columns;
+  }
+  if (rest.template !== undefined) {
+    payload.template = rest.template;
+  }
+
   const response = await request(testApp)
     .post('/api/projects')
     .set('Authorization', `Bearer ${token}`)
-    .send({
-      name: projectData.name,
-      description: projectData.description,
-      prefix: projectData.prefix,
-      columns: projectData.columns,
-    });
+    .send(payload);
 
   if (response.status !== 200 && response.status !== 201) {
     const project = await db.project.create({

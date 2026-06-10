@@ -577,7 +577,7 @@ pub async fn create_and_run_server(
             title: Some("VibeTask Agent Orchestrator".into()),
             description: Some("Stateless Rust MCP sidecar for intelligent Kanban workflows with dual-agent architecture".into()),
             icons: vec![],
-            website_url: Some("https://github.com/vibetask/vibetask-mcp".into()),
+            website_url: Some("https://github.com/GnosticEchos/VibeTask".into()),
         },
         capabilities: ServerCapabilities {
             tools: Some(ServerCapabilitiesTools { list_changed: Some(true) }),

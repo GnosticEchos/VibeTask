@@ -1,5 +1,7 @@
 # VibeTask
 
+**https://github.com/GnosticEchos/VibeTask**
+
 Agent-orchestrated Kanban platform (alpha). One Git repository, three packages:
 
 | Package | Path | Role | Dev port |

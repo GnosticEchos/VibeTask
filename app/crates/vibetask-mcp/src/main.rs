@@ -177,5 +177,5 @@ fn print_help() {
     println!("    vibetask-mcp health --config ./config.toml     # Health check");
     println!("    vibetask-mcp validate --config ./config.toml   # Validate configuration");
     println!();
-    println!("For more information, visit: https://github.com/vibetask/vibetask-mcp");
+    println!("For more information, visit: https://github.com/GnosticEchos/VibeTask");
 }

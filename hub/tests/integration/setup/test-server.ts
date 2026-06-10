@@ -41,6 +41,7 @@ import { auth, prisma } from '@/infrastructure/auth/index.js';
 import authRoutes from '@/api/routes/auth.js';
 import usersRoutes from '@/api/routes/users.js';
 import projectsRoutes from '@/api/routes/projects.js';
+import projectPlanningRoutes from '@/api/routes/project-planning.js';
 import tasksRoutes from '@/api/routes/tasks.js';
 import columnsRoutes from '@/api/routes/columns.js';
 import membersRoutes from '@/api/routes/members.js';
@@ -104,6 +105,7 @@ export function createTestApp(): express.Application {
 
   // Projects routes
   app.use('/api/projects', projectsRoutes);
+  app.use('/api/projects/:projectId/planning', projectPlanningRoutes);
 
   // Tasks routes
   app.use('/api/tasks', tasksRoutes);

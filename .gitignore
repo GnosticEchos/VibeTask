@@ -25,3 +25,4 @@ hub/dist/
 hub/prisma/generated/
 frontend/dist/
 app/target/GitActionLog.txt
+app/config/vibe-cli.toml
