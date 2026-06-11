@@ -655,6 +655,35 @@
       "saveSuccess": "Planning skill saved.",
       "saveError": "Failed to save planning skill."
     },
+    "project": {
+      "planningSkills": {
+        "title": "Planning skills (project)",
+        "subtitle": "Override platform grill and planning SKILL.md content for this project",
+        "lead": "Agents load effective skill text for this project when running draft planning flows.",
+        "draftCallout": "Customize the grill skill before accepting — agents use this content during draft planning.",
+        "adminLink": "Platform defaults are managed in",
+        "adminLinkAction": "Administration → Planning skills",
+        "colSlug": "Slug",
+        "colStatus": "Status",
+        "colActions": "Actions",
+        "statusDefault": "Platform default",
+        "statusOverride": "Project override",
+        "viewEffective": "View effective",
+        "customize": "Customize",
+        "reset": "Reset to platform",
+        "resetConfirm": "Remove project override for {slug} and use platform default again?",
+        "resetSuccess": "Project override removed.",
+        "resetError": "Failed to remove override.",
+        "loadError": "Failed to load skill content.",
+        "loadListError": "Failed to load project planning skills.",
+        "emptyCatalog": "No planning skills in the platform catalog yet.",
+        "previewTitle": "Effective skill — {slug}",
+        "resolutionOverride": "Project override (active)",
+        "resolutionPlatform": "Else platform database",
+        "resolutionFilesystem": "Else app/skills/{slug}/SKILL.md",
+        "resolutionFilesystemOnly": "Filesystem default (not synced to DB yet)"
+      }
+    },
     "workspace": {
       "title": "Project Workspace",
       "jumpNavAria": "Jump to a workspace section",

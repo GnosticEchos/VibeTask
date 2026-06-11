@@ -37,6 +37,7 @@ import {
 import { randomPastelColor } from '@/utils/functions'
 import ProjectColumnsTableInput from '@/components/dashboard/project/settings/inputs/ProjectColumnsTableInput.vue'
 import ProjectPlanningAcceptCard from '@/components/settings/project/ProjectPlanningAcceptCard.vue'
+import ProjectPlanningSkillsCard from '@/components/settings/project/ProjectPlanningSkillsCard.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import { Form } from 'vee-validate'
 
@@ -577,6 +578,13 @@ onMounted(() => {
     <ProjectPlanningAcceptCard
       v-if="hasProjectSelected"
       :project-id="projectId"
+      class="mx-0"
+    />
+
+    <ProjectPlanningSkillsCard
+      v-if="hasProjectSelected"
+      :project-id="projectId"
+      :mode="workspaceMode"
       class="mx-0"
     />
 
