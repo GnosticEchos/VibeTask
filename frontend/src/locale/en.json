@@ -616,6 +616,13 @@
       "roadmapPlatformItem2": "Maintenance mode and in-app status messaging.",
       "roadmapPlatformItem3": "Export, backup, and operational integration hooks."
     },
+    "planningSkills": {
+      "editorTitle": "Edit planning skill: {slug}",
+      "editorHint": "SKILL.md markdown for agents. Include YAML frontmatter when useful.",
+      "bytesLabel": "bytes",
+      "saveSuccess": "Planning skill saved.",
+      "saveError": "Failed to save planning skill."
+    },
     "workspace": {
       "title": "Project Workspace",
       "jumpNavAria": "Jump to a workspace section",
