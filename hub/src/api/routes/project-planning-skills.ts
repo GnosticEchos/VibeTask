@@ -8,7 +8,12 @@ import { validateBody, validateParams, getValidatedBody, getValidatedParams } fr
 import { asyncHandler, ForbiddenError } from '../../infrastructure/http/middleware/error-handler.js';
 import { projectIdRouteParamSchema } from '../../validation/schemas/common.schemas.js';
 import { checkProjectMembership } from '../../infrastructure/auth/project-role-check.js';
-import { getEffectiveSkillContent, upsertProjectSkillOverride } from '../../services/planning-skills.js';
+import {
+  deleteProjectSkillOverride,
+  getEffectiveSkillContent,
+  listProjectSkillOverrides,
+  upsertProjectSkillOverride,
+} from '../../services/planning-skills.js';
 
 const router = Router({ mergeParams: true });
 
@@ -19,6 +24,17 @@ const skillParamsSchema = projectIdRouteParamSchema.extend({
 const upsertSchema = z.object({
   content: z.string().min(1).max(32_000),
 });
+
+router.get('/', requireAuth, validateParams(projectIdRouteParamSchema), asyncHandler(async (req, res) => {
+  const params = getValidatedParams<{ projectId: number }>(req)!;
+  const user = req.user!;
+  const { membership } = await checkProjectMembership(user.id, params.projectId, 'Viewer');
+  if (!membership) {
+    throw new ForbiddenError('Access denied');
+  }
+  const skills = await listProjectSkillOverrides(params.projectId);
+  res.json({ skills });
+}));
 
 router.get('/:slug', requireAuth, validateParams(skillParamsSchema), asyncHandler(async (req, res) => {
   const params = getValidatedParams<{ projectId: number; slug: string }>(req)!;
@@ -41,6 +57,17 @@ router.put('/:slug', requireAuth, validateParams(skillParamsSchema), validateBod
   const body = getValidatedBody<{ content: string }>(req)!;
   const override = await upsertProjectSkillOverride(params.projectId, params.slug, body.content);
   res.json({ override });
+}));
+
+router.delete('/:slug', requireAuth, validateParams(skillParamsSchema), asyncHandler(async (req, res) => {
+  const params = getValidatedParams<{ projectId: number; slug: string }>(req)!;
+  const user = req.user!;
+  const { membership, hasRole } = await checkProjectMembership(user.id, params.projectId, 'Maintainer');
+  if (!membership || !hasRole) {
+    throw new ForbiddenError('Maintainer role required');
+  }
+  await deleteProjectSkillOverride(params.projectId, params.slug);
+  res.json({ deleted: true });
 }));
 
 export default router;

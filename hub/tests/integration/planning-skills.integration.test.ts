@@ -111,6 +111,28 @@ describe('Planning skills integration', () => {
       expect(revertRes.status).toBe(200);
       expect(revertRes.body.skill.content).toBe(v1);
     });
+
+    it('returns catalog with filesystem source and rejects unknown slug on PUT', async () => {
+      const { token: adminToken } = await authenticateUser(
+        EXISTING_USER.email,
+        EXISTING_USER.password,
+      );
+
+      const catalogRes = await request(testApp)
+        .get('/api/admin/planning-skills/catalog')
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(catalogRes.status).toBe(200);
+      const grill = catalogRes.body.catalog.find((e: { slug: string }) => e.slug === SKILL_SLUG);
+      expect(grill).toBeTruthy();
+      expect(['filesystem', 'both']).toContain(grill.source);
+
+      const unknownPut = await request(testApp)
+        .put('/api/admin/planning-skills/not-in-catalog')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ content: '# Orphan\n' });
+      expect(unknownPut.status).toBe(400);
+      expect(unknownPut.body.message ?? unknownPut.body.error).toMatch(/catalog/i);
+    });
   });
 
   describe('Project /api/projects/:projectId/planning/skills', () => {
@@ -174,6 +196,59 @@ describe('Planning skills integration', () => {
         .send({ content: '# Nope\n' });
 
       expect(res.status).toBe(403);
+    });
+
+    it('lists override status, deletes override, and falls back to platform content', async () => {
+      const { token: adminToken } = await authenticateUser(
+        EXISTING_USER.email,
+        EXISTING_USER.password,
+      );
+      const platformContent = '# Platform for delete test\n';
+      await request(testApp)
+        .put(`/api/admin/planning-skills/${SKILL_SLUG}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ content: platformContent });
+
+      const auth = await authenticateExistingUser();
+      const userId = parseInt(auth.user.id as string, 10);
+      const project = await createTestProject(userId, { bare: true });
+
+      const indexBefore = await request(testApp)
+        .get(`/api/projects/${project.id}/planning/skills`)
+        .set('Authorization', `Bearer ${auth.token}`);
+      expect(indexBefore.status).toBe(200);
+      const rowBefore = indexBefore.body.skills.find((s: { slug: string }) => s.slug === SKILL_SLUG);
+      expect(rowBefore.hasOverride).toBe(false);
+
+      const overrideContent = '# Temporary override\n';
+      await request(testApp)
+        .put(`/api/projects/${project.id}/planning/skills/${SKILL_SLUG}`)
+        .set('Authorization', `Bearer ${auth.token}`)
+        .send({ content: overrideContent });
+
+      const indexDuring = await request(testApp)
+        .get(`/api/projects/${project.id}/planning/skills`)
+        .set('Authorization', `Bearer ${auth.token}`);
+      const rowDuring = indexDuring.body.skills.find((s: { slug: string }) => s.slug === SKILL_SLUG);
+      expect(rowDuring.hasOverride).toBe(true);
+      expect(rowDuring.overrideUpdatedAt).toBeTruthy();
+
+      const deleteRes = await request(testApp)
+        .delete(`/api/projects/${project.id}/planning/skills/${SKILL_SLUG}`)
+        .set('Authorization', `Bearer ${auth.token}`);
+      expect(deleteRes.status).toBe(200);
+      expect(deleteRes.body.deleted).toBe(true);
+
+      const effective = await request(testApp)
+        .get(`/api/projects/${project.id}/planning/skills/${SKILL_SLUG}`)
+        .set('Authorization', `Bearer ${auth.token}`);
+      expect(effective.body.content).toBe(platformContent);
+
+      const indexAfter = await request(testApp)
+        .get(`/api/projects/${project.id}/planning/skills`)
+        .set('Authorization', `Bearer ${auth.token}`);
+      const rowAfter = indexAfter.body.skills.find((s: { slug: string }) => s.slug === SKILL_SLUG);
+      expect(rowAfter.hasOverride).toBe(false);
     });
   });
 });

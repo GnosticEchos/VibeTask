@@ -389,6 +389,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{projectId}/planning/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List project planning skills
+         * @description Returns catalog slugs with override status for the project. Requires project Viewer+ membership.
+         */
+        get: operations["listProjectPlanningSkills"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{projectId}/planning/skills/{slug}": {
         parameters: {
             query?: never;
@@ -411,7 +431,11 @@ export interface paths {
          */
         put: operations["upsertProjectPlanningSkill"];
         post?: never;
-        delete?: never;
+        /**
+         * Delete project planning skill override
+         * @description Removes a project override so agents resolve platform/filesystem defaults again. Requires Maintainer+ role.
+         */
+        delete: operations["deleteProjectPlanningSkill"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1247,6 +1271,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/planning-skills/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List planning skill catalog
+         * @description Merges filesystem `app/skills/` slugs with platform DB rows. Includes source and sync drift hints. Requires global ADMIN.
+         */
+        get: operations["listAdminPlanningSkillsCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/planning-skills/{slug}": {
         parameters: {
             query?: never;
@@ -1814,6 +1858,32 @@ export interface components {
         };
         PlanningSkillRevertBody: {
             revisionId: string;
+        };
+        /** @description Merged filesystem + platform DB planning skill catalog row */
+        PlanningSkillCatalogEntry: {
+            slug: string;
+            /** @enum {string} */
+            source: "filesystem" | "db" | "both";
+            filesystemHash?: string | null;
+            dbContentHash?: string | null;
+            /** Format: date-time */
+            dbUpdatedAt?: string | null;
+            syncAvailable: boolean;
+        };
+        PlanningSkillCatalogResponse: {
+            catalog: components["schemas"]["PlanningSkillCatalogEntry"][];
+        };
+        /** @description Catalog slug with project override status */
+        ProjectPlanningSkillIndexEntry: {
+            slug: string;
+            /** @enum {string} */
+            catalogSource: "filesystem" | "db" | "both";
+            hasOverride: boolean;
+            /** Format: date-time */
+            overrideUpdatedAt?: string | null;
+        };
+        ProjectPlanningSkillListResponse: {
+            skills: components["schemas"]["ProjectPlanningSkillIndexEntry"][];
         };
         User: {
             id?: number;
@@ -3784,6 +3854,42 @@ export interface operations {
             };
         };
     };
+    listProjectPlanningSkills: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Project planning skill index */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectPlanningSkillListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Access denied — not a project member */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getProjectPlanningSkill: {
         parameters: {
             query?: never;
@@ -3879,6 +3985,53 @@ export interface operations {
                 content?: never;
             };
             /** @description Skill not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteProjectPlanningSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: number;
+                /** @description Planning skill slug */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Override deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        deleted: boolean;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Maintainer role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Override not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6713,6 +6866,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlanningSkillSyncResponse"];
+                };
+            };
+            /** @description Forbidden — admin only */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listAdminPlanningSkillsCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Skill catalog */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanningSkillCatalogResponse"];
                 };
             };
             /** @description Forbidden — admin only */

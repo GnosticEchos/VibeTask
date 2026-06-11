@@ -5,6 +5,7 @@ import { validateBody, validateParams, getValidatedBody, getValidatedParams } fr
 import { asyncHandler } from '../../../infrastructure/http/middleware/error-handler.js';
 import {
   getEffectiveSkillContent,
+  listSkillCatalog,
   listSkillRevisions,
   revertGlobalSkill,
   syncFilesystemDefaultsToDb,
@@ -39,6 +40,11 @@ router.get('/', asyncHandler(async (_req, res) => {
 router.post('/sync', asyncHandler(async (_req, res) => {
   const synced = await syncFilesystemDefaultsToDb();
   res.json({ synced });
+}));
+
+router.get('/catalog', asyncHandler(async (_req, res) => {
+  const catalog = await listSkillCatalog();
+  res.json({ catalog });
 }));
 
 router.get('/:slug', validateParams(slugParamSchema), asyncHandler(async (req, res) => {

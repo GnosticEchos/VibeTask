@@ -1901,6 +1901,35 @@
         "operationId": "acceptImplementationPlan"
       }
     },
+    "/api/projects/{projectId}/planning/skills": {
+      "get": {
+        "tags": ["Projects"],
+        "summary": "List project planning skills",
+        "description": "Returns catalog slugs with override status for the project. Requires project Viewer+ membership.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project planning skill index",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProjectPlanningSkillListResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Access denied — not a project member" }
+        },
+        "operationId": "listProjectPlanningSkills"
+      }
+    },
     "/api/projects/{projectId}/planning/skills/{slug}": {
       "parameters": [
         {
@@ -1971,6 +2000,32 @@
           "404": { "description": "Skill not found" }
         },
         "operationId": "upsertProjectPlanningSkill"
+      },
+      "delete": {
+        "tags": ["Projects"],
+        "summary": "Delete project planning skill override",
+        "description": "Removes a project override so agents resolve platform/filesystem defaults again. Requires Maintainer+ role.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Override deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deleted": { "type": "boolean" }
+                  },
+                  "required": ["deleted"]
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Maintainer role required" },
+          "404": { "description": "Override not found" }
+        },
+        "operationId": "deleteProjectPlanningSkill"
       }
     },
     "/api/tasks": {
@@ -5822,6 +5877,26 @@
         "operationId": "syncAdminPlanningSkills"
       }
     },
+    "/api/admin/planning-skills/catalog": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "List planning skill catalog",
+        "description": "Merges filesystem `app/skills/` slugs with platform DB rows. Includes source and sync drift hints. Requires global ADMIN.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Skill catalog",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PlanningSkillCatalogResponse" }
+              }
+            }
+          },
+          "403": { "description": "Forbidden — admin only" }
+        },
+        "operationId": "listAdminPlanningSkillsCatalog"
+      }
+    },
     "/api/admin/planning-skills/{slug}": {
       "parameters": [
         {
@@ -7557,6 +7632,56 @@
           "revisionId": { "type": "string", "minLength": 1 }
         },
         "required": ["revisionId"]
+      },
+      "PlanningSkillCatalogEntry": {
+        "type": "object",
+        "description": "Merged filesystem + platform DB planning skill catalog row",
+        "properties": {
+          "slug": { "type": "string", "maxLength": 64 },
+          "source": {
+            "type": "string",
+            "enum": ["filesystem", "db", "both"]
+          },
+          "filesystemHash": { "type": "string", "nullable": true },
+          "dbContentHash": { "type": "string", "nullable": true },
+          "dbUpdatedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "syncAvailable": { "type": "boolean" }
+        },
+        "required": ["slug", "source", "syncAvailable"]
+      },
+      "PlanningSkillCatalogResponse": {
+        "type": "object",
+        "properties": {
+          "catalog": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PlanningSkillCatalogEntry" }
+          }
+        },
+        "required": ["catalog"]
+      },
+      "ProjectPlanningSkillIndexEntry": {
+        "type": "object",
+        "description": "Catalog slug with project override status",
+        "properties": {
+          "slug": { "type": "string", "maxLength": 64 },
+          "catalogSource": {
+            "type": "string",
+            "enum": ["filesystem", "db", "both"]
+          },
+          "hasOverride": { "type": "boolean" },
+          "overrideUpdatedAt": { "type": "string", "format": "date-time", "nullable": true }
+        },
+        "required": ["slug", "catalogSource", "hasOverride"]
+      },
+      "ProjectPlanningSkillListResponse": {
+        "type": "object",
+        "properties": {
+          "skills": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ProjectPlanningSkillIndexEntry" }
+          }
+        },
+        "required": ["skills"]
       },
       "User": {
         "type": "object",
