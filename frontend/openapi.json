@@ -1901,6 +1901,78 @@
         "operationId": "acceptImplementationPlan"
       }
     },
+    "/api/projects/{projectId}/planning/skills/{slug}": {
+      "parameters": [
+        {
+          "name": "projectId",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "integer" }
+        },
+        {
+          "name": "slug",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string", "maxLength": 64 },
+          "description": "Planning skill slug"
+        }
+      ],
+      "get": {
+        "tags": ["Projects"],
+        "summary": "Get effective planning skill for project",
+        "description": "Returns effective skill content for the project (project override, else platform DB, else filesystem). Requires project Viewer+ membership.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Effective skill content",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PlanningSkillContent" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Access denied — not a project member" },
+          "404": { "description": "Skill not found" }
+        },
+        "operationId": "getProjectPlanningSkill"
+      },
+      "put": {
+        "tags": ["Projects"],
+        "summary": "Upsert project planning skill override",
+        "description": "Creates or updates a project-level planning skill override. Requires Maintainer+ role.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PlanningSkillUpsertBody" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Override upserted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "override": { "$ref": "#/components/schemas/ProjectPlanningSkillOverride" }
+                  },
+                  "required": ["override"]
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation failed" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Maintainer role required" },
+          "404": { "description": "Skill not found" }
+        },
+        "operationId": "upsertProjectPlanningSkill"
+      }
+    },
     "/api/tasks": {
       "get": {
         "tags": [
@@ -5710,6 +5782,181 @@
         "operationId": "listAdminAuditlog"
       }
     },
+    "/api/admin/planning-skills": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "List platform planning skills",
+        "description": "Returns global planning skills stored in the hub database (slug, content hash, updatedAt). Requires global ADMIN.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Planning skills list",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PlanningSkillListResponse" }
+              }
+            }
+          },
+          "403": { "description": "Forbidden — admin only" }
+        },
+        "operationId": "listAdminPlanningSkills"
+      }
+    },
+    "/api/admin/planning-skills/sync": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Sync planning skills from repository",
+        "description": "Imports or updates planning skills from `app/skills/{slug}/SKILL.md` into the platform database. Requires global ADMIN.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Sync completed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PlanningSkillSyncResponse" }
+              }
+            }
+          },
+          "403": { "description": "Forbidden — admin only" }
+        },
+        "operationId": "syncAdminPlanningSkills"
+      }
+    },
+    "/api/admin/planning-skills/{slug}": {
+      "parameters": [
+        {
+          "name": "slug",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string", "maxLength": 64 },
+          "description": "Planning skill slug (e.g. project-planning-grill)"
+        }
+      ],
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get platform planning skill content",
+        "description": "Returns effective global skill content (platform DB, else filesystem default). Does not apply project overrides.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Skill content",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PlanningSkillContent" }
+              }
+            }
+          },
+          "403": { "description": "Forbidden — admin only" },
+          "404": { "description": "Skill not found" }
+        },
+        "operationId": "getAdminPlanningSkill"
+      },
+      "put": {
+        "tags": ["Admin"],
+        "summary": "Upsert platform planning skill",
+        "description": "Creates or updates a global planning skill and records a revision. Requires global ADMIN.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PlanningSkillUpsertBody" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Skill upserted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "skill": { "$ref": "#/components/schemas/PlanningSkill" }
+                  },
+                  "required": ["skill"]
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation failed" },
+          "403": { "description": "Forbidden — admin only" }
+        },
+        "operationId": "upsertAdminPlanningSkill"
+      }
+    },
+    "/api/admin/planning-skills/{slug}/revisions": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "List planning skill revisions",
+        "description": "Returns the last 20 revisions for a platform planning skill. Requires global ADMIN.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "maxLength": 64 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revision list",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PlanningSkillRevisionListResponse" }
+              }
+            }
+          },
+          "403": { "description": "Forbidden — admin only" }
+        },
+        "operationId": "listAdminPlanningSkillRevisions"
+      }
+    },
+    "/api/admin/planning-skills/{slug}/revert": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Revert planning skill to revision",
+        "description": "Restores platform skill content from a prior revision. Requires global ADMIN.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "maxLength": 64 }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PlanningSkillRevertBody" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Skill reverted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "skill": { "$ref": "#/components/schemas/PlanningSkill" }
+                  },
+                  "required": ["skill"]
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid revision" },
+          "403": { "description": "Forbidden — admin only" },
+          "404": { "description": "Revision not found" }
+        },
+        "operationId": "revertAdminPlanningSkill"
+      }
+    },
     "/api/agent/health": {
       "get": {
         "tags": [
@@ -6937,6 +7184,43 @@
         "operationId": "createAgentSession"
       }
     },
+    "/api/agent/planning/skills/{slug}": {
+      "get": {
+        "tags": ["Agent API"],
+        "summary": "Load effective planning skill (Agent)",
+        "description": "Returns effective planning skill content for MCP/CLI. Optional projectId query applies project override. Requires platform session.",
+        "security": [{ "agentAuth": [], "platformSession": [] }],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "maxLength": 64 }
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer" },
+            "description": "When set, resolve project override before platform default"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Effective skill content",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PlanningSkillContent" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Platform session required" },
+          "404": { "description": "Skill not found" }
+        },
+        "operationId": "getAgentPlanningSkill"
+      }
+    },
     "/api/agent/my-agents": {
       "get": {
         "tags": ["Agent API"],
@@ -7169,6 +7453,110 @@
         "required": [
           "error"
         ]
+      },
+      "PlanningSkillSummary": {
+        "type": "object",
+        "description": "Platform planning skill list row",
+        "properties": {
+          "slug": { "type": "string", "maxLength": 64 },
+          "contentHash": { "type": "string", "nullable": true },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["slug", "updatedAt"]
+      },
+      "PlanningSkill": {
+        "type": "object",
+        "description": "Platform planning skill record",
+        "properties": {
+          "id": { "type": "integer" },
+          "slug": { "type": "string", "maxLength": 64 },
+          "content": { "type": "string", "maxLength": 32000 },
+          "contentHash": { "type": "string", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "slug", "content", "updatedAt"]
+      },
+      "PlanningSkillContent": {
+        "type": "object",
+        "description": "Effective planning skill markdown content",
+        "properties": {
+          "slug": { "type": "string", "maxLength": 64 },
+          "content": { "type": "string", "maxLength": 32000 }
+        },
+        "required": ["slug", "content"]
+      },
+      "PlanningSkillUpsertBody": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32000,
+            "description": "SKILL.md markdown body (max 32 KB)"
+          }
+        },
+        "required": ["content"]
+      },
+      "PlanningSkillRevision": {
+        "type": "object",
+        "description": "Platform planning skill revision snapshot",
+        "properties": {
+          "id": { "type": "string" },
+          "skillId": { "type": "integer" },
+          "content": { "type": "string" },
+          "authorId": { "type": "integer", "nullable": true },
+          "parentRevisionId": { "type": "string", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "skillId", "content", "createdAt"]
+      },
+      "ProjectPlanningSkillOverride": {
+        "type": "object",
+        "description": "Project-level planning skill override",
+        "properties": {
+          "id": { "type": "integer" },
+          "projectId": { "type": "integer" },
+          "slug": { "type": "string", "maxLength": 64 },
+          "content": { "type": "string", "maxLength": 32000 },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "projectId", "slug", "content", "updatedAt"]
+      },
+      "PlanningSkillListResponse": {
+        "type": "object",
+        "properties": {
+          "skills": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PlanningSkillSummary" }
+          }
+        },
+        "required": ["skills"]
+      },
+      "PlanningSkillSyncResponse": {
+        "type": "object",
+        "properties": {
+          "synced": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["synced"]
+      },
+      "PlanningSkillRevisionListResponse": {
+        "type": "object",
+        "properties": {
+          "revisions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PlanningSkillRevision" }
+          }
+        },
+        "required": ["revisions"]
+      },
+      "PlanningSkillRevertBody": {
+        "type": "object",
+        "properties": {
+          "revisionId": { "type": "string", "minLength": 1 }
+        },
+        "required": ["revisionId"]
       },
       "User": {
         "type": "object",

@@ -52,6 +52,8 @@ import adminRateLimitsRoutes from '@/api/routes/admin/rate-limits.js';
 import adminUsersRoutes from '@/api/routes/admin/users.js';
 import adminHealthRoutes from '@/api/routes/admin/health.js';
 import adminAuditLogRoutes from '@/api/routes/admin/audit-log.js';
+import adminPlanningSkillsRoutes from '@/api/routes/admin/planning-skills.js';
+import projectPlanningSkillsRoutes from '@/api/routes/project-planning-skills.js';
 import { runSystemHealthCheck } from '@/infrastructure/http/system-health.js';
 import { createDynamicRateLimiter } from '@/infrastructure/http/rate-limiter.js';
 
@@ -106,6 +108,7 @@ export function createTestApp(): express.Application {
   // Projects routes
   app.use('/api/projects', projectsRoutes);
   app.use('/api/projects/:projectId/planning', projectPlanningRoutes);
+  app.use('/api/projects/:projectId/planning/skills', projectPlanningSkillsRoutes);
 
   // Tasks routes
   app.use('/api/tasks', tasksRoutes);
@@ -125,6 +128,7 @@ export function createTestApp(): express.Application {
   app.use('/api/admin/users', adminUsersRoutes);
   app.use('/api/admin/health', adminHealthRoutes);
   app.use('/api/admin/audit-log', adminAuditLogRoutes);
+  app.use('/api/admin/planning-skills', adminPlanningSkillsRoutes);
 
   app.use('/api/agent', agentRouter);
 
