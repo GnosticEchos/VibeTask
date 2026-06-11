@@ -614,7 +614,39 @@
       "roadmapPlatformTitle": "Platform controls",
       "roadmapPlatformItem1": "Feature flags per environment or tenant.",
       "roadmapPlatformItem2": "Maintenance mode and in-app status messaging.",
-      "roadmapPlatformItem3": "Export, backup, and operational integration hooks."
+      "roadmapPlatformItem3": "Export, backup, and operational integration hooks.",
+      "planningSkills": {
+        "title": "Planning skills (platform)",
+        "subtitle": "Global SKILL.md content for agent draft planning flows",
+        "lead": "Sync from the repository, edit platform defaults, and revert revisions. Project overrides are managed under Project Settings.",
+        "syncButton": "Sync from repository",
+        "syncSuccess": "Synced {count} skill(s) from app/skills/.",
+        "syncError": "Failed to sync planning skills.",
+        "loadError": "Failed to load skill content.",
+        "loadListError": "Failed to load planning skills catalog.",
+        "emptyDb": "No skills in the database yet. Sync from repository to import app/skills/.",
+        "emptyCatalog": "No planning skills found in app/skills/.",
+        "colSlug": "Slug",
+        "colSource": "Source",
+        "colUpdated": "Updated",
+        "colHash": "Hash",
+        "colActions": "Actions",
+        "edit": "Edit",
+        "revisions": "Revisions",
+        "revert": "Revert",
+        "syncAvailable": "Sync available",
+        "revisionsTitle": "Revisions — {slug}",
+        "revisionsEmpty": "No revisions recorded yet.",
+        "revertConfirm": "Restore {slug} to the revision from {date}?",
+        "revertSuccess": "Skill reverted to selected revision.",
+        "revertError": "Failed to revert skill.",
+        "authorId": "author #{id}",
+        "source": {
+          "filesystem": "Filesystem",
+          "db": "Database",
+          "both": "Filesystem + DB"
+        }
+      }
     },
     "planningSkills": {
       "editorTitle": "Edit planning skill: {slug}",

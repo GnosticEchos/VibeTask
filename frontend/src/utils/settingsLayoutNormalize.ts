@@ -32,6 +32,7 @@ export const SETTINGS_CARD_CONSTRAINTS: Record<string, CardConstraint> = {
   'admin.systemHealth': { minW: 3, maxW: 6, minH: 4, maxH: CONTENT_FIT_MAX_H },
   'admin.rateLimits': { minW: 6, maxW: 9, minH: 6, maxH: CONTENT_FIT_MAX_H },
   'admin.platformAgents': { minW: 6, maxW: 12, minH: 6, maxH: CONTENT_FIT_MAX_H },
+  'admin.planningSkills': { minW: 6, maxW: 12, minH: 6, maxH: CONTENT_FIT_MAX_H },
   'admin.summary': { minW: 3, maxW: 4, minH: 5, maxH: CONTENT_FIT_MAX_H },
   'admin.roadmapSecurity': { minW: 4, maxW: 6, minH: 5, maxH: CONTENT_FIT_MAX_H },
   'admin.roadmapCompliance': { minW: 4, maxW: 6, minH: 5, maxH: CONTENT_FIT_MAX_H },

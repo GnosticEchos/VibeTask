@@ -7,6 +7,7 @@ import { useAdminUsersQuery } from '@/composables/useAdminUsersQuery'
 import { useAdminSystemHealthQuery } from '@/composables/useAdminSystemHealthQuery'
 import SettingsCard from '@/components/settings/SettingsCard.vue'
 import DraggableSettingsGrid from '@/components/settings/layout/DraggableSettingsGrid.vue'
+import PlatformPlanningSkillsCard from '@/components/settings/admin/PlatformPlanningSkillsCard.vue'
 import { useSettingsLayout } from '@/composables/useSettingsLayout'
 import { useSettingsLayoutStore } from '@/stores/settingsLayout'
 import { useAuthStore } from '@/stores/auth'
@@ -919,6 +920,8 @@ async function removePlatformAgent(agent: PlatformAgent) {
           </div>
         </div>
       </SettingsCard>
+
+      <PlatformPlanningSkillsCard v-else-if="cardId === 'admin.planningSkills'" />
 
       <SettingsCard v-else-if="cardId === 'admin.roadmapSecurity'"
         :title="$t('settingsHub.admin.roadmapSecurityTitle')"

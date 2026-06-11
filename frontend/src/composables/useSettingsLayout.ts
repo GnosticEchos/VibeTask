@@ -44,9 +44,10 @@ function defaultPageLayout(page: SettingsHubPageKey): SettingsLayoutPage {
       card('admin.systemHealth', 8, 3, 4, 4),
       card('admin.rateLimits', 0, 7, 7, 8),
       card('admin.platformAgents', 7, 7, 5, 8),
-      card('admin.roadmapSecurity', 0, 15, 4, 5),
-      card('admin.roadmapCompliance', 4, 15, 4, 5),
-      card('admin.roadmapPlatform', 8, 15, 4, 5),
+      card('admin.planningSkills', 0, 15, 12, 7),
+      card('admin.roadmapSecurity', 0, 22, 4, 5),
+      card('admin.roadmapCompliance', 4, 22, 4, 5),
+      card('admin.roadmapPlatform', 8, 22, 4, 5),
     ]
   } else if (page === 'themeBuilder') {
     base.cards = [card('theme.builder', 0, 0, 10, 10)]
