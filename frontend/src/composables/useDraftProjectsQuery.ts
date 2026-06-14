@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/vue-query'
+import { computed } from 'vue'
 import { axiosApi } from '@/api/axios'
 
 export type DraftProjectColumn = {
@@ -50,7 +51,7 @@ export type PlanningPreview = {
 
 export function usePlanningPreviewQuery(projectId: () => number | null) {
   return useQuery({
-    queryKey: ['planning-preview', projectId],
+    queryKey: computed(() => ['planning-preview', projectId()] as const),
     queryFn: async () => {
       const id = projectId()
       if (!id) return null

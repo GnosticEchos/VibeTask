@@ -13,7 +13,7 @@ function isValidProjectId(id: number | null | undefined): id is number {
 
 export function useProjectPlanningSkillsQuery(projectId: MaybeRef<number | null | undefined>) {
   return useQuery<ProjectPlanningSkillIndexEntry[]>({
-    queryKey: ['project', projectId, 'planning-skills'],
+    queryKey: computed(() => ['project', unref(projectId), 'planning-skills'] as const),
     queryFn: async () => {
       const id = unref(projectId)
       if (!isValidProjectId(id)) return []
@@ -34,7 +34,9 @@ export function useProjectPlanningSkillContentQuery(
   })
 
   return useQuery<PlanningSkillContent | null>({
-    queryKey: ['project', projectId, 'planning-skills', slug, 'content'],
+    queryKey: computed(
+      () => ['project', unref(projectId), 'planning-skills', unref(slug), 'content'] as const,
+    ),
     queryFn: async () => {
       const id = unref(projectId)
       const s = unref(slug)

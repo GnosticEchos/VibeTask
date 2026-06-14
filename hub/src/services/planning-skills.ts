@@ -75,6 +75,7 @@ async function listFilesystemSkillSlugs(): Promise<string[]> {
   for (const entry of entries) {
     const stat = await fs.stat(path.join(defaultSkillsDir, entry)).catch(() => null);
     if (!stat?.isDirectory()) continue;
+    if (!SKILL_SLUG_PATTERN.test(entry)) continue;
     const content = await readFilesystemSkill(entry);
     if (content) {
       slugs.push(entry);

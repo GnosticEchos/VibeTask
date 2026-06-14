@@ -18,6 +18,7 @@ export function useProjectMutations() {
       queryClient.removeQueries({ queryKey: ['columns', deletedId] })
       queryClient.removeQueries({ queryKey: ['members', deletedId] })
       queryClient.removeQueries({ queryKey: ['planning-preview', deletedId] })
+      queryClient.removeQueries({ queryKey: ['project', deletedId, 'planning-skills'] })
       if (projectStore.selectedProjectId === deletedId) {
         projectStore.clearSelectedProject()
       }

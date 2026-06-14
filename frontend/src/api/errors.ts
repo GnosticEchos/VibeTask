@@ -46,7 +46,9 @@ export class ForbiddenError extends ApiError {
 
 export class NotFoundError extends ApiError {
   constructor(resource = 'Resource', originalError?: unknown) {
-    super(404, `${resource} not found`, undefined, originalError)
+    const label = resource.trim() || 'Resource'
+    const message = /not found$/i.test(label) ? label : `${label} not found`
+    super(404, message, undefined, originalError)
     this.name = 'NotFoundError'
   }
 }
@@ -123,10 +125,7 @@ const ERROR_CLASS_BY_STATUS: Record<number, (
     : new BadRequestError(msg, errs, orig),
   401: (msg, _errs, orig) => new UnauthorizedError(msg, orig),
   403: (msg, _errs, orig) => new ForbiddenError(msg, orig),
-  404: (msg, _errs, orig) =>
-    /not found/i.test(msg)
-      ? new ApiError(404, msg, undefined, orig)
-      : new NotFoundError(msg, orig),
+  404: (msg, _errs, orig) => new NotFoundError(msg || 'Resource', orig),
   409: (msg, _errs, orig) => new ConflictError(msg, orig),
   429: (msg, _errs, orig, after) => new RateLimitError(msg, after, orig),
 }

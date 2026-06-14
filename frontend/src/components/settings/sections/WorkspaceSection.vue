@@ -138,6 +138,7 @@ function purgeStaleProjectQueries(staleId: number) {
   queryClient.removeQueries({ queryKey: ['columns', staleId] })
   queryClient.removeQueries({ queryKey: ['members', staleId] })
   queryClient.removeQueries({ queryKey: ['planning-preview', staleId] })
+  queryClient.removeQueries({ queryKey: ['project', staleId, 'planning-skills'] })
 }
 
 watch(
@@ -690,7 +691,10 @@ onMounted(() => {
           :subtitle="$t('settingsHub.workspace.generalSubtitle')"
           :mode="workspaceMode"
         >
-          <div v-if="!showProjectWorkspace && projectListReady" class="rounded-lg border border-base-300/80 bg-base-200/70 px-3 py-2 text-sm text-base-content/80">
+          <div v-if="!projectListReady" class="flex justify-center py-6">
+            <span class="loading loading-spinner loading-md" aria-label="Loading projects" />
+          </div>
+          <div v-else-if="!showProjectWorkspace" class="rounded-lg border border-base-300/80 bg-base-200/70 px-3 py-2 text-sm text-base-content/80">
             {{ $t('settingsHub.workspace.noProjectSelected') }}
           </div>
           <div v-else-if="projectQuery.isLoading.value" class="flex justify-center py-6">
@@ -779,7 +783,10 @@ onMounted(() => {
           :subtitle="$t('settingsHub.workspace.columnsSubtitle')"
           :mode="workspaceMode"
         >
-          <div v-if="!showProjectWorkspace && projectListReady" class="rounded-lg border border-base-300/80 bg-base-200/70 px-3 py-2 text-sm text-base-content/80">
+          <div v-if="!projectListReady" class="flex justify-center py-6">
+            <span class="loading loading-spinner loading-md" aria-label="Loading projects" />
+          </div>
+          <div v-else-if="!showProjectWorkspace" class="rounded-lg border border-base-300/80 bg-base-200/70 px-3 py-2 text-sm text-base-content/80">
             {{ $t('settingsHub.workspace.noProjectSelected') }}
           </div>
           <div
