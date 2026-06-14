@@ -149,8 +149,9 @@ watch(
   }),
   ({ ready, selectedId, projects }) => {
     if (!ready || !isValidId(selectedId)) return
-    if (isProjectInMembershipList(selectedId, projects)) return
-    purgeStaleProjectQueries(selectedId)
+    const id = Number(selectedId)
+    if (isProjectInMembershipList(id, projects)) return
+    purgeStaleProjectQueries(id)
     projectStore.clearSelectedProject()
   },
   { immediate: true },
