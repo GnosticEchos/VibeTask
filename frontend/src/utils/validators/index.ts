@@ -30,7 +30,7 @@ const maxLength = (value: string, length: number, label: string = 'Field') => {
 }
 
 const isExact = (value: string, validatorValue: string) => {
-  if(value !== validatorValue){
+  if (value.trim() !== validatorValue.trim()) {
     return i18n.global.t('validators.isExactInvalid')
   }
   return true

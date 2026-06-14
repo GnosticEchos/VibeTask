@@ -273,8 +273,14 @@ watch(previewOpen, (open) => {
       @saved="onEditorSaved"
     />
 
-    <dialog class="modal" :class="{ 'modal-open': previewOpen }">
-      <div class="modal-box flex max-h-[85vh] max-w-4xl flex-col gap-3">
+    <Teleport to="body">
+      <div
+        v-if="previewOpen"
+        class="modal modal-open fixed inset-0 z-[100] flex items-center justify-center"
+        role="dialog"
+        aria-modal="true"
+      >
+      <div class="modal-box flex max-h-[85vh] max-w-5xl flex-col gap-3">
         <div class="flex items-start justify-between gap-2">
           <div>
             <h3 class="text-lg font-semibold">
@@ -292,14 +298,17 @@ watch(previewOpen, (open) => {
         <div v-if="previewLoading" class="flex flex-1 items-center justify-center py-12">
           <span class="loading loading-spinner loading-lg" />
         </div>
-        <div v-else class="min-h-0 flex-1 overflow-y-auto rounded-lg border border-base-300/60 p-3">
+        <div
+          v-else
+          class="doc-md-preview-scroll min-h-0 flex-1 overflow-y-auto rounded-lg border border-base-300/60 p-3"
+        >
           <component
             v-if="previewReady && previewContent"
             :is="MdPreview"
             :model-value="previewContent"
             :editor-id="`skill-preview-${previewSlug}`"
             :theme="isDark ? 'dark' : 'light'"
-            class="doc-md-preview bg-transparent"
+            class="doc-md-preview"
           />
           <pre v-else class="whitespace-pre-wrap text-sm">{{ previewContent }}</pre>
         </div>
@@ -310,9 +319,10 @@ watch(previewOpen, (open) => {
           </button>
         </div>
       </div>
-      <form method="dialog" class="modal-backdrop">
-        <button type="button" @click="closePreview">close</button>
+      <form method="dialog" class="modal-backdrop" @click="closePreview">
+        <button type="button">close</button>
       </form>
-    </dialog>
+      </div>
+    </Teleport>
   </SettingsCard>
 </template>

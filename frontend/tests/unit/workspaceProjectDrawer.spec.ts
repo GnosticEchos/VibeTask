@@ -3,6 +3,7 @@ import {
   buildCreateProjectPayload,
   getFallbackDrawerProjects,
   isDrawerUsingFallback,
+  isProjectInMembershipList,
   validateProjectPrefix,
 } from '@/utils/workspaceProjectDrawer'
 
@@ -40,5 +41,12 @@ describe('workspaceProjectDrawer utils', () => {
   it('rejects invalid create payload', () => {
     expect(buildCreateProjectPayload('', 'AB', '')).toBeNull()
     expect(buildCreateProjectPayload('X', 'a-', '')).toBeNull()
+  })
+
+  it('checks membership list for selected project id', () => {
+    const live = [{ id: 8, name: 'Alpha' }]
+    expect(isProjectInMembershipList(8, live)).toBe(true)
+    expect(isProjectInMembershipList(39, live)).toBe(false)
+    expect(isProjectInMembershipList(null, live)).toBe(false)
   })
 })

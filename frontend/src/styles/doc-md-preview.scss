@@ -1,0 +1,85 @@
+/* Shared read-mode markdown (MdPreview / md-editor-v3) — docs + planning skills */
+.doc-md-preview {
+  background: transparent;
+}
+
+/* md-editor themes set display:block on tables — breaks column sizing */
+.doc-md-preview .md-editor-preview table,
+.doc-md-preview div.default-theme table,
+.doc-md-preview div.github-theme table,
+.doc-md-preview div.vuepress-theme table,
+.doc-md-preview table {
+  display: table !important;
+  width: 100%;
+  min-width: 42rem;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin: 0.75rem 0 1rem;
+}
+
+.doc-md-preview .md-editor-preview th,
+.doc-md-preview .md-editor-preview td,
+.doc-md-preview div.default-theme th,
+.doc-md-preview div.default-theme td,
+.doc-md-preview div.github-theme th,
+.doc-md-preview div.github-theme td,
+.doc-md-preview div.vuepress-theme th,
+.doc-md-preview div.vuepress-theme td,
+.doc-md-preview th,
+.doc-md-preview td {
+  vertical-align: top;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  border: 1px solid color-mix(in oklch, var(--color-base-content) 18%, transparent);
+}
+
+.doc-md-preview .md-editor-preview th,
+.doc-md-preview div.default-theme th,
+.doc-md-preview div.github-theme th,
+.doc-md-preview div.vuepress-theme th,
+.doc-md-preview th {
+  font-weight: 600;
+  background: color-mix(in oklch, var(--color-base-content) 8%, transparent);
+}
+
+.doc-md-preview .md-editor-preview tr:nth-child(even) td,
+.doc-md-preview div.default-theme tr:nth-child(even) td,
+.doc-md-preview div.github-theme tr:nth-child(even) td,
+.doc-md-preview div.vuepress-theme tr:nth-child(even) td {
+  background: color-mix(in oklch, var(--color-base-content) 4%, transparent);
+}
+
+/* Step / Template label column — fixed width so labels stay readable */
+.doc-md-preview .md-editor-preview tr > :first-child,
+.doc-md-preview div.default-theme tr > :first-child,
+.doc-md-preview div.github-theme tr > :first-child,
+.doc-md-preview div.vuepress-theme tr > :first-child,
+.doc-md-preview tr > :first-child {
+  width: 9.5rem;
+  min-width: 9.5rem;
+  max-width: 9.5rem;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.doc-md-preview .md-editor-preview tr > :nth-child(2),
+.doc-md-preview .md-editor-preview tr > :nth-child(3),
+.doc-md-preview div.default-theme tr > :nth-child(2),
+.doc-md-preview div.default-theme tr > :nth-child(3),
+.doc-md-preview div.github-theme tr > :nth-child(2),
+.doc-md-preview div.github-theme tr > :nth-child(3),
+.doc-md-preview div.vuepress-theme tr > :nth-child(2),
+.doc-md-preview div.vuepress-theme tr > :nth-child(3) {
+  width: calc((100% - 9.5rem) / 2);
+}
+
+.doc-md-preview code {
+  font-size: 0.8125rem;
+  word-break: break-word;
+}
+
+.doc-md-preview-scroll {
+  overflow-x: auto;
+}

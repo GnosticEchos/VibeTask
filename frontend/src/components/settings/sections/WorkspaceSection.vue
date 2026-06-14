@@ -23,13 +23,16 @@ import { useSettingsLayoutStore } from '@/stores/settingsLayout'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectsQuery } from '@/composables/useProjectsQuery'
 import type { iProject } from '@/types/projectTypes'
-import { ClipboardDocumentListIcon } from '@heroicons/vue/24/outline'
+import { ClipboardDocumentListIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import {
   buildCreateProjectPayload,
   getFallbackDrawerProjects,
   isDrawerUsingFallback,
+  isProjectInMembershipList,
   validateProjectPrefix,
 } from '@/utils/workspaceProjectDrawer'
+import { shouldRetryQueryError } from '@/utils/queryRetry'
+import { ForbiddenError, NotFoundError } from '@/api/errors'
 import {
   normalizeHexColor,
   resolveWorkspaceOutlineColor,
@@ -106,24 +109,69 @@ const newProjectPrefixHint = computed(() => {
 const projectId = computed(() => Number(projectStore.selectedProjectId || 0))
 const hasProjectSelected = computed(() => isValidId(projectId.value))
 
+const projectListReady = computed(() => projectsQuery.isFetched.value)
+const isSelectedInMembership = computed(() =>
+  isProjectInMembershipList(projectId.value, sortedMemberProjects.value),
+)
+/** Gate project-scoped API calls until membership list confirms the selection. */
+const projectQueriesEnabled = computed(
+  () => hasProjectSelected.value && projectListReady.value && isSelectedInMembership.value,
+)
+const showProjectWorkspace = computed(() => projectQueriesEnabled.value)
+
 const projectQuery = useQuery({
   queryKey: computed(() => ['project', projectId.value]),
   queryFn: () => projectsApi.getSingleProject(projectId.value),
-  enabled: hasProjectSelected,
+  enabled: projectQueriesEnabled,
+  retry: shouldRetryQueryError,
 })
 
 const columnsQuery = useQuery({
   queryKey: computed(() => ['columns', projectId.value]),
   queryFn: () => api.getItems<iColumn>('columns', { projectId: projectId.value }),
-  enabled: hasProjectSelected,
+  enabled: projectQueriesEnabled,
+  retry: shouldRetryQueryError,
 })
+
+function purgeStaleProjectQueries(staleId: number) {
+  queryClient.removeQueries({ queryKey: ['project', staleId] })
+  queryClient.removeQueries({ queryKey: ['columns', staleId] })
+  queryClient.removeQueries({ queryKey: ['members', staleId] })
+  queryClient.removeQueries({ queryKey: ['planning-preview', staleId] })
+}
+
+watch(
+  () => ({
+    ready: projectListReady.value,
+    selectedId: projectStore.selectedProjectId,
+    projects: sortedMemberProjects.value,
+  }),
+  ({ ready, selectedId, projects }) => {
+    if (!ready || !isValidId(selectedId)) return
+    if (isProjectInMembershipList(selectedId, projects)) return
+    purgeStaleProjectQueries(selectedId)
+    projectStore.clearSelectedProject()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => projectQuery.error.value,
+  (err) => {
+    if (!err || !hasProjectSelected.value) return
+    if (!(err instanceof NotFoundError || err instanceof ForbiddenError)) return
+    const staleId = projectId.value
+    purgeStaleProjectQueries(staleId)
+    projectStore.clearSelectedProject()
+  },
+)
 
 const localName = ref('')
 const localPrefix = ref('')
 const localDescription = ref('')
 
 const displayWorkspaceProjectName = computed(() => {
-  if (!hasProjectSelected.value) return ''
+  if (!showProjectWorkspace.value) return ''
   if (projectStore.project.id === projectId.value && projectStore.project.name?.trim()) {
     return projectStore.project.name
   }
@@ -283,7 +331,7 @@ function applySettingsToPolicyDrafts(settings: ProjectSettings | undefined) {
 watch(
   () => columnsQuery.data.value,
   (rows) => {
-    if (!hasProjectSelected.value || isSavingColumnsStructure.value) return
+    if (!showProjectWorkspace.value || isSavingColumnsStructure.value) return
     if (!Array.isArray(rows)) return
     syncColumnsLocalFromServer(rows)
     if (projectQuery.data.value?.settings) {
@@ -312,6 +360,36 @@ function selectWorkspaceProject(id: number) {
   if (!isValidId(id)) return
   projectStore.setSelectedProjectId(id)
   projectDrawerOpen.value = false
+}
+
+function canDeleteDrawerProject(project: iProject): boolean {
+  const role = (project.role || '').trim().toUpperCase()
+  return role === 'OWNER' || role === 'MAINTAINER'
+}
+
+function openDeleteProjectDialog(project?: iProject) {
+  if (project) {
+    projectStore.setProject(project)
+    projectStore.setSelectedProjectId(project.id)
+  }
+  if (!canDeleteProject.value) return
+  projectDrawerOpen.value = false
+  layoutStore.openDialog({
+    title: t('settings.dangerZone.deleteProject'),
+    component: 'ConfirmProjectDeleteDialog',
+    size: '600px',
+  })
+}
+
+async function openDeleteDrawerProject(project: iProject, event: Event) {
+  event.stopPropagation()
+  if (!canDeleteDrawerProject(project)) return
+  try {
+    const full = await projectsApi.getSingleProject(project.id)
+    openDeleteProjectDialog(full)
+  } catch {
+    openDeleteProjectDialog(project)
+  }
 }
 
 function retryProjectsLoad() {
@@ -362,7 +440,7 @@ async function submitCreateProject() {
 }
 
 async function saveWorkspace() {
-  if (!hasProjectSelected.value || isReadOnlyWorkspace.value) return
+  if (!showProjectWorkspace.value || isReadOnlyWorkspace.value) return
   isSavingProject.value = true
   try {
     await updateProject({
@@ -383,7 +461,7 @@ async function saveWorkspace() {
 }
 
 async function saveColumnsStructure() {
-  if (!hasProjectSelected.value || isReadOnlyWorkspace.value) return
+  if (!showProjectWorkspace.value || isReadOnlyWorkspace.value) return
   const missingName = columnsLocal.value.some(
     (col) => !col.toDelete && !(col.name?.trim()),
   )
@@ -421,7 +499,7 @@ async function saveColumnsStructure() {
 }
 
 async function saveColumnPolicies() {
-  if (!hasProjectSelected.value || isReadOnlyWorkspace.value) return
+  if (!showProjectWorkspace.value || isReadOnlyWorkspace.value) return
   const outlineHex = normalizeHexColor(localWorkspaceOutlineColor.value)
   if (!outlineHex) {
     layoutStore.openToast({ message: t('settingsHub.workspace.workspaceColorInvalid'), type: 'error' })
@@ -466,7 +544,7 @@ function onWorkspaceColorPickerInput(event: Event) {
 }
 
 async function inviteMember() {
-  if (!hasProjectSelected.value || !canInviteMembers.value || !inviteEmail.value.trim()) return
+  if (!showProjectWorkspace.value || !canInviteMembers.value || !inviteEmail.value.trim()) return
   isInvitingMember.value = true
   try {
     const foundMember = await membersStore.checkMemberEmail({
@@ -568,7 +646,7 @@ onMounted(() => {
     </div>
 
     <p
-      v-if="hasProjectSelected && displayWorkspaceProjectName"
+      v-if="showProjectWorkspace && displayWorkspaceProjectName"
       class="-mt-1 text-sm text-base-content/70"
     >
       {{ $t('settingsHub.workspace.activeProjectLabel') }}:
@@ -576,13 +654,13 @@ onMounted(() => {
     </p>
 
     <ProjectPlanningAcceptCard
-      v-if="hasProjectSelected"
+      v-if="showProjectWorkspace"
       :project-id="projectId"
       class="mx-0"
     />
 
     <ProjectPlanningSkillsCard
-      v-if="hasProjectSelected"
+      v-if="showProjectWorkspace"
       :project-id="projectId"
       :mode="workspaceMode"
       class="mx-0"
@@ -601,7 +679,7 @@ onMounted(() => {
         :mode="workspaceMode"
       >
         <div class="rounded-lg border border-base-300/80 bg-base-200/60 px-3 py-2 text-sm text-base-content/80">
-          <span v-if="hasProjectSelected">{{ $t('settingsHub.workspace.projectName') }}: {{ localName || '—' }}</span>
+          <span v-if="showProjectWorkspace">{{ $t('settingsHub.workspace.projectName') }}: {{ localName || '—' }}</span>
           <span v-else>{{ $t('settingsHub.workspace.noProjectSelected') }}</span>
         </div>
       </SettingsCard>
@@ -612,7 +690,7 @@ onMounted(() => {
           :subtitle="$t('settingsHub.workspace.generalSubtitle')"
           :mode="workspaceMode"
         >
-          <div v-if="!hasProjectSelected" class="rounded-lg border border-base-300/80 bg-base-200/70 px-3 py-2 text-sm text-base-content/80">
+          <div v-if="!showProjectWorkspace && projectListReady" class="rounded-lg border border-base-300/80 bg-base-200/70 px-3 py-2 text-sm text-base-content/80">
             {{ $t('settingsHub.workspace.noProjectSelected') }}
           </div>
           <div v-else-if="projectQuery.isLoading.value" class="flex justify-center py-6">
@@ -647,7 +725,7 @@ onMounted(() => {
             <button
               type="button"
               class="btn btn-primary btn-sm"
-              :disabled="isReadOnlyWorkspace || !hasProjectSelected || isSavingProject"
+              :disabled="isReadOnlyWorkspace || !showProjectWorkspace || isSavingProject"
               @click="saveWorkspace"
             >
               {{ $t('settingsApp.account.saveChanges') }}
@@ -669,12 +747,12 @@ onMounted(() => {
             type="email"
             class="input input-bordered w-full"
             placeholder="teammate@example.com"
-            :disabled="!canInviteMembers || !hasProjectSelected || isInvitingMember"
+            :disabled="!canInviteMembers || !showProjectWorkspace || isInvitingMember"
           />
         </div>
         <div class="form-control">
           <label class="label" for="workspace-role">{{ $t('settingsHub.workspace.memberRole') }}</label>
-          <select id="workspace-role" v-model="inviteRole" class="select select-bordered w-full" :disabled="!canInviteMembers || !hasProjectSelected || isInvitingMember">
+          <select id="workspace-role" v-model="inviteRole" class="select select-bordered w-full" :disabled="!canInviteMembers || !showProjectWorkspace || isInvitingMember">
             <option v-for="role in roles" :key="role">{{ role }}</option>
           </select>
         </div>
@@ -682,7 +760,7 @@ onMounted(() => {
           <button
             type="button"
             class="btn btn-primary btn-sm"
-            :disabled="!canInviteMembers || !hasProjectSelected || !inviteEmail.trim() || isInvitingMember"
+            :disabled="!canInviteMembers || !showProjectWorkspace || !inviteEmail.trim() || isInvitingMember"
             @click="inviteMember"
           >
             {{ $t('settingsHub.workspace.inviteAction') }}
@@ -690,7 +768,10 @@ onMounted(() => {
         </template>
       </SettingsCard>
 
-      <WorkspaceMembersCard v-else-if="cardId === 'project.members'" :project-id="projectId" />
+      <WorkspaceMembersCard
+        v-else-if="cardId === 'project.members' && showProjectWorkspace"
+        :project-id="projectId"
+      />
 
       <div v-else-if="cardId === 'project.columns'">
         <SettingsCard
@@ -698,7 +779,7 @@ onMounted(() => {
           :subtitle="$t('settingsHub.workspace.columnsSubtitle')"
           :mode="workspaceMode"
         >
-          <div v-if="!hasProjectSelected" class="rounded-lg border border-base-300/80 bg-base-200/70 px-3 py-2 text-sm text-base-content/80">
+          <div v-if="!showProjectWorkspace && projectListReady" class="rounded-lg border border-base-300/80 bg-base-200/70 px-3 py-2 text-sm text-base-content/80">
             {{ $t('settingsHub.workspace.noProjectSelected') }}
           </div>
           <div
@@ -816,7 +897,7 @@ onMounted(() => {
             </div>
           </div>
           </template>
-          <p v-if="hasProjectSelected && !columnsQuery.isError.value && !(columnsQuery.isLoading && !columnsQuery.isFetched)" class="text-xs text-base-content/60 mt-2">
+          <p v-if="showProjectWorkspace && !columnsQuery.isError.value && !(columnsQuery.isLoading && !columnsQuery.isFetched)" class="text-xs text-base-content/60 mt-2">
             Move policies apply when dragging tasks. Tasks marked <strong>Blocked by</strong> another task cannot be moved into a Done column until the blocker is Done.
           </p>
           <template #actions>
@@ -825,7 +906,7 @@ onMounted(() => {
               class="btn btn-primary btn-sm"
               :disabled="
                 isReadOnlyWorkspace ||
-                !hasProjectSelected ||
+                !showProjectWorkspace ||
                 !columnsStructureDirty ||
                 !columnsSectionValid ||
                 isSavingColumnsStructure ||
@@ -838,7 +919,7 @@ onMounted(() => {
             <button
               type="button"
               class="btn btn-outline btn-sm"
-              :disabled="isReadOnlyWorkspace || !hasProjectSelected || isSavingPolicies || workspaceColorInvalid"
+              :disabled="isReadOnlyWorkspace || !showProjectWorkspace || isSavingPolicies || workspaceColorInvalid"
               @click="saveColumnPolicies"
             >
               {{
@@ -858,7 +939,12 @@ onMounted(() => {
       >
         <p class="text-sm text-base-content/70">{{ $t('settingsHub.workspace.dangerBody') }}</p>
         <template #actions>
-          <button type="button" class="btn btn-error btn-sm" :disabled="!canDeleteProject">
+          <button
+            type="button"
+            class="btn btn-error btn-sm"
+            :disabled="!canDeleteProject || !showProjectWorkspace"
+            @click="openDeleteProjectDialog()"
+          >
             {{ $t('settings.dangerZone.deleteProject') }}
           </button>
         </template>
@@ -963,10 +1049,10 @@ onMounted(() => {
             {{ $t('settingsHub.workspace.projectsUsingFallback') }}
           </div>
           <ul class="menu menu-vertical rounded-box flex-1 gap-0.5 overflow-y-auto bg-base-200/40 p-2">
-          <li v-for="p in drawerProjects" :key="p.id">
+          <li v-for="p in drawerProjects" :key="p.id" class="flex items-stretch gap-1">
             <button
               type="button"
-              class="flex w-full flex-col items-stretch gap-0.5 rounded-lg text-left sm:flex-row sm:items-center sm:justify-between"
+              class="flex min-w-0 flex-1 flex-col items-stretch gap-0.5 rounded-lg text-left sm:flex-row sm:items-center sm:justify-between"
               :class="p.id === projectId ? 'active' : ''"
               @click="selectWorkspaceProject(p.id)"
             >
@@ -984,6 +1070,16 @@ onMounted(() => {
                 {{ $t('settingsHub.workspace.newProjectBadge') }}
               </span>
               <span v-if="p.role" class="text-xs opacity-70 sm:shrink-0">{{ p.role }}</span>
+            </button>
+            <button
+              v-if="canDeleteDrawerProject(p)"
+              type="button"
+              class="btn btn-ghost btn-square btn-sm shrink-0 text-error hover:bg-error/10"
+              :aria-label="$t('settings.dangerZone.deleteProject')"
+              :title="$t('settings.dangerZone.deleteProject')"
+              @click="openDeleteDrawerProject(p, $event)"
+            >
+              <TrashIcon class="h-4 w-4" aria-hidden="true" />
             </button>
           </li>
           </ul>

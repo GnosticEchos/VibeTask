@@ -19,6 +19,14 @@ export function isDrawerUsingFallback(
   return isError && liveProjectsCount === 0 && drawerProjectsCount > 0
 }
 
+export function isProjectInMembershipList(
+  projectId: number | null | undefined,
+  liveProjects: DrawerProjectLike[],
+): boolean {
+  if (projectId == null || !Number.isFinite(projectId) || projectId <= 0) return false
+  return liveProjects.some((project) => project.id === projectId)
+}
+
 export function getFallbackDrawerProjects(
   liveProjects: DrawerProjectLike[],
   fallbackProject: DrawerProjectLike | null,

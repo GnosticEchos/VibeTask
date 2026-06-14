@@ -9,17 +9,19 @@ Use this skill when a human asks you to plan a new project before board go-live.
 
 ## Workflow
 
-1. **Create draft** — `POST /api/agent/projects/draft` with platform session (default template `ADHOC_OPS`; use `LIFECYCLE_EPIC` for epic/product flows).
-2. **Grill** — Ask **one question per turn**. Capture decisions in hub docs (`POST /api/projects/{id}/docs`) or backlog tasks (`POST /api/tasks`).
-3. **Preview** — Human reviews `GET /api/projects/{id}/planning/preview` in Settings or CLI `project draft preview`.
-4. **Accept** — Human accepts in Settings or CLI device-code flow; then create a delegate agent.
+| Step | Agent (MCP / CLI) | Human (Settings) |
+|------|-------------------|------------------|
+| **Create draft** | MCP `create_draft_project` (platform session; default template `ADHOC_OPS`; use `LIFECYCLE_EPIC` for epic/product flows). CLI: `vibetask-cli project draft create --name "…" --prefix … --template ADHOC_OPS`. | — (agent-owned; switch to the draft under **Settings → Project settings** or **Explore → Drafts** when ready) |
+| **Grill** | MCP `load_planning_skill` → `project-planning-grill`. Ask **one question per turn**. Persist with `documents` / `backlog_tasks` on `create_draft_project`, or MCP `create_knowledge_document` / `create_task` with a delegate + platform session. | Answer in chat; optional **Settings → Project settings → Planning skills (project)** to review or customize the grill copy |
+| **Preview** | MCP `preview_draft_project` · CLI `vibetask-cli project draft preview <project-id>` | **Settings → Project settings** — **Project acceptance** card (checklist, docs, backlog) |
+| **Accept** | Optional kickoff only: MCP `request_project_accept` · CLI `vibetask-cli project accept <id> --init` (human must confirm — agents cannot go live alone) | **Settings → Project settings** — **Accept project**; then **Settings → AI Agents** — create a delegate agent |
 
-## API conventions (critical)
+## Payload conventions (critical)
 
 - Task create body uses **`name`**, not `title`.
 - Backlog tasks on DRAFT: omit `projectColumnId` (null). Column-assigned tasks are blocked until accept.
 - Document types: `CONSTITUTION`, `SPECIFICATION`, `IMPLEMENTATION_PLAN`, etc.
-- `accept-plan` expands workspaces; **project accept** (`POST .../planning/accept`) activates the project.
+- `accept-plan` expands workspaces; **project accept** (Settings or CLI device-code) activates the project.
 
 ## Templates
 

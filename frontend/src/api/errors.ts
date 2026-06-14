@@ -123,7 +123,10 @@ const ERROR_CLASS_BY_STATUS: Record<number, (
     : new BadRequestError(msg, errs, orig),
   401: (msg, _errs, orig) => new UnauthorizedError(msg, orig),
   403: (msg, _errs, orig) => new ForbiddenError(msg, orig),
-  404: (msg, _errs, orig) => new NotFoundError(msg, orig),
+  404: (msg, _errs, orig) =>
+    /not found/i.test(msg)
+      ? new ApiError(404, msg, undefined, orig)
+      : new NotFoundError(msg, orig),
   409: (msg, _errs, orig) => new ConflictError(msg, orig),
   429: (msg, _errs, orig, after) => new RateLimitError(msg, after, orig),
 }

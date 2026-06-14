@@ -129,7 +129,13 @@ async function save() {
 </script>
 
 <template>
-  <dialog class="modal" :class="{ 'modal-open': open }" @close="close">
+  <Teleport to="body">
+    <div
+      v-if="open"
+      class="modal modal-open fixed inset-0 z-[100] flex items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+    >
     <div class="modal-box flex max-h-[90vh] w-full max-w-5xl flex-col gap-3">
       <div class="flex items-start justify-between gap-3">
         <div>
@@ -183,10 +189,11 @@ async function save() {
         </BaseButton>
       </div>
     </div>
-    <form method="dialog" class="modal-backdrop">
-      <button type="button" @click="close">close</button>
+    <form method="dialog" class="modal-backdrop" @click="close">
+      <button type="button">close</button>
     </form>
-  </dialog>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>

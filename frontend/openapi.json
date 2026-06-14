@@ -1956,7 +1956,7 @@
             "description": "Effective skill content",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/PlanningSkillContent" }
+                "schema": { "$ref": "#/components/schemas/EffectivePlanningSkill" }
               }
             }
           },
@@ -5917,7 +5917,7 @@
             "description": "Skill content",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/PlanningSkillContent" }
+                "schema": { "$ref": "#/components/schemas/EffectivePlanningSkill" }
               }
             }
           },
@@ -7285,7 +7285,7 @@
             "description": "Effective skill content",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/PlanningSkillContent" }
+                "schema": { "$ref": "#/components/schemas/EffectivePlanningSkill" }
               }
             }
           },
@@ -7552,7 +7552,7 @@
         },
         "required": ["id", "slug", "content", "updatedAt"]
       },
-      "PlanningSkillContent": {
+      "EffectivePlanningSkill": {
         "type": "object",
         "description": "Effective planning skill markdown content",
         "properties": {

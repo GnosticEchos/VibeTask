@@ -132,7 +132,7 @@
       </div>
 
       <!-- View mode: same preview pipeline as edit (MdPreview + mermaid) -->
-      <div v-else class="overflow-y-auto h-full p-4">
+      <div v-else class="doc-md-preview-scroll overflow-y-auto h-full p-4">
         <div v-if="!previewReady" class="flex justify-center py-8">
           <span class="loading loading-spinner loading-lg" />
         </div>
@@ -366,7 +366,4 @@ watch(() => props.document, (doc) => {
   height: calc(100% - 56px) !important;
 }
 
-.doc-md-preview {
-  background: transparent;
-}
 </style>

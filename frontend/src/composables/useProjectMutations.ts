@@ -3,15 +3,24 @@ import projectsApi from '../api/v1/projectApi'
 import { iProject, CreateProjectPayload } from '../types/projectTypes'
 import api from '../api/v1/indexApi'
 import { isValidId } from '../utils/validation'
+import { useProjectStore } from '../stores/project'
 
 export function useProjectMutations() {
   const queryClient = useQueryClient()
+  const projectStore = useProjectStore()
 
   const deleteProjectMutation = useMutation({
     mutationFn: (id: number) => projectsApi.deleteProject(id),
-    onSuccess: () => {
+    onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       queryClient.invalidateQueries({ queryKey: ['projects', 'summary'] })
+      queryClient.removeQueries({ queryKey: ['project', deletedId] })
+      queryClient.removeQueries({ queryKey: ['columns', deletedId] })
+      queryClient.removeQueries({ queryKey: ['members', deletedId] })
+      queryClient.removeQueries({ queryKey: ['planning-preview', deletedId] })
+      if (projectStore.selectedProjectId === deletedId) {
+        projectStore.clearSelectedProject()
+      }
     },
   })
 

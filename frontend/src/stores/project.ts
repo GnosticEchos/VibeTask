@@ -117,6 +117,7 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   const clearSelectedProject = () => {
+    selectedProjectId.value = null
     Object.assign(project, defaultProjectState())
   }
 

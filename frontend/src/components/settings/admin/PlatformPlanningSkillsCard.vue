@@ -252,7 +252,13 @@ async function confirmRevert(revision: PlanningSkillRevision) {
       @saved="onEditorSaved"
     />
 
-    <dialog class="modal" :class="{ 'modal-open': revisionsOpen }">
+    <Teleport to="body">
+      <div
+        v-if="revisionsOpen"
+        class="modal modal-open fixed inset-0 z-[100] flex items-center justify-center"
+        role="dialog"
+        aria-modal="true"
+      >
       <div class="modal-box max-w-2xl">
         <h3 class="text-lg font-semibold">
           {{ $t('settingsHub.admin.planningSkills.revisionsTitle', { slug: revisionsSlug }) }}
@@ -291,9 +297,10 @@ async function confirmRevert(revision: PlanningSkillRevision) {
           </button>
         </div>
       </div>
-      <form method="dialog" class="modal-backdrop">
-        <button type="button" @click="closeRevisions">close</button>
+      <form method="dialog" class="modal-backdrop" @click="closeRevisions">
+        <button type="button">close</button>
       </form>
-    </dialog>
+      </div>
+    </Teleport>
   </SettingsCard>
 </template>

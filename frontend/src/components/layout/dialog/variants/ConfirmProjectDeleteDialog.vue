@@ -6,7 +6,7 @@ import { useProjectStore } from '../../../../stores/project'
 import { useProjectMutations } from '@/composables/useProjectMutations'
 import rules from '../../../../utils/validators'
 import { useForm } from 'vee-validate'
-import { computed, ref, Ref } from 'vue'
+import { computed, ref, watch, type Ref } from 'vue'
 
 const { errors } = useForm()
 
@@ -23,6 +23,14 @@ const formIsValid = computed(() => {
 })
 
 const projectNameValue: Ref<string> = ref('')
+
+watch(
+  () => project.value?.id,
+  () => {
+    projectNameValue.value = ''
+  },
+  { immediate: true },
+)
 
 const deleteProject = async () => {
   const id = projectStore.project?.id
@@ -44,10 +52,8 @@ const deleteProject = async () => {
       <template #content>
         <div class="px-4">
           <div class="mb-3">
-            <span class="mr-1"
-              >{{ $t('settings.dangerZone.enterProjectName') }}:
-            </span>
-            <span class="font-medium text-teal-500">"{{ project?.name }}"</span>
+            <span class="mr-1">{{ $t('settings.dangerZone.enterProjectName') }}:</span>
+            <span class="font-medium text-teal-500">{{ project?.name }}</span>
           </div>
           <div class="w-full">
             <BaseInput

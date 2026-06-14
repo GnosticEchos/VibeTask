@@ -3,7 +3,9 @@ import type { components } from '@/api/generated/openapi-types'
 
 export type PlanningSkillSummary = components['schemas']['PlanningSkillSummary']
 export type PlanningSkill = components['schemas']['PlanningSkill']
-export type PlanningSkillContent = components['schemas']['PlanningSkillContent']
+export type EffectivePlanningSkill = components['schemas']['EffectivePlanningSkill']
+/** @deprecated Use {@link EffectivePlanningSkill} — renamed to avoid OpenAPI/progenitor type collision */
+export type PlanningSkillContent = EffectivePlanningSkill
 export type PlanningSkillRevision = components['schemas']['PlanningSkillRevision']
 export type PlanningSkillCatalogEntry = components['schemas']['PlanningSkillCatalogEntry']
 export type ProjectPlanningSkillIndexEntry = components['schemas']['ProjectPlanningSkillIndexEntry']

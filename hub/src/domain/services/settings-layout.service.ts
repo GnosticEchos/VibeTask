@@ -32,6 +32,7 @@ const ALLOWED_CARD_IDS = new Set([
   'admin.systemHealth',
   'admin.rateLimits',
   'admin.platformAgents',
+  'admin.planningSkills',
   'admin.summary',
   'admin.roadmapSecurity',
   'admin.roadmapCompliance',
@@ -39,35 +40,38 @@ const ALLOWED_CARD_IDS = new Set([
   'theme.builder',
 ]);
 
-/** Mirror `Kanban-frontend` `src/utils/settingsLayoutNormalize.ts` → `SETTINGS_CARD_CONSTRAINTS` */
+/** Mirror `frontend/src/utils/settingsLayoutNormalize.ts` → `SETTINGS_CARD_CONSTRAINTS` */
+const CONTENT_FIT_MAX_H = 240;
+
 const SETTINGS_CARD_CONSTRAINTS: Record<string, { minW: number; maxW: number; minH: number; maxH: number }> = {
-  'account.profile': { minW: 4, maxW: 12, minH: 5, maxH: 24 },
-  'account.security': { minW: 4, maxW: 12, minH: 5, maxH: 24 },
-  'account.sessions': { minW: 4, maxW: 12, minH: 5, maxH: 24 },
-  'account.preferences': { minW: 4, maxW: 12, minH: 5, maxH: 24 },
-  'agents.list': { minW: 6, maxW: 9, minH: 6, maxH: 32 },
-  'agents.summary': { minW: 3, maxW: 4, minH: 4, maxH: 20 },
-  'agents.create': { minW: 3, maxW: 6, minH: 5, maxH: 24 },
-  'agents.delegations': { minW: 6, maxW: 12, minH: 5, maxH: 32 },
-  'project.context': { minW: 6, maxW: 12, minH: 4, maxH: 20 },
-  'project.general': { minW: 4, maxW: 8, minH: 6, maxH: 28 },
-  'project.invite': { minW: 4, maxW: 8, minH: 6, maxH: 24 },
-  'project.members': { minW: 6, maxW: 12, minH: 6, maxH: 32 },
-  'project.columns': { minW: 4, maxW: 12, minH: 4, maxH: 56 },
-  'project.danger': { minW: 6, maxW: 12, minH: 5, maxH: 24 },
-  'admin.users': { minW: 6, maxW: 12, minH: 6, maxH: 36 },
-  'admin.systemHealth': { minW: 3, maxW: 6, minH: 4, maxH: 24 },
-  'admin.rateLimits': { minW: 6, maxW: 9, minH: 6, maxH: 32 },
-  'admin.platformAgents': { minW: 6, maxW: 12, minH: 6, maxH: 36 },
-  'admin.summary': { minW: 3, maxW: 4, minH: 5, maxH: 24 },
-  'admin.roadmapSecurity': { minW: 4, maxW: 6, minH: 5, maxH: 28 },
-  'admin.roadmapCompliance': { minW: 4, maxW: 6, minH: 5, maxH: 28 },
-  'admin.roadmapPlatform': { minW: 4, maxW: 6, minH: 5, maxH: 28 },
-  'theme.builder': { minW: 8, maxW: 12, minH: 10, maxH: 48 },
+  'account.profile': { minW: 4, maxW: 12, minH: 5, maxH: CONTENT_FIT_MAX_H },
+  'account.security': { minW: 4, maxW: 12, minH: 5, maxH: CONTENT_FIT_MAX_H },
+  'account.sessions': { minW: 4, maxW: 12, minH: 5, maxH: CONTENT_FIT_MAX_H },
+  'account.preferences': { minW: 4, maxW: 12, minH: 5, maxH: CONTENT_FIT_MAX_H },
+  'agents.list': { minW: 6, maxW: 9, minH: 6, maxH: CONTENT_FIT_MAX_H },
+  'agents.summary': { minW: 3, maxW: 4, minH: 4, maxH: CONTENT_FIT_MAX_H },
+  'agents.create': { minW: 3, maxW: 6, minH: 5, maxH: CONTENT_FIT_MAX_H },
+  'agents.delegations': { minW: 6, maxW: 12, minH: 5, maxH: CONTENT_FIT_MAX_H },
+  'project.context': { minW: 6, maxW: 12, minH: 4, maxH: CONTENT_FIT_MAX_H },
+  'project.general': { minW: 4, maxW: 8, minH: 6, maxH: CONTENT_FIT_MAX_H },
+  'project.invite': { minW: 4, maxW: 8, minH: 6, maxH: CONTENT_FIT_MAX_H },
+  'project.members': { minW: 6, maxW: 12, minH: 6, maxH: CONTENT_FIT_MAX_H },
+  'project.columns': { minW: 4, maxW: 12, minH: 4, maxH: CONTENT_FIT_MAX_H },
+  'project.danger': { minW: 6, maxW: 12, minH: 5, maxH: CONTENT_FIT_MAX_H },
+  'admin.users': { minW: 6, maxW: 12, minH: 6, maxH: CONTENT_FIT_MAX_H },
+  'admin.systemHealth': { minW: 3, maxW: 6, minH: 4, maxH: CONTENT_FIT_MAX_H },
+  'admin.rateLimits': { minW: 6, maxW: 9, minH: 6, maxH: CONTENT_FIT_MAX_H },
+  'admin.platformAgents': { minW: 6, maxW: 12, minH: 6, maxH: CONTENT_FIT_MAX_H },
+  'admin.planningSkills': { minW: 6, maxW: 12, minH: 6, maxH: CONTENT_FIT_MAX_H },
+  'admin.summary': { minW: 3, maxW: 4, minH: 5, maxH: CONTENT_FIT_MAX_H },
+  'admin.roadmapSecurity': { minW: 4, maxW: 6, minH: 5, maxH: CONTENT_FIT_MAX_H },
+  'admin.roadmapCompliance': { minW: 4, maxW: 6, minH: 5, maxH: CONTENT_FIT_MAX_H },
+  'admin.roadmapPlatform': { minW: 4, maxW: 6, minH: 5, maxH: CONTENT_FIT_MAX_H },
+  'theme.builder': { minW: 8, maxW: 12, minH: 10, maxH: CONTENT_FIT_MAX_H },
 };
 
 function cardConstraint(id: string, columns: number): { minW: number; maxW: number; minH: number; maxH: number } {
-  const c = SETTINGS_CARD_CONSTRAINTS[id] ?? { minW: 3, maxW: columns, minH: 3, maxH: 48 };
+  const c = SETTINGS_CARD_CONSTRAINTS[id] ?? { minW: 3, maxW: columns, minH: 3, maxH: CONTENT_FIT_MAX_H };
   return {
     minW: Math.max(1, Math.min(columns, c.minW)),
     maxW: Math.max(1, Math.min(columns, c.maxW)),

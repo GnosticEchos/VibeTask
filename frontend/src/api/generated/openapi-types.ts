@@ -1818,7 +1818,7 @@ export interface components {
             updatedAt: string;
         };
         /** @description Effective planning skill markdown content */
-        PlanningSkillContent: {
+        EffectivePlanningSkill: {
             slug: string;
             content: string;
         };
@@ -3909,7 +3909,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlanningSkillContent"];
+                    "application/json": components["schemas"]["EffectivePlanningSkill"];
                 };
             };
             /** @description Unauthorized */
@@ -6922,7 +6922,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlanningSkillContent"];
+                    "application/json": components["schemas"]["EffectivePlanningSkill"];
                 };
             };
             /** @description Forbidden — admin only */
@@ -7882,7 +7882,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlanningSkillContent"];
+                    "application/json": components["schemas"]["EffectivePlanningSkill"];
                 };
             };
             /** @description Unauthorized */
